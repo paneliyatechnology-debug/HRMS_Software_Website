@@ -16,9 +16,19 @@
       "code": "ADM",
       "headEmployeeId": "emp-1",
       "headName": "Keyur Sangani",
-      "employeeCount": 2,
+      "employeeCount": 11,
       "description": "Core Executive & Operations Management",
       "createdAt": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "dept-1792583144327",
+      "name": "Artificial Intelligence",
+      "code": "AI",
+      "headEmployeeId": "emp-1",
+      "headName": "John Deo",
+      "employeeCount": 0,
+      "description": "Research and deployment of machine learning systems.",
+      "createdAt": "2026-10-21T11:45:44.327Z"
     }
   ],
   "designations": [
@@ -46,6 +56,600 @@
     }
   ],
   "employees": [
+    {
+      "id": "emp-1792588528256",
+      "employeeCode": "EMP-106",
+      "firstName": "keyur",
+      "lastName": "sangani",
+      "email": "kr@paneliya.com",
+      "phone": "+1 (555) 234-5688",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "gender": "Male",
+      "dateOfBirth": "1992-06-15",
+      "address": "Corporate HQ",
+      "emergencyContact": {
+        "name": "Sarah Jenkins",
+        "relationship": "Spouse",
+        "phone": "+1 (555) 999-9999"
+      },
+      "joiningDate": "2026-02-01",
+      "employmentType": "Full-time",
+      "status": "Active",
+      "departmentId": "dept-1",
+      "departmentName": "Administration & Management",
+      "designationId": "des-4",
+      "designationTitle": "Software Engineer",
+      "reportingManagerId": "emp-1",
+      "reportingManagerName": "Sarah Connor",
+      "workLocationId": "loc-1",
+      "workLocationName": "Corporate HQ",
+      "shift": "General Shift (9 AM - 6 PM)",
+      "bankDetails": {
+        "bankName": "Silicon Valley Bank",
+        "accountNumber": "99201948191",
+        "ifscOrRouting": "SVB00129",
+        "accountHolderName": "Alex Morgan"
+      },
+      "taxInformation": {
+        "taxId": "TX-293426",
+        "panOrSsn": "***-**-0000",
+        "taxRegime": "New Regime"
+      },
+      "education": [
+        {
+          "degree": "B.S. in Computer Science",
+          "institution": "University",
+          "year": 2020
+        }
+      ],
+      "previousExperience": [],
+      "skills": [
+        "TypeScript",
+        "NestJS",
+        "PostgreSQL"
+      ],
+      "salary": {
+        "basic": 5000,
+        "hra": 2000,
+        "allowances": 1200,
+        "bonus": 500,
+        "pf": 600,
+        "tax": 750,
+        "professionalTax": 200,
+        "gross": 8700,
+        "net": 7150
+      },
+      "createdAt": "2026-10-21T13:15:28.257Z",
+      "updatedAt": "2026-10-21T13:15:28.257Z"
+    },
+    {
+      "id": "emp-1792588511771",
+      "employeeCode": "EMP-105",
+      "firstName": "keyur",
+      "lastName": "sangani",
+      "email": "kr@paneliya.com",
+      "phone": "+1 (555) 234-5688",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "gender": "Male",
+      "dateOfBirth": "1992-06-15",
+      "address": "Corporate HQ",
+      "emergencyContact": {
+        "name": "Sarah Jenkins",
+        "relationship": "Spouse",
+        "phone": "+1 (555) 999-9999"
+      },
+      "joiningDate": "2026-02-01",
+      "employmentType": "Full-time",
+      "status": "Active",
+      "departmentId": "dept-1",
+      "departmentName": "Administration & Management",
+      "designationId": "des-4",
+      "designationTitle": "Software Engineer",
+      "reportingManagerId": "emp-1",
+      "reportingManagerName": "Sarah Connor",
+      "workLocationId": "loc-1",
+      "workLocationName": "Corporate HQ",
+      "shift": "General Shift (9 AM - 6 PM)",
+      "bankDetails": {
+        "bankName": "Silicon Valley Bank",
+        "accountNumber": "99201948191",
+        "ifscOrRouting": "SVB00129",
+        "accountHolderName": "Alex Morgan"
+      },
+      "taxInformation": {
+        "taxId": "TX-241943",
+        "panOrSsn": "***-**-0000",
+        "taxRegime": "New Regime"
+      },
+      "education": [
+        {
+          "degree": "B.S. in Computer Science",
+          "institution": "University",
+          "year": 2020
+        }
+      ],
+      "previousExperience": [],
+      "skills": [
+        "TypeScript",
+        "NestJS",
+        "PostgreSQL"
+      ],
+      "salary": {
+        "basic": 5000,
+        "hra": 2000,
+        "allowances": 1200,
+        "bonus": 500,
+        "pf": 600,
+        "tax": 750,
+        "professionalTax": 200,
+        "gross": 8700,
+        "net": 7150
+      },
+      "createdAt": "2026-10-21T13:15:11.772Z",
+      "updatedAt": "2026-10-21T13:15:11.772Z"
+    },
+    {
+      "id": "emp-1792588301611",
+      "employeeCode": "EMP-104",
+      "firstName": "RAVI",
+      "lastName": "KHUNT",
+      "email": "RK@paneliya.com",
+      "phone": "+1 (555) 234-5678",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "gender": "Male",
+      "dateOfBirth": "1992-06-15",
+      "address": "Corporate HQ",
+      "emergencyContact": {
+        "name": "Sarah Jenkins",
+        "relationship": "Spouse",
+        "phone": "+1 (555) 999-9999"
+      },
+      "joiningDate": "2026-02-01",
+      "employmentType": "Full-time",
+      "status": "Active",
+      "departmentId": "dept-1",
+      "departmentName": "Administration & Management",
+      "designationId": "des-4",
+      "designationTitle": "Software Engineer",
+      "reportingManagerId": "emp-1",
+      "reportingManagerName": "Sarah Connor",
+      "workLocationId": "loc-1",
+      "workLocationName": "Corporate HQ",
+      "shift": "General Shift (9 AM - 6 PM)",
+      "bankDetails": {
+        "bankName": "Silicon Valley Bank",
+        "accountNumber": "99201948191",
+        "ifscOrRouting": "SVB00129",
+        "accountHolderName": "Alex Morgan"
+      },
+      "taxInformation": {
+        "taxId": "TX-404804",
+        "panOrSsn": "***-**-0000",
+        "taxRegime": "New Regime"
+      },
+      "education": [
+        {
+          "degree": "B.S. in Computer Science",
+          "institution": "University",
+          "year": 2020
+        }
+      ],
+      "previousExperience": [],
+      "skills": [
+        "TypeScript",
+        "NestJS",
+        "PostgreSQL"
+      ],
+      "salary": {
+        "basic": 5000,
+        "hra": 2000,
+        "allowances": 1200,
+        "bonus": 500,
+        "pf": 600,
+        "tax": 750,
+        "professionalTax": 200,
+        "gross": 8700,
+        "net": 7150
+      },
+      "createdAt": "2026-10-21T13:11:41.612Z",
+      "updatedAt": "2026-10-21T13:11:41.612Z"
+    },
+    {
+      "id": "emp-1792588273327",
+      "employeeCode": "EMP-105",
+      "firstName": "RAVI",
+      "lastName": "KHUNT",
+      "email": "RK@paneliya.com",
+      "phone": "+1 (555) 234-5678",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "gender": "Male",
+      "dateOfBirth": "1992-06-15",
+      "address": "Corporate HQ",
+      "emergencyContact": {
+        "name": "Sarah Jenkins",
+        "relationship": "Spouse",
+        "phone": "+1 (555) 999-9999"
+      },
+      "joiningDate": "2026-02-01",
+      "employmentType": "Full-time",
+      "status": "Active",
+      "departmentId": "dept-1",
+      "departmentName": "Administration & Management",
+      "designationId": "des-4",
+      "designationTitle": "Software Engineer",
+      "reportingManagerId": "emp-1",
+      "reportingManagerName": "Sarah Connor",
+      "workLocationId": "loc-1",
+      "workLocationName": "Corporate HQ",
+      "shift": "General Shift (9 AM - 6 PM)",
+      "bankDetails": {
+        "bankName": "Silicon Valley Bank",
+        "accountNumber": "99201948191",
+        "ifscOrRouting": "SVB00129",
+        "accountHolderName": "Alex Morgan"
+      },
+      "taxInformation": {
+        "taxId": "TX-188119",
+        "panOrSsn": "***-**-0000",
+        "taxRegime": "New Regime"
+      },
+      "education": [
+        {
+          "degree": "B.S. in Computer Science",
+          "institution": "University",
+          "year": 2020
+        }
+      ],
+      "previousExperience": [],
+      "skills": [
+        "TypeScript",
+        "NestJS",
+        "PostgreSQL"
+      ],
+      "salary": {
+        "basic": 5000,
+        "hra": 2000,
+        "allowances": 1200,
+        "bonus": 500,
+        "pf": 600,
+        "tax": 750,
+        "professionalTax": 200,
+        "gross": 8700,
+        "net": 7150
+      },
+      "createdAt": "2026-10-21T13:11:13.327Z",
+      "updatedAt": "2026-10-21T13:11:13.327Z"
+    },
+    {
+      "id": "emp-1792588089203",
+      "employeeCode": "EMP-105",
+      "firstName": "RAVI",
+      "lastName": "KHUNT",
+      "email": "RK@paneliya.com",
+      "phone": "+1 (555) 234-5678",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "gender": "Male",
+      "dateOfBirth": "1992-06-15",
+      "address": "Corporate HQ",
+      "emergencyContact": {
+        "name": "Sarah Jenkins",
+        "relationship": "Spouse",
+        "phone": "+1 (555) 999-9999"
+      },
+      "joiningDate": "2026-02-01",
+      "employmentType": "Full-time",
+      "status": "Active",
+      "departmentId": "dept-1",
+      "departmentName": "Administration & Management",
+      "designationId": "des-4",
+      "designationTitle": "Software Engineer",
+      "reportingManagerId": "emp-1",
+      "reportingManagerName": "Sarah Connor",
+      "workLocationId": "loc-1",
+      "workLocationName": "Corporate HQ",
+      "shift": "General Shift (9 AM - 6 PM)",
+      "bankDetails": {
+        "bankName": "Silicon Valley Bank",
+        "accountNumber": "99201948191",
+        "ifscOrRouting": "SVB00129",
+        "accountHolderName": "Alex Morgan"
+      },
+      "taxInformation": {
+        "taxId": "TX-829594",
+        "panOrSsn": "***-**-0000",
+        "taxRegime": "New Regime"
+      },
+      "education": [
+        {
+          "degree": "B.S. in Computer Science",
+          "institution": "University",
+          "year": 2020
+        }
+      ],
+      "previousExperience": [],
+      "skills": [
+        "TypeScript",
+        "NestJS",
+        "PostgreSQL"
+      ],
+      "salary": {
+        "basic": 5000,
+        "hra": 2000,
+        "allowances": 1200,
+        "bonus": 500,
+        "pf": 600,
+        "tax": 750,
+        "professionalTax": 200,
+        "gross": 8700,
+        "net": 7150
+      },
+      "createdAt": "2026-10-21T13:08:09.203Z",
+      "updatedAt": "2026-10-21T13:08:09.204Z"
+    },
+    {
+      "id": "emp-1792587982674",
+      "employeeCode": "EMP-105",
+      "firstName": "RAVI",
+      "lastName": "KHUNT",
+      "email": "david.miller@paneliya.com",
+      "phone": "+1 (555) 234-5678",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "gender": "Male",
+      "dateOfBirth": "1992-06-15",
+      "address": "Corporate HQ",
+      "emergencyContact": {
+        "name": "Sarah Jenkins",
+        "relationship": "Spouse",
+        "phone": "+1 (555) 999-9999"
+      },
+      "joiningDate": "2026-02-01",
+      "employmentType": "Full-time",
+      "status": "Active",
+      "departmentId": "dept-1",
+      "departmentName": "Administration & Management",
+      "designationId": "des-4",
+      "designationTitle": "Software Engineer",
+      "reportingManagerId": "emp-1",
+      "reportingManagerName": "Sarah Connor",
+      "workLocationId": "loc-1",
+      "workLocationName": "Corporate HQ",
+      "shift": "General Shift (9 AM - 6 PM)",
+      "bankDetails": {
+        "bankName": "Silicon Valley Bank",
+        "accountNumber": "99201948191",
+        "ifscOrRouting": "SVB00129",
+        "accountHolderName": "Alex Morgan"
+      },
+      "taxInformation": {
+        "taxId": "TX-105403",
+        "panOrSsn": "***-**-0000",
+        "taxRegime": "New Regime"
+      },
+      "education": [
+        {
+          "degree": "B.S. in Computer Science",
+          "institution": "University",
+          "year": 2020
+        }
+      ],
+      "previousExperience": [],
+      "skills": [
+        "TypeScript",
+        "NestJS",
+        "PostgreSQL"
+      ],
+      "salary": {
+        "basic": 5000,
+        "hra": 2000,
+        "allowances": 1200,
+        "bonus": 500,
+        "pf": 600,
+        "tax": 750,
+        "professionalTax": 200,
+        "gross": 8700,
+        "net": 7150
+      },
+      "createdAt": "2026-10-21T13:06:22.675Z",
+      "updatedAt": "2026-10-21T13:06:22.675Z"
+    },
+    {
+      "id": "emp-1792587878654",
+      "employeeCode": "EMP-105",
+      "firstName": "RAVI",
+      "lastName": "KHUNT",
+      "email": "david.miller@paneliya.com",
+      "phone": "+1 (555) 234-5678",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "gender": "Male",
+      "dateOfBirth": "1992-06-15",
+      "address": "Corporate HQ",
+      "emergencyContact": {
+        "name": "Sarah Jenkins",
+        "relationship": "Spouse",
+        "phone": "+1 (555) 999-9999"
+      },
+      "joiningDate": "2026-02-01",
+      "employmentType": "Full-time",
+      "status": "Active",
+      "departmentId": "dept-1",
+      "departmentName": "Administration & Management",
+      "designationId": "des-4",
+      "designationTitle": "Software Engineer",
+      "reportingManagerId": "emp-1",
+      "reportingManagerName": "Sarah Connor",
+      "workLocationId": "loc-1",
+      "workLocationName": "Corporate HQ",
+      "shift": "General Shift (9 AM - 6 PM)",
+      "bankDetails": {
+        "bankName": "Silicon Valley Bank",
+        "accountNumber": "99201948191",
+        "ifscOrRouting": "SVB00129",
+        "accountHolderName": "Alex Morgan"
+      },
+      "taxInformation": {
+        "taxId": "TX-410658",
+        "panOrSsn": "***-**-0000",
+        "taxRegime": "New Regime"
+      },
+      "education": [
+        {
+          "degree": "B.S. in Computer Science",
+          "institution": "University",
+          "year": 2020
+        }
+      ],
+      "previousExperience": [],
+      "skills": [
+        "TypeScript",
+        "NestJS",
+        "PostgreSQL"
+      ],
+      "salary": {
+        "basic": 5000,
+        "hra": 2000,
+        "allowances": 1200,
+        "bonus": 500,
+        "pf": 600,
+        "tax": 750,
+        "professionalTax": 200,
+        "gross": 8700,
+        "net": 7150
+      },
+      "createdAt": "2026-10-21T13:04:38.655Z",
+      "updatedAt": "2026-10-21T13:04:38.655Z"
+    },
+    {
+      "id": "emp-1792587805386",
+      "employeeCode": "EMP-105",
+      "firstName": "RAVI",
+      "lastName": "Miller",
+      "email": "david.miller@paneliya.com",
+      "phone": "+1 (555) 234-5678",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "gender": "Male",
+      "dateOfBirth": "1992-06-15",
+      "address": "Corporate HQ",
+      "emergencyContact": {
+        "name": "Sarah Jenkins",
+        "relationship": "Spouse",
+        "phone": "+1 (555) 999-9999"
+      },
+      "joiningDate": "2026-02-01",
+      "employmentType": "Full-time",
+      "status": "Active",
+      "departmentId": "dept-1",
+      "departmentName": "Administration & Management",
+      "designationId": "des-4",
+      "designationTitle": "Software Engineer",
+      "reportingManagerId": "emp-1",
+      "reportingManagerName": "Sarah Connor",
+      "workLocationId": "loc-1",
+      "workLocationName": "Corporate HQ",
+      "shift": "General Shift (9 AM - 6 PM)",
+      "bankDetails": {
+        "bankName": "Silicon Valley Bank",
+        "accountNumber": "99201948191",
+        "ifscOrRouting": "SVB00129",
+        "accountHolderName": "Alex Morgan"
+      },
+      "taxInformation": {
+        "taxId": "TX-214726",
+        "panOrSsn": "***-**-0000",
+        "taxRegime": "New Regime"
+      },
+      "education": [
+        {
+          "degree": "B.S. in Computer Science",
+          "institution": "University",
+          "year": 2020
+        }
+      ],
+      "previousExperience": [],
+      "skills": [
+        "TypeScript",
+        "NestJS",
+        "PostgreSQL"
+      ],
+      "salary": {
+        "basic": 5000,
+        "hra": 2000,
+        "allowances": 1200,
+        "bonus": 500,
+        "pf": 600,
+        "tax": 750,
+        "professionalTax": 200,
+        "gross": 8700,
+        "net": 7150
+      },
+      "createdAt": "2026-10-21T13:03:25.387Z",
+      "updatedAt": "2026-10-21T13:03:25.387Z"
+    },
+    {
+      "id": "emp-1792587495958",
+      "employeeCode": "EMP-105",
+      "firstName": "David",
+      "lastName": "Miller",
+      "email": "david.miller@paneliya.com",
+      "phone": "+1 (555) 234-5678",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "gender": "Male",
+      "dateOfBirth": "1992-06-15",
+      "address": "Corporate HQ",
+      "emergencyContact": {
+        "name": "Sarah Jenkins",
+        "relationship": "Spouse",
+        "phone": "+1 (555) 999-9999"
+      },
+      "joiningDate": "2026-02-01",
+      "employmentType": "Full-time",
+      "status": "Active",
+      "departmentId": "dept-1",
+      "departmentName": "Administration & Management",
+      "designationId": "des-4",
+      "designationTitle": "Software Engineer",
+      "reportingManagerId": "emp-1",
+      "reportingManagerName": "Sarah Connor",
+      "workLocationId": "loc-1",
+      "workLocationName": "Corporate HQ",
+      "shift": "General Shift (9 AM - 6 PM)",
+      "bankDetails": {
+        "bankName": "Silicon Valley Bank",
+        "accountNumber": "99201948191",
+        "ifscOrRouting": "SVB00129",
+        "accountHolderName": "Alex Morgan"
+      },
+      "taxInformation": {
+        "taxId": "TX-821284",
+        "panOrSsn": "***-**-0000",
+        "taxRegime": "New Regime"
+      },
+      "education": [
+        {
+          "degree": "B.S. in Computer Science",
+          "institution": "University",
+          "year": 2020
+        }
+      ],
+      "previousExperience": [],
+      "skills": [
+        "TypeScript",
+        "NestJS",
+        "PostgreSQL"
+      ],
+      "salary": {
+        "basic": 5000,
+        "hra": 2000,
+        "allowances": 1200,
+        "bonus": 500,
+        "pf": 600,
+        "tax": 750,
+        "professionalTax": 200,
+        "gross": 8700,
+        "net": 7150
+      },
+      "createdAt": "2026-10-21T12:58:15.958Z",
+      "updatedAt": "2026-10-21T12:58:15.958Z"
+    },
     {
       "id": "emp-1792578296819",
       "employeeCode": "EMP-2",
@@ -212,6 +816,186 @@
     {
       "id": "bal-emp-1792578296819",
       "employeeId": "emp-1792578296819",
+      "year": 2026,
+      "casualLeave": {
+        "total": 12,
+        "used": 0,
+        "remaining": 12
+      },
+      "sickLeave": {
+        "total": 10,
+        "used": 0,
+        "remaining": 10
+      },
+      "paidLeave": {
+        "total": 15,
+        "used": 0,
+        "remaining": 15
+      }
+    },
+    {
+      "id": "bal-emp-1792587495958",
+      "employeeId": "emp-1792587495958",
+      "year": 2026,
+      "casualLeave": {
+        "total": 12,
+        "used": 0,
+        "remaining": 12
+      },
+      "sickLeave": {
+        "total": 10,
+        "used": 0,
+        "remaining": 10
+      },
+      "paidLeave": {
+        "total": 15,
+        "used": 0,
+        "remaining": 15
+      }
+    },
+    {
+      "id": "bal-emp-1792587805386",
+      "employeeId": "emp-1792587805386",
+      "year": 2026,
+      "casualLeave": {
+        "total": 12,
+        "used": 0,
+        "remaining": 12
+      },
+      "sickLeave": {
+        "total": 10,
+        "used": 0,
+        "remaining": 10
+      },
+      "paidLeave": {
+        "total": 15,
+        "used": 0,
+        "remaining": 15
+      }
+    },
+    {
+      "id": "bal-emp-1792587878654",
+      "employeeId": "emp-1792587878654",
+      "year": 2026,
+      "casualLeave": {
+        "total": 12,
+        "used": 0,
+        "remaining": 12
+      },
+      "sickLeave": {
+        "total": 10,
+        "used": 0,
+        "remaining": 10
+      },
+      "paidLeave": {
+        "total": 15,
+        "used": 0,
+        "remaining": 15
+      }
+    },
+    {
+      "id": "bal-emp-1792587982674",
+      "employeeId": "emp-1792587982674",
+      "year": 2026,
+      "casualLeave": {
+        "total": 12,
+        "used": 0,
+        "remaining": 12
+      },
+      "sickLeave": {
+        "total": 10,
+        "used": 0,
+        "remaining": 10
+      },
+      "paidLeave": {
+        "total": 15,
+        "used": 0,
+        "remaining": 15
+      }
+    },
+    {
+      "id": "bal-emp-1792588089203",
+      "employeeId": "emp-1792588089203",
+      "year": 2026,
+      "casualLeave": {
+        "total": 12,
+        "used": 0,
+        "remaining": 12
+      },
+      "sickLeave": {
+        "total": 10,
+        "used": 0,
+        "remaining": 10
+      },
+      "paidLeave": {
+        "total": 15,
+        "used": 0,
+        "remaining": 15
+      }
+    },
+    {
+      "id": "bal-emp-1792588273327",
+      "employeeId": "emp-1792588273327",
+      "year": 2026,
+      "casualLeave": {
+        "total": 12,
+        "used": 0,
+        "remaining": 12
+      },
+      "sickLeave": {
+        "total": 10,
+        "used": 0,
+        "remaining": 10
+      },
+      "paidLeave": {
+        "total": 15,
+        "used": 0,
+        "remaining": 15
+      }
+    },
+    {
+      "id": "bal-emp-1792588301611",
+      "employeeId": "emp-1792588301611",
+      "year": 2026,
+      "casualLeave": {
+        "total": 12,
+        "used": 0,
+        "remaining": 12
+      },
+      "sickLeave": {
+        "total": 10,
+        "used": 0,
+        "remaining": 10
+      },
+      "paidLeave": {
+        "total": 15,
+        "used": 0,
+        "remaining": 15
+      }
+    },
+    {
+      "id": "bal-emp-1792588511771",
+      "employeeId": "emp-1792588511771",
+      "year": 2026,
+      "casualLeave": {
+        "total": 12,
+        "used": 0,
+        "remaining": 12
+      },
+      "sickLeave": {
+        "total": 10,
+        "used": 0,
+        "remaining": 10
+      },
+      "paidLeave": {
+        "total": 15,
+        "used": 0,
+        "remaining": 15
+      }
+    },
+    {
+      "id": "bal-emp-1792588528256",
+      "employeeId": "emp-1792588528256",
       "year": 2026,
       "casualLeave": {
         "total": 12,
@@ -542,6 +1326,210 @@
   ],
   "documents": [],
   "auditLogs": [
+    {
+      "id": "log-1792588528257-729",
+      "userId": "sys",
+      "userName": "Admin",
+      "userRole": "HR_ADMIN",
+      "action": "EMPLOYEE_CREATED",
+      "module": "Employee Management",
+      "recordId": "emp-1792588528256",
+      "details": "Created new employee keyur sangani (EMP-106)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T13:15:28.257Z"
+    },
+    {
+      "id": "log-1792588511772-97",
+      "userId": "sys",
+      "userName": "Admin",
+      "userRole": "HR_ADMIN",
+      "action": "EMPLOYEE_CREATED",
+      "module": "Employee Management",
+      "recordId": "emp-1792588511771",
+      "details": "Created new employee keyur sangani (EMP-105)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T13:15:11.772Z"
+    },
+    {
+      "id": "log-1792588455145-748",
+      "userId": "user-1",
+      "userName": "Keyur Sangani",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1",
+      "details": "User keyur.sangani1234@gmail.com logged in successfully",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T13:14:15.145Z"
+    },
+    {
+      "id": "log-1792588301612-721",
+      "userId": "sys",
+      "userName": "Admin",
+      "userRole": "HR_ADMIN",
+      "action": "EMPLOYEE_CREATED",
+      "module": "Employee Management",
+      "recordId": "emp-1792588301611",
+      "details": "Created new employee RAVI KHUNT (EMP-104)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T13:11:41.612Z"
+    },
+    {
+      "id": "log-1792588273327-552",
+      "userId": "sys",
+      "userName": "Admin",
+      "userRole": "HR_ADMIN",
+      "action": "EMPLOYEE_CREATED",
+      "module": "Employee Management",
+      "recordId": "emp-1792588273327",
+      "details": "Created new employee RAVI KHUNT (EMP-105)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T13:11:13.327Z"
+    },
+    {
+      "id": "log-1792588089204-457",
+      "userId": "sys",
+      "userName": "Admin",
+      "userRole": "HR_ADMIN",
+      "action": "EMPLOYEE_CREATED",
+      "module": "Employee Management",
+      "recordId": "emp-1792588089203",
+      "details": "Created new employee RAVI KHUNT (EMP-105)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T13:08:09.204Z"
+    },
+    {
+      "id": "log-1792587982675-352",
+      "userId": "sys",
+      "userName": "Admin",
+      "userRole": "HR_ADMIN",
+      "action": "EMPLOYEE_CREATED",
+      "module": "Employee Management",
+      "recordId": "emp-1792587982674",
+      "details": "Created new employee RAVI KHUNT (EMP-105)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T13:06:22.675Z"
+    },
+    {
+      "id": "log-1792587878655-182",
+      "userId": "sys",
+      "userName": "Admin",
+      "userRole": "HR_ADMIN",
+      "action": "EMPLOYEE_CREATED",
+      "module": "Employee Management",
+      "recordId": "emp-1792587878654",
+      "details": "Created new employee RAVI KHUNT (EMP-105)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T13:04:38.655Z"
+    },
+    {
+      "id": "log-1792587805387-975",
+      "userId": "sys",
+      "userName": "Admin",
+      "userRole": "HR_ADMIN",
+      "action": "EMPLOYEE_CREATED",
+      "module": "Employee Management",
+      "recordId": "emp-1792587805386",
+      "details": "Created new employee RAVI Miller (EMP-105)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T13:03:25.387Z"
+    },
+    {
+      "id": "log-1792587495958-879",
+      "userId": "sys",
+      "userName": "Admin",
+      "userRole": "HR_ADMIN",
+      "action": "EMPLOYEE_CREATED",
+      "module": "Employee Management",
+      "recordId": "emp-1792587495958",
+      "details": "Created new employee David Miller (EMP-105)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T12:58:15.958Z"
+    },
+    {
+      "id": "log-1792586058572-991",
+      "userId": "user-1",
+      "userName": "Keyur Sangani",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1",
+      "details": "User keyur.sangani1234@gmail.com logged in successfully",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T12:34:18.572Z"
+    },
+    {
+      "id": "log-1792586045665-6",
+      "userId": "user-1",
+      "userName": "Keyur Sangani",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1",
+      "details": "User keyur.sangani1234@gmail.com logged in successfully",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T12:34:05.665Z"
+    },
+    {
+      "id": "log-1792586043470-669",
+      "userId": "user-1",
+      "userName": "Keyur Sangani",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1",
+      "details": "User keyur.sangani1234@gmail.com logged in successfully",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T12:34:03.470Z"
+    },
+    {
+      "id": "log-1792586033460-144",
+      "userId": "user-1",
+      "userName": "Keyur Sangani",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1",
+      "details": "User keyur.sangani1234@gmail.com logged in successfully",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T12:33:53.460Z"
+    },
+    {
+      "id": "log-1792585676757-324",
+      "userId": "user-1",
+      "userName": "Keyur Sangani",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1",
+      "details": "User keyur.sangani1234@gmail.com logged in successfully",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T12:27:56.757Z"
+    },
+    {
+      "id": "log-1792584530063-559",
+      "userId": "user-1",
+      "userName": "Keyur Sangani",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1",
+      "details": "User keyur.sangani1234@gmail.com logged in successfully",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T12:08:50.063Z"
+    },
+    {
+      "id": "log-1792583134869-806",
+      "userId": "user-1",
+      "userName": "Keyur Sangani",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1",
+      "details": "User keyur.sangani1234@gmail.com logged in successfully",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-21T11:45:34.869Z"
+    },
     {
       "id": "log-1792578296819-773",
       "userId": "sys",

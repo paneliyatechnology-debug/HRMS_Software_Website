@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import type mysql from 'mysql2/promise';
 import {
   User,
   Employee,
@@ -49,6 +50,7 @@ import {
   initialDocuments,
   initialAuditLogs,
 } from './seed-data.js';
+import { getMysqlPool, initializeMysqlTables, syncDataToMysql } from './mysql-sync.js';
 
 interface DatabaseSchema {
   locations: Location[];
@@ -80,6 +82,8 @@ export class DatabaseService implements OnModuleInit {
   private readonly logger = new Logger(DatabaseService.name);
   private dataDir = path.resolve(process.cwd(), 'data');
   private dbFilePath = path.join(this.dataDir, 'database.json');
+  private mysqlPool: mysql.Pool | null = null;
+  private isMysqlConnected = false;
 
   public locations: Location[] = [];
   public departments: Department[] = [];
@@ -104,8 +108,9 @@ export class DatabaseService implements OnModuleInit {
   public documents: EmployeeDocument[] = [];
   public auditLogs: AuditLog[] = [];
 
-  onModuleInit() {
+  async onModuleInit() {
     this.initDatabase();
+    await this.initMysqlSync();
   }
 
   private initDatabase() {
@@ -151,6 +156,58 @@ export class DatabaseService implements OnModuleInit {
     }
   }
 
+  private async initMysqlSync() {
+    try {
+      this.mysqlPool = await getMysqlPool();
+      await initializeMysqlTables(this.mysqlPool);
+      this.isMysqlConnected = true;
+      this.logger.log('Connected to XAMPP MySQL database "hrms". All tables verified.');
+
+      // Push initial data to MySQL so phpMyAdmin shows all records
+      await this.syncToMysql({
+        locations: this.locations,
+        departments: this.departments,
+        designations: this.designations,
+        users: this.users,
+        employees: this.employees,
+        holidays: this.holidays,
+        leaveBalances: this.leaveBalances,
+        leaveRequests: this.leaveRequests,
+        attendanceRecords: this.attendanceRecords,
+        payrollRecords: this.payrollRecords,
+        jobs: this.jobs,
+        candidates: this.candidates,
+        assets: this.assets,
+        trainingPrograms: this.trainingPrograms,
+        employeeTrainings: this.employeeTrainings,
+        performanceCycles: this.performanceCycles,
+        performanceReviews: this.performanceReviews,
+        resignations: this.resignations,
+        announcements: this.announcements,
+        notifications: this.notifications,
+        documents: this.documents,
+        auditLogs: this.auditLogs,
+      });
+      this.logger.log('Synchronized records into XAMPP MySQL "hrms" database successfully.');
+    } catch (err) {
+      this.logger.warn(
+        'MySQL connection to "hrms" failed or not reachable. Operating with local file fallback.',
+        err,
+      );
+      this.isMysqlConnected = false;
+    }
+  }
+
+  private async syncToMysql(data: any) {
+    if (this.mysqlPool && this.isMysqlConnected) {
+      try {
+        await syncDataToMysql(this.mysqlPool, data);
+      } catch (err) {
+        this.logger.error('Failed to sync changes to MySQL "hrms":', err);
+      }
+    }
+  }
+
   private seedInitialData() {
     this.locations = [...initialLocations];
     this.departments = [...initialDepartments];
@@ -191,7 +248,6 @@ export class DatabaseService implements OnModuleInit {
 
   private executeAtomicPersist() {
     if (this.isPersisting) {
-      // Re-queue if already in progress
       this.persistTimeout = setTimeout(() => this.executeAtomicPersist(), 30);
       return;
     }
@@ -226,6 +282,9 @@ export class DatabaseService implements OnModuleInit {
       const tempPath = `${this.dbFilePath}.tmp-${Date.now()}`;
       fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf8');
       fs.renameSync(tempPath, this.dbFilePath);
+
+      // Also persist to MySQL
+      this.syncToMysql(data);
     } catch (err) {
       this.logger.error('Failed to persist database file', err);
     } finally {
@@ -233,7 +292,16 @@ export class DatabaseService implements OnModuleInit {
     }
   }
 
-  public logAudit(userId: string, userName: string, userRole: string, action: string, module: string, details: string, recordId?: string, ipAddress = '127.0.0.1') {
+  public logAudit(
+    userId: string,
+    userName: string,
+    userRole: string,
+    action: string,
+    module: string,
+    details: string,
+    recordId?: string,
+    ipAddress = '127.0.0.1',
+  ) {
     const log: AuditLog = {
       id: `log-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       userId,
