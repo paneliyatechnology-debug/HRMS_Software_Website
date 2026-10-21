@@ -284,7 +284,7 @@ export class DatabaseService implements OnModuleInit {
       fs.renameSync(tempPath, this.dbFilePath);
 
       // Also persist to MySQL
-      this.syncToMysql(data);
+      void this.syncToMysql(data);
     } catch (err) {
       this.logger.error('Failed to persist database file', err);
     } finally {

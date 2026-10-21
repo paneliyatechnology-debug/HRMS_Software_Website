@@ -14,9 +14,12 @@ describe('AppController', () => {
     appController = app.get<AppController>(AppController);
   });
 
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+  describe('health check', () => {
+    it('should return health status', () => {
+      const status = appController.getStatus();
+      expect(status).toBeDefined();
+      expect(status.status).toBe('online');
+      expect(status.name).toBe('Paneliya Enterprise HRMS API');
     });
   });
 });
