@@ -41,6 +41,11 @@ async function bootstrap() {
   // Serve static files from /uploads
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+  // Redirect root '/' to Swagger Documentation
+  app.getHttpAdapter().get('/', (_req: any, res: any) => {
+    res.redirect('/api/docs');
+  });
+
   // Global API Prefix
   app.setGlobalPrefix('api');
 
@@ -56,14 +61,7 @@ async function bootstrap() {
         '- **Type-Safe Validation**: Interactive DTO schemas with class-validator & Swagger decorators',
     )
     .setVersion('1.0.0')
-    .addBearerAuth({
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'JWT',
-      name: 'JWT',
-      description: 'Enter your JWT token (e.g. from /api/auth/login)',
-      in: 'header',
-    })
+    .addBearerAuth()
     .addTag('System Health', 'API status and system vitality')
     .addTag('Authentication', 'JWT authentication, RBAC session switching, user accounts')
     .addTag('Employees', 'Employee profiles, 11-tab records, directory search')

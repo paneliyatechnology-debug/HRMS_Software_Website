@@ -52,6 +52,7 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
     `CREATE TABLE IF NOT EXISTS users (
       id VARCHAR(64) PRIMARY KEY,
       email VARCHAR(255) NOT NULL UNIQUE,
+      password VARCHAR(255),
       firstName VARCHAR(100),
       lastName VARCHAR(100),
       role VARCHAR(50),
@@ -346,6 +347,12 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
   for (const sql of tableDefinitions) {
     await pool.query(sql);
   }
+
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN password VARCHAR(255) AFTER email;`);
+  } catch {
+    // Column already exists or table freshly created
+  }
 }
 
 export async function syncDataToMysql(pool: mysql.Pool, data: any) {
@@ -390,10 +397,10 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.users && data.users.length > 0) {
       for (const u of data.users) {
         await pool.query(
-          `INSERT INTO users (id, email, firstName, lastName, role, employeeId, avatarUrl, createdAt, updatedAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE email=VALUES(email), firstName=VALUES(firstName), lastName=VALUES(lastName), role=VALUES(role), employeeId=VALUES(employeeId), avatarUrl=VALUES(avatarUrl), updatedAt=VALUES(updatedAt)`,
-          [u.id, u.email, u.firstName, u.lastName, u.role, u.employeeId || null, u.avatarUrl || '', u.createdAt || new Date().toISOString(), u.updatedAt || new Date().toISOString()],
+          `INSERT INTO users (id, email, password, firstName, lastName, role, employeeId, avatarUrl, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE email=VALUES(email), password=VALUES(password), firstName=VALUES(firstName), lastName=VALUES(lastName), role=VALUES(role), employeeId=VALUES(employeeId), avatarUrl=VALUES(avatarUrl), updatedAt=VALUES(updatedAt)`,
+          [u.id, u.email, u.password || null, u.firstName, u.lastName, u.role, u.employeeId || null, u.avatarUrl || '', u.createdAt || new Date().toISOString(), u.updatedAt || new Date().toISOString()],
         );
       }
     }

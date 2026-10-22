@@ -127,6 +127,7 @@ export interface Employee {
   id: string;
   employeeCode: string;
   userId?: string;
+  password?: string;
   firstName: string;
   lastName: string;
   email: string;

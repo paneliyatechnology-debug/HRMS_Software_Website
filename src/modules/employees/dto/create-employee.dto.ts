@@ -8,7 +8,7 @@ import {
   IsNumber,
   IsArray,
 } from 'class-validator';
-import { EmployeeStatus } from '../../../common/types.js';
+import { EmployeeStatus, Role } from '../../../common/types.js';
 
 export class SalaryDto {
   @ApiPropertyOptional({ example: 5000 })
@@ -102,6 +102,23 @@ export class CreateEmployeeDto {
   @IsNotEmpty()
   email: string;
 
+  @ApiPropertyOptional({
+    example: 'Employee@123',
+    description: 'Portal login password for the employee account',
+  })
+  @IsString()
+  @IsOptional()
+  password?: string;
+
+  @ApiPropertyOptional({
+    enum: Role,
+    example: Role.EMPLOYEE,
+    description: 'Access role for employee portal login (e.g. EMPLOYEE, MANAGER, HR_EXECUTIVE)',
+  })
+  @IsEnum(Role)
+  @IsOptional()
+  role?: Role;
+
   @ApiPropertyOptional({ example: '+1 (555) 234-5678', description: 'Contact phone number' })
   @IsString()
   @IsOptional()
@@ -174,4 +191,31 @@ export class CreateEmployeeDto {
   @ApiPropertyOptional({ type: () => BankDetailsDto })
   @IsOptional()
   bankDetails?: BankDetailsDto;
+
+  @ApiPropertyOptional({ example: '100 Silicon Vista Blvd, San Francisco', description: 'Residential address' })
+  @IsString()
+  @IsOptional()
+  address?: string;
+
+  @ApiPropertyOptional({ example: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', description: 'Avatar URL' })
+  @IsString()
+  @IsOptional()
+  avatarUrl?: string;
+
+  @ApiPropertyOptional({ example: 'General Shift (9 AM - 6 PM)', description: 'Work shift' })
+  @IsString()
+  @IsOptional()
+  shift?: string;
+
+  @ApiPropertyOptional({ example: { taxId: 'TX-123456', panOrSsn: 'ABCDE1234F', taxRegime: 'New Regime' }, description: 'Tax information' })
+  @IsOptional()
+  taxInformation?: any;
+
+  @ApiPropertyOptional({ example: [{ degree: 'B.S. in Computer Science', institution: 'University', year: 2022 }], description: 'Education history' })
+  @IsOptional()
+  education?: any[];
+
+  @ApiPropertyOptional({ example: [{ company: 'Tech Inc', role: 'Developer', years: 3 }], description: 'Previous work experience' })
+  @IsOptional()
+  previousExperience?: any[];
 }

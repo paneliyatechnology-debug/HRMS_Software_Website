@@ -15,6 +15,11 @@
       "key": "token",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "bearerToken",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -22,6 +27,43 @@
       "name": "System Health",
       "description": "API status and system vitality",
       "item": [
+        {
+          "name": "API Root vitality",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}//api",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "",
+                "api"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Returns service vitality information at /api."
+          },
+          "response": []
+        },
         {
           "name": "System health and API status",
           "request": {
@@ -64,6 +106,75 @@
       "name": "Authentication",
       "description": "JWT authentication, RBAC session switching, user accounts",
       "item": [
+        {
+          "name": "Register new user account",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"new.employee@paneliya.com\",\n  \"password\": \"SecurePassword@123\",\n  \"firstName\": \"Ramesh\",\n  \"lastName\": \"Patel\",\n  \"role\": \"EMPLOYEE\",\n  \"phone\": \"+1 (555) 789-0123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Creates a new user credentials account with password and initializes their employee profile."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set(\"token\", jsonData.accessToken);",
+                  "    pm.collectionVariables.set(\"bearerToken\", jsonData.accessToken);",
+                  "    pm.environment.set(\"token\", jsonData.accessToken);",
+                  "    pm.environment.set(\"bearerToken\", jsonData.accessToken);",
+                  "    console.log(\"Auth token saved:\", jsonData.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
         {
           "name": "Login user and receive JWT session",
           "request": {
@@ -122,6 +233,9 @@
                   "var jsonData = pm.response.json();",
                   "if (jsonData.accessToken) {",
                   "    pm.collectionVariables.set(\"token\", jsonData.accessToken);",
+                  "    pm.collectionVariables.set(\"bearerToken\", jsonData.accessToken);",
+                  "    pm.environment.set(\"token\", jsonData.accessToken);",
+                  "    pm.environment.set(\"bearerToken\", jsonData.accessToken);",
                   "    console.log(\"Auth token saved:\", jsonData.accessToken);",
                   "}"
                 ],
@@ -160,10 +274,17 @@
                 "auth",
                 "me"
               ],
-              "query": [],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Token can also be passed as query parameter (?token=...)"
+                }
+              ],
               "variable": []
             },
-            "description": "Retrieves the current authenticated user session data using the Bearer token."
+            "description": "Retrieves current user profile. Pass token in Authorization header, or as query param ?token=..."
           },
           "response": []
         },
@@ -350,7 +471,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"employeeCode\": \"EMP-105\",\n  \"firstName\": \"David\",\n  \"lastName\": \"Miller\",\n  \"email\": \"david.miller@paneliya.com\",\n  \"phone\": \"+1 (555) 234-5678\",\n  \"gender\": \"Male\",\n  \"dateOfBirth\": \"1992-06-15\",\n  \"departmentId\": \"dept-1\",\n  \"designationId\": \"des-1\",\n  \"workLocationId\": \"loc-1\",\n  \"joiningDate\": \"2026-02-01\",\n  \"employmentType\": \"Full-time\",\n  \"status\": \"Active\",\n  \"skills\": [\n    \"TypeScript\",\n    \"NestJS\",\n    \"PostgreSQL\"\n  ],\n  \"salary\": {\n    \"basic\": 5000,\n    \"hra\": 2000,\n    \"allowances\": 1200,\n    \"bonus\": 500,\n    \"pf\": 600,\n    \"tax\": 750\n  }\n}",
+              "raw": "{\n  \"employeeCode\": \"EMP-105\",\n  \"firstName\": \"David\",\n  \"lastName\": \"Miller\",\n  \"email\": \"david.miller@paneliya.com\",\n  \"password\": \"Employee@123\",\n  \"role\": \"EMPLOYEE\",\n  \"phone\": \"+1 (555) 234-5678\",\n  \"gender\": \"Male\",\n  \"dateOfBirth\": \"1992-06-15\",\n  \"departmentId\": \"dept-1\",\n  \"designationId\": \"des-1\",\n  \"workLocationId\": \"loc-1\",\n  \"joiningDate\": \"2026-02-01\",\n  \"employmentType\": \"Full-time\",\n  \"status\": \"Active\",\n  \"skills\": [\n    \"TypeScript\",\n    \"NestJS\",\n    \"PostgreSQL\"\n  ],\n  \"salary\": {\n    \"basic\": 5000,\n    \"hra\": 2000,\n    \"allowances\": 1200,\n    \"bonus\": 500,\n    \"pf\": 600,\n    \"tax\": 750\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { Employee, EmployeeStatus } from '../../common/types.js';
+import { Employee, EmployeeStatus, Role, User } from '../../common/types.js';
 import { CreateEmployeeDto } from './dto/create-employee.dto.js';
 import { UpdateEmployeeDto } from './dto/update-employee.dto.js';
 import { QueryEmployeeDto } from './dto/query-employee.dto.js';
@@ -85,60 +85,19 @@ export class EmployeesService {
     const location =
       this.db.locations.find((l) => l.id === data.workLocationId) || this.db.locations[0];
 
-    const basic = data.salary?.basic || 5000;
-    const hra = data.salary?.hra || basic * 0.4;
-    const allowances = data.salary?.allowances || 1200;
-    const bonus = data.salary?.bonus || 500;
-    const pf = data.salary?.pf || basic * 0.12;
-    const tax = data.salary?.tax || basic * 0.15;
-    const professionalTax = 200;
-    const gross = basic + hra + allowances + bonus;
-    const net = gross - (pf + tax + professionalTax);
-
-    const newEmployee: Employee = {
-      id: newId,
-      employeeCode,
-      firstName: data.firstName || 'New',
-      lastName: data.lastName || 'Employee',
-      email: data.email || `employee.${Date.now()}@paneliya.com`,
-      phone: data.phone || '+1 (555) 000-0000',
-      avatarUrl:
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      gender: (data.gender as any) || 'Other',
-      dateOfBirth: data.dateOfBirth || '1995-01-01',
-      address: 'Corporate HQ',
-      emergencyContact: (data.emergencyContact as any) || {
-        name: 'Emergency Contact',
-        relationship: 'Kin',
-        phone: '+1 (555) 999-9999',
-      },
-      joiningDate: data.joiningDate || new Date().toISOString().split('T')[0],
-      employmentType: (data.employmentType as any) || 'Full-time',
-      status: data.status || EmployeeStatus.PROBATION,
-      departmentId: department?.id || 'dept-1',
-      departmentName: department?.name || 'Engineering',
-      designationId: designation?.id || 'des-4',
-      designationTitle: designation?.title || 'Software Engineer',
-      reportingManagerId: data.reportingManagerId,
-      reportingManagerName: data.reportingManagerName,
-      workLocationId: location.id,
-      workLocationName: location.name,
-      shift: 'General Shift (9 AM - 6 PM)',
-      bankDetails: (data.bankDetails as any) || {
-        bankName: 'Silicon Valley Bank',
-        accountNumber: '99201948191',
-        ifscOrRouting: 'SVB00129',
-        accountHolderName: `${data.firstName || 'New'} ${data.lastName || 'Employee'}`,
-      },
-      taxInformation: {
-        taxId: `TX-${Math.floor(100000 + Math.random() * 900000)}`,
-        panOrSsn: '***-**-0000',
-        taxRegime: 'New Regime',
-      },
-      education: [{ degree: 'B.S. in Computer Science', institution: 'University', year: 2020 }],
-      previousExperience: [],
-      skills: data.skills || ['JavaScript', 'Communication'],
-      salary: {
+    // Dynamic salary calculation - only if salary data is provided
+    let salary = data.salary;
+    if (data.salary && Object.keys(data.salary).length > 0) {
+      const basic = data.salary.basic || 0;
+      const hra = data.salary.hra || 0;
+      const allowances = data.salary.allowances || 0;
+      const bonus = data.salary.bonus || 0;
+      const pf = data.salary.pf || 0;
+      const tax = data.salary.tax || 0;
+      const professionalTax = (data.salary as any).professionalTax || 0;
+      const gross = (data.salary as any).gross !== undefined ? (data.salary as any).gross : (basic + hra + allowances + bonus);
+      const net = (data.salary as any).net !== undefined ? (data.salary as any).net : (gross - (pf + tax + professionalTax));
+      salary = {
         basic,
         hra,
         allowances,
@@ -148,12 +107,80 @@ export class EmployeesService {
         professionalTax,
         gross,
         net,
-      },
+      } as any;
+    }
+
+    const userId = `user-${Date.now()}`;
+    const userPassword = data.password || '';
+    const userRole = data.role || Role.EMPLOYEE;
+
+    const newEmployee: Employee = {
+      id: newId,
+      employeeCode,
+      userId,
+      password: userPassword,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      phone: data.phone || '',
+      avatarUrl: data.avatarUrl || '',
+      gender: (data.gender as any) || 'Other',
+      dateOfBirth: data.dateOfBirth || '',
+      address: data.address || '',
+      emergencyContact: (data.emergencyContact as any) || {},
+      joiningDate: data.joiningDate || new Date().toISOString().split('T')[0],
+      employmentType: (data.employmentType as any) || 'Full-time',
+      status: data.status || EmployeeStatus.ACTIVE,
+      departmentId: department?.id || data.departmentId || '',
+      departmentName: department?.name || '',
+      designationId: designation?.id || data.designationId || '',
+      designationTitle: designation?.title || '',
+      reportingManagerId: data.reportingManagerId || '',
+      reportingManagerName: data.reportingManagerName || '',
+      workLocationId: location?.id || data.workLocationId || '',
+      workLocationName: location?.name || '',
+      shift: data.shift || '',
+      bankDetails: (data.bankDetails as any) || {},
+      taxInformation: (data.taxInformation as any) || {},
+      education: data.education || [],
+      previousExperience: data.previousExperience || [],
+      skills: data.skills || [],
+      salary: (salary as any) || {},
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     this.db.employees.unshift(newEmployee);
+
+    // Create or link login User account
+    const existingUser = this.db.users.find(
+      (u) => u.email.toLowerCase() === newEmployee.email.toLowerCase(),
+    );
+
+    if (!existingUser) {
+      const newUser: User = {
+        id: userId,
+        email: newEmployee.email,
+        password: userPassword,
+        firstName: newEmployee.firstName,
+        lastName: newEmployee.lastName,
+        role: userRole,
+        employeeId: newEmployee.id,
+        avatarUrl: newEmployee.avatarUrl,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      this.db.users.push(newUser);
+    } else {
+      existingUser.employeeId = newEmployee.id;
+      if (data.password) {
+        existingUser.password = data.password;
+      }
+      if (data.role) {
+        existingUser.role = data.role;
+      }
+      newEmployee.userId = existingUser.id;
+    }
 
     // Create initial leave balance
     this.db.leaveBalances.push({
@@ -185,7 +212,9 @@ export class EmployeesService {
   }
 
   update(id: string, data: UpdateEmployeeDto, actorName = 'Admin') {
-    const idx = this.db.employees.findIndex((e) => e.id === id);
+    const idx = this.db.employees.findIndex(
+      (e) => e.id === id || e.employeeCode.toLowerCase() === id.toLowerCase(),
+    );
     if (idx === -1) {
       throw new NotFoundException(`Employee ${id} not found`);
     }
@@ -203,6 +232,19 @@ export class EmployeesService {
 
     this.db.employees[idx] = updated;
 
+    // Keep associated user account synchronized
+    const user = this.db.users.find(
+      (u) => u.employeeId === current.id || u.email.toLowerCase() === current.email.toLowerCase(),
+    );
+    if (user) {
+      if (data.email) user.email = data.email;
+      if (data.firstName) user.firstName = data.firstName;
+      if (data.lastName) user.lastName = data.lastName;
+      if (data.password) user.password = data.password;
+      if (data.role) user.role = data.role;
+      user.updatedAt = new Date().toISOString();
+    }
+
     this.db.logAudit(
       'sys',
       actorName,
@@ -218,7 +260,9 @@ export class EmployeesService {
   }
 
   remove(id: string, actorName = 'Admin') {
-    const employee = this.db.employees.find((e) => e.id === id);
+    const employee = this.db.employees.find(
+      (e) => e.id === id || e.employeeCode.toLowerCase() === id.toLowerCase(),
+    );
     if (!employee) {
       throw new NotFoundException(`Employee ${id} not found`);
     }

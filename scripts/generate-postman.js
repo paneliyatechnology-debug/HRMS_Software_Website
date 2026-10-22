@@ -25,6 +25,11 @@ async function generate() {
         value: '',
         type: 'string',
       },
+      {
+        key: 'bearerToken',
+        value: '',
+        type: 'string',
+      },
     ],
     item: [],
   };
@@ -41,6 +46,14 @@ async function generate() {
 
   // Pre-configured JSON request bodies for clean testing
   const sampleBodies = {
+    'post_/api/auth/register': {
+      email: 'new.employee@paneliya.com',
+      password: 'SecurePassword@123',
+      firstName: 'Ramesh',
+      lastName: 'Patel',
+      role: 'EMPLOYEE',
+      phone: '+1 (555) 789-0123',
+    },
     'post_/api/auth/login': {
       email: 'keyur.sangani1234@gmail.com',
       password: 'AnyPasswordOrEmpty',
@@ -53,6 +66,8 @@ async function generate() {
       firstName: 'David',
       lastName: 'Miller',
       email: 'david.miller@paneliya.com',
+      password: 'Employee@123',
+      role: 'EMPLOYEE',
       phone: '+1 (555) 234-5678',
       gender: 'Male',
       dateOfBirth: '1992-06-15',
@@ -374,8 +389,8 @@ async function generate() {
         response: [],
       };
 
-      // Add auto-save script for login endpoint!
-      if (pathStr === '/api/auth/login' && method === 'post') {
+      // Add auto-save script for login and register endpoints!
+      if ((pathStr === '/api/auth/login' || pathStr === '/api/auth/register') && method === 'post') {
         postmanRequest.event = [
           {
             listen: 'test',
@@ -384,6 +399,9 @@ async function generate() {
                 'var jsonData = pm.response.json();',
                 'if (jsonData.accessToken) {',
                 '    pm.collectionVariables.set("token", jsonData.accessToken);',
+                '    pm.collectionVariables.set("bearerToken", jsonData.accessToken);',
+                '    pm.environment.set("token", jsonData.accessToken);',
+                '    pm.environment.set("bearerToken", jsonData.accessToken);',
                 '    console.log("Auth token saved:", jsonData.accessToken);',
                 '}',
               ],

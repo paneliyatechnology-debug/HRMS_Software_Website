@@ -7,6 +7,16 @@ import { AppService } from './app.service.js';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
+  @Get()
+  @ApiOperation({
+    summary: 'API Root vitality',
+    description: 'Returns service vitality information at /api.',
+  })
+  @ApiResponse({ status: 200, description: 'API health information' })
+  getRoot() {
+    return this.appService.getStatus();
+  }
+
   @Get('health')
   @ApiOperation({
     summary: 'System health and API status',
