@@ -123,7 +123,7 @@ export class LeavesService {
       throw new BadRequestException('Leave request is already approved');
     }
 
-    const approverRole = dto.role || 'HR_ADMIN';
+    const approverRole = dto.role || 'ADMIN';
     const approverName = dto.approverName || 'Approver';
     const comments = dto.comments || 'Leave application approved';
 

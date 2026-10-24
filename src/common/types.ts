@@ -1,11 +1,7 @@
 export enum Role {
   SUPER_ADMIN = 'SUPER_ADMIN',
-  HR_ADMIN = 'HR_ADMIN',
-  HR_EXECUTIVE = 'HR_EXECUTIVE',
-  MANAGER = 'MANAGER',
+  ADMIN = 'ADMIN',
   EMPLOYEE = 'EMPLOYEE',
-  RECRUITER = 'RECRUITER',
-  FINANCE_ADMIN = 'FINANCE_ADMIN',
 }
 
 export enum EmployeeStatus {
@@ -87,6 +83,8 @@ export interface User {
   firstName: string;
   lastName: string;
   role: Role;
+  isSuperAdmin?: boolean;
+  status?: string;
   employeeId?: string;
   avatarUrl?: string;
   createdAt: string;
@@ -128,6 +126,7 @@ export interface Employee {
   employeeCode: string;
   userId?: string;
   password?: string;
+  isSuperAdmin?: boolean;
   firstName: string;
   lastName: string;
   email: string;

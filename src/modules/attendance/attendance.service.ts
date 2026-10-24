@@ -206,7 +206,7 @@ export class AttendanceService {
     this.db.logAudit(
       'sys',
       actorName,
-      'HR_ADMIN',
+      'ADMIN',
       'ATTENDANCE_REGULARIZED',
       'Attendance',
       `Manual attendance entry for ${employee.firstName} ${employee.lastName} on ${data.date}`,

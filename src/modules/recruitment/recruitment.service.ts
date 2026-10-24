@@ -206,7 +206,7 @@ export class RecruitmentService {
     this.db.logAudit(
       'sys',
       actorName,
-      'HR_ADMIN',
+      'ADMIN',
       'CANDIDATE_CONVERTED_TO_EMPLOYEE',
       'Recruitment',
       `Converted candidate ${candidate.fullName} into employee ${newEmployee.employeeCode}`,

@@ -55,7 +55,9 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
       password VARCHAR(255),
       firstName VARCHAR(100),
       lastName VARCHAR(100),
-      role VARCHAR(50),
+      role ENUM('SUPER_ADMIN', 'ADMIN', 'EMPLOYEE') DEFAULT 'EMPLOYEE',
+      isSuperAdmin BOOLEAN DEFAULT FALSE,
+      status VARCHAR(50) DEFAULT 'Active',
       employeeId VARCHAR(64),
       avatarUrl TEXT,
       createdAt VARCHAR(50),
@@ -342,6 +344,44 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
       ipAddress VARCHAR(50),
       createdAt VARCHAR(50)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS super_admins (
+      id VARCHAR(64) PRIMARY KEY,
+      userId VARCHAR(64) NOT NULL UNIQUE,
+      email VARCHAR(255) NOT NULL UNIQUE,
+      fullName VARCHAR(255) NOT NULL,
+      permissions JSON,
+      isRoot BOOLEAN DEFAULT TRUE,
+      status VARCHAR(50) DEFAULT 'Active',
+      lastLoginAt VARCHAR(50),
+      createdAt VARCHAR(50),
+      updatedAt VARCHAR(50)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS system_settings (
+      id VARCHAR(64) PRIMARY KEY,
+      companyName VARCHAR(255) NOT NULL,
+      supportEmail VARCHAR(255),
+      timeZone VARCHAR(100) DEFAULT 'Asia/Kolkata',
+      currency VARCHAR(20) DEFAULT 'INR',
+      maintenanceMode BOOLEAN DEFAULT FALSE,
+      allowRegistration BOOLEAN DEFAULT TRUE,
+      twoFactorAuthEnforced BOOLEAN DEFAULT FALSE,
+      sessionTimeoutMinutes INT DEFAULT 120,
+      configData JSON,
+      updatedBy VARCHAR(64),
+      updatedAt VARCHAR(50)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS system_backups (
+      id VARCHAR(64) PRIMARY KEY,
+      backupFileName VARCHAR(255) NOT NULL,
+      backupFilePath TEXT NOT NULL,
+      totalEntities INT DEFAULT 0,
+      fileSizeBytes BIGINT DEFAULT 0,
+      initiatedBy VARCHAR(255),
+      createdAt VARCHAR(50)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
   ];
 
   for (const sql of tableDefinitions) {
@@ -352,6 +392,58 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
     await pool.query(`ALTER TABLE users ADD COLUMN password VARCHAR(255) AFTER email;`);
   } catch {
     // Column already exists or table freshly created
+  }
+
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN isSuperAdmin BOOLEAN DEFAULT FALSE AFTER role;`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN status VARCHAR(50) DEFAULT 'Active' AFTER isSuperAdmin;`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
+    await pool.query(`ALTER TABLE employees ADD COLUMN isSuperAdmin BOOLEAN DEFAULT FALSE AFTER password;`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
+    await pool.query(`ALTER TABLE users MODIFY COLUMN role ENUM('SUPER_ADMIN', 'ADMIN', 'EMPLOYEE') DEFAULT 'EMPLOYEE';`);
+  } catch {
+    // Column already enum
+  }
+
+  try {
+    const [rows]: any = await pool.query(`SELECT COUNT(*) as count FROM system_settings`);
+    if (rows && rows[0]?.count === 0) {
+      await pool.query(
+        `INSERT INTO system_settings (id, companyName, supportEmail, timeZone, currency, maintenanceMode, allowRegistration, twoFactorAuthEnforced, sessionTimeoutMinutes, configData, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          'settings-1',
+          'Paneliya Enterprise HRMS',
+          'admin@paneliya.com',
+          'Asia/Kolkata',
+          'INR',
+          0,
+          1,
+          0,
+          120,
+          JSON.stringify({
+            rbacRoles: ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE'],
+            activeModules: ['Super Admin', 'Employees', 'Organization', 'Attendance', 'Leaves', 'Payroll', 'Recruitment'],
+          }),
+          new Date().toISOString(),
+        ],
+      );
+    }
+  } catch {
+    // Ignore seeding error if table already populated
   }
 }
 
@@ -394,19 +486,76 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     }
 
     // 4. Users
-    if (data.users && data.users.length > 0) {
+    if (data.users !== undefined) {
+      const activeUserIds = (data.users || []).map((u: any) => u.id);
+      if (activeUserIds.length > 0) {
+        await pool.query(`DELETE FROM users WHERE id NOT IN (?)`, [activeUserIds]);
+      } else {
+        await pool.query(`DELETE FROM users`);
+      }
+
       for (const u of data.users) {
         await pool.query(
-          `INSERT INTO users (id, email, password, firstName, lastName, role, employeeId, avatarUrl, createdAt, updatedAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE email=VALUES(email), password=VALUES(password), firstName=VALUES(firstName), lastName=VALUES(lastName), role=VALUES(role), employeeId=VALUES(employeeId), avatarUrl=VALUES(avatarUrl), updatedAt=VALUES(updatedAt)`,
-          [u.id, u.email, u.password || null, u.firstName, u.lastName, u.role, u.employeeId || null, u.avatarUrl || '', u.createdAt || new Date().toISOString(), u.updatedAt || new Date().toISOString()],
+          `INSERT INTO users (id, email, password, firstName, lastName, role, isSuperAdmin, status, employeeId, avatarUrl, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE email=VALUES(email), password=VALUES(password), firstName=VALUES(firstName), lastName=VALUES(lastName), role=VALUES(role), isSuperAdmin=VALUES(isSuperAdmin), status=VALUES(status), employeeId=VALUES(employeeId), avatarUrl=VALUES(avatarUrl), updatedAt=VALUES(updatedAt)`,
+          [
+            u.id,
+            u.email,
+            u.password || null,
+            u.firstName,
+            u.lastName,
+            u.role,
+            u.isSuperAdmin ? 1 : 0,
+            u.status || 'Active',
+            u.employeeId || null,
+            u.avatarUrl || '',
+            u.createdAt || new Date().toISOString(),
+            u.updatedAt || new Date().toISOString(),
+          ],
+        );
+      }
+
+      // 4.1 Sync Super Admins Table
+      const superAdmins = (data.users || []).filter(
+        (u: any) => u.isSuperAdmin === true || u.role === 'SUPER_ADMIN',
+      );
+      const activeSaIds = superAdmins.map((u: any) => `sa-${u.id}`);
+      if (activeSaIds.length > 0) {
+        await pool.query(`DELETE FROM super_admins WHERE id NOT IN (?)`, [activeSaIds]);
+      } else {
+        await pool.query(`DELETE FROM super_admins`);
+      }
+
+      for (const sa of superAdmins) {
+        await pool.query(
+          `INSERT INTO super_admins (id, userId, email, fullName, permissions, isRoot, status, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE email=VALUES(email), fullName=VALUES(fullName), status=VALUES(status), updatedAt=VALUES(updatedAt)`,
+          [
+            `sa-${sa.id}`,
+            sa.id,
+            sa.email,
+            `${sa.firstName || ''} ${sa.lastName || ''}`.trim() || sa.email,
+            JSON.stringify(['*']),
+            1,
+            sa.status || 'Active',
+            sa.createdAt || new Date().toISOString(),
+            sa.updatedAt || new Date().toISOString(),
+          ],
         );
       }
     }
 
     // 5. Employees
-    if (data.employees && data.employees.length > 0) {
+    if (data.employees !== undefined) {
+      const activeEmpIds = (data.employees || []).map((e: any) => e.id);
+      if (activeEmpIds.length > 0) {
+        await pool.query(`DELETE FROM employees WHERE id NOT IN (?)`, [activeEmpIds]);
+      } else {
+        await pool.query(`DELETE FROM employees`);
+      }
+
       for (const emp of data.employees) {
         await pool.query(
           `INSERT INTO employees (

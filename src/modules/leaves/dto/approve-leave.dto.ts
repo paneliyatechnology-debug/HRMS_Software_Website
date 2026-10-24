@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 
 export class ApproveLeaveDto {
-  @ApiPropertyOptional({ example: 'HR_ADMIN', description: 'Approver role (HR_ADMIN or MANAGER)' })
+  @ApiPropertyOptional({ example: 'ADMIN', description: 'Approver role (ADMIN or SUPER_ADMIN)' })
   @IsString()
   @IsOptional()
   role?: string;

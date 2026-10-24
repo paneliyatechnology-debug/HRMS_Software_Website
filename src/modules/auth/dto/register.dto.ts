@@ -8,6 +8,7 @@ import {
   IsEnum,
 } from 'class-validator';
 import { Role } from '../../../common/types.js';
+import { Transform } from 'class-transformer';
 
 export class RegisterDto {
   @ApiProperty({
@@ -41,8 +42,9 @@ export class RegisterDto {
   @ApiPropertyOptional({
     enum: Role,
     example: Role.EMPLOYEE,
-    description: 'Role for this account (defaults to EMPLOYEE)',
+    description: 'Role for this account: SUPER_ADMIN, ADMIN, or EMPLOYEE (defaults to EMPLOYEE)',
   })
+  @Transform(({ value }) => (typeof value === 'string' ? value.toUpperCase().trim() : value))
   @IsEnum(Role)
   @IsOptional()
   role?: Role;

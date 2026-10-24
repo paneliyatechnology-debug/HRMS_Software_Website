@@ -12,12 +12,8 @@ datasource db {
 
 enum Role {
   SUPER_ADMIN
-  HR_ADMIN
-  HR_EXECUTIVE
-  MANAGER
+  ADMIN
   EMPLOYEE
-  RECRUITER
-  FINANCE_ADMIN
 }
 
 enum EmployeeStatus {
@@ -65,6 +61,7 @@ model User {
   firstName    String
   lastName     String
   role         Role      @default(EMPLOYEE)
+  isSuperAdmin Boolean   @default(false)
   status       String    @default("Active")
   employeeId   String?   @unique
   avatarUrl    String?
@@ -317,3 +314,48 @@ model AuditLog {
   @@index([module, action])
   @@map("audit_logs")
 }
+
+model SuperAdmin {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  email       String   @unique
+  fullName    String
+  permissions Json?
+  isRoot      Boolean  @default(true)
+  status      String   @default("Active")
+  lastLoginAt String?
+  createdAt   String?
+  updatedAt   String?
+
+  @@map("super_admins")
+}
+
+model SystemSetting {
+  id                     String   @id @default(uuid())
+  companyName            String
+  supportEmail           String?
+  timeZone               String?  @default("Asia/Kolkata")
+  currency               String?  @default("INR")
+  maintenanceMode        Boolean  @default(false)
+  allowRegistration      Boolean  @default(true)
+  twoFactorAuthEnforced  Boolean  @default(false)
+  sessionTimeoutMinutes  Int      @default(120)
+  configData             Json?
+  updatedBy              String?
+  updatedAt              String?
+
+  @@map("system_settings")
+}
+
+model SystemBackup {
+  id             String  @id @default(uuid())
+  backupFileName String
+  backupFilePath String  @db.Text
+  totalEntities  Int     @default(0)
+  fileSizeBytes  BigInt  @default(0)
+  initiatedBy    String?
+  createdAt      String?
+
+  @@map("system_backups")
+}
+

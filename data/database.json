@@ -12,339 +12,279 @@
   "departments": [
     {
       "id": "dept-1",
-      "name": "Administration & Management",
-      "code": "ADM",
-      "headEmployeeId": "emp-1",
-      "headName": "Keyur Sangani",
-      "employeeCount": 16,
-      "description": "Core Executive & Operations Management",
-      "createdAt": "2026-10-19T00:00:00Z"
+      "name": "Engineering",
+      "code": "ENG",
+      "headEmployeeId": null,
+      "headName": null,
+      "employeeCount": 3,
+      "description": "Core software development, infrastructure, devops and platform engineering",
+      "createdAt": "2024-01-15T09:00:00Z"
     },
     {
-      "id": "dept-1792583144327",
-      "name": "Artificial Intelligence",
-      "code": "AI",
-      "headEmployeeId": "emp-1",
-      "headName": "John Deo",
+      "id": "dept-2",
+      "name": "Product Design",
+      "code": "PRD",
+      "headEmployeeId": null,
+      "headName": null,
       "employeeCount": 0,
-      "description": "Research and deployment of machine learning systems.",
-      "createdAt": "2026-10-21T11:45:44.327Z"
+      "description": "Product strategy, UI/UX research, visual identity and customer experience",
+      "createdAt": "2024-01-15T09:00:00Z"
     },
     {
-      "id": "dept-1792675463834",
-      "name": "Artificial Intelligence",
-      "code": "AI",
-      "headEmployeeId": "emp-1",
-      "headName": "John Deo",
+      "id": "dept-3",
+      "name": "Human Resources",
+      "code": "HRM",
+      "headEmployeeId": null,
+      "headName": null,
       "employeeCount": 0,
-      "description": "Research and deployment of machine learning systems.",
-      "createdAt": "2026-10-22T13:24:23.834Z"
+      "description": "Talent acquisition, employee engagement, compensation and people operations",
+      "createdAt": "2024-01-15T09:00:00Z"
     },
     {
-      "id": "dept-1792675481165",
-      "name": "Artificial Intelligence",
-      "code": "AI",
-      "headEmployeeId": "emp-1",
-      "headName": "John Deo",
+      "id": "dept-4",
+      "name": "Marketing & Growth",
+      "code": "MKT",
+      "headEmployeeId": null,
+      "headName": null,
       "employeeCount": 0,
-      "description": "Research and deployment of machine learning systems.",
-      "createdAt": "2026-10-22T13:24:41.165Z"
+      "description": "Brand awareness, digital growth marketing, events and content strategy",
+      "createdAt": "2024-01-15T09:00:00Z"
     },
     {
-      "id": "dept-1792675544488",
-      "name": "New employee",
-      "code": "AI",
-      "headEmployeeId": "emp-1",
-      "headName": "John Deo",
+      "id": "dept-5",
+      "name": "Sales & Business Dev",
+      "code": "SLS",
+      "headEmployeeId": null,
+      "headName": null,
       "employeeCount": 0,
-      "description": "Research and deployment of machine learning systems.",
-      "createdAt": "2026-10-22T13:25:44.488Z"
+      "description": "Enterprise client acquisition, account management and revenue operations",
+      "createdAt": "2024-01-15T09:00:00Z"
     },
     {
-      "id": "dept-1792675565635",
-      "name": "New employee",
-      "code": "AI",
-      "headEmployeeId": "emp-1",
-      "headName": "John Deo",
+      "id": "dept-6",
+      "name": "Finance & Operations",
+      "code": "FIN",
+      "headEmployeeId": null,
+      "headName": null,
       "employeeCount": 0,
-      "description": "Research and deployment of machine learning systems.",
-      "createdAt": "2026-10-22T13:26:05.635Z"
-    },
-    {
-      "id": "dept-1792675567826",
-      "name": "New employee",
-      "code": "AI",
-      "headEmployeeId": "emp-1",
-      "headName": "John Deo",
-      "employeeCount": 0,
-      "description": "Research and deployment of machine learning systems.",
-      "createdAt": "2026-10-22T13:26:07.826Z"
-    },
-    {
-      "id": "dept-1792675568716",
-      "name": "New employee",
-      "code": "AI",
-      "headEmployeeId": "emp-1",
-      "headName": "John Deo",
-      "employeeCount": 0,
-      "description": "Research and deployment of machine learning systems.",
-      "createdAt": "2026-10-22T13:26:08.716Z"
+      "description": "Financial reporting, accounting, payroll compliance and facilities",
+      "createdAt": "2024-01-15T09:00:00Z"
     }
   ],
   "designations": [
     {
       "id": "des-1",
-      "title": "App Administrator",
+      "title": "VP of Engineering",
       "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "minSalary": 0,
-      "maxSalary": 0,
-      "createdAt": "2026-10-19T00:00:00Z"
-    },
-    {
-      "id": "des-1792675794478",
-      "title": "Senior Staff Engineer",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "minSalary": 85000,
-      "maxSalary": 140000,
-      "createdAt": "2026-10-22T13:29:54.478Z"
-    },
-    {
-      "id": "des-1792675815444",
-      "title": "Junior Staff Engineer",
-      "departmentId": "dept-2",
       "departmentName": "Engineering",
-      "minSalary": 85000,
-      "maxSalary": 140000,
-      "createdAt": "2026-10-22T13:30:15.444Z"
+      "minSalary": 160000,
+      "maxSalary": 220000,
+      "createdAt": "2024-01-15T00:00:00Z"
     },
     {
-      "id": "des-1792675831627",
-      "title": "Junior Staff Engineer",
+      "id": "des-2",
+      "title": "Principal Software Engineer",
       "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "minSalary": 85000,
-      "maxSalary": 140000,
-      "createdAt": "2026-10-22T13:30:31.627Z"
+      "departmentName": "Engineering",
+      "minSalary": 130000,
+      "maxSalary": 180000,
+      "createdAt": "2024-01-15T00:00:00Z"
     },
     {
-      "id": "des-1792675833243",
-      "title": "Junior Staff Engineer",
+      "id": "des-3",
+      "title": "Senior Full Stack Engineer",
       "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "minSalary": 85000,
+      "departmentName": "Engineering",
+      "minSalary": 95000,
       "maxSalary": 140000,
-      "createdAt": "2026-10-22T13:30:33.243Z"
+      "createdAt": "2024-01-15T00:00:00Z"
+    },
+    {
+      "id": "des-4",
+      "title": "Frontend Developer",
+      "departmentId": "dept-1",
+      "departmentName": "Engineering",
+      "minSalary": 70000,
+      "maxSalary": 105000,
+      "createdAt": "2024-01-15T00:00:00Z"
+    },
+    {
+      "id": "des-5",
+      "title": "Lead Product Designer",
+      "departmentId": "dept-2",
+      "departmentName": "Product Design",
+      "minSalary": 110000,
+      "maxSalary": 155000,
+      "createdAt": "2024-01-15T00:00:00Z"
+    },
+    {
+      "id": "des-6",
+      "title": "UI/UX Designer",
+      "departmentId": "dept-2",
+      "departmentName": "Product Design",
+      "minSalary": 65000,
+      "maxSalary": 95000,
+      "createdAt": "2024-01-15T00:00:00Z"
+    },
+    {
+      "id": "des-7",
+      "title": "Director of People Operations",
+      "departmentId": "dept-3",
+      "departmentName": "Human Resources",
+      "minSalary": 120000,
+      "maxSalary": 165000,
+      "createdAt": "2024-01-15T00:00:00Z"
+    },
+    {
+      "id": "des-8",
+      "title": "HR Generalist",
+      "departmentId": "dept-3",
+      "departmentName": "Human Resources",
+      "minSalary": 55000,
+      "maxSalary": 80000,
+      "createdAt": "2024-01-15T00:00:00Z"
+    },
+    {
+      "id": "des-9",
+      "title": "Talent Acquisition Specialist",
+      "departmentId": "dept-3",
+      "departmentName": "Human Resources",
+      "minSalary": 60000,
+      "maxSalary": 85000,
+      "createdAt": "2024-01-15T00:00:00Z"
+    },
+    {
+      "id": "des-10",
+      "title": "Marketing Lead",
+      "departmentId": "dept-4",
+      "departmentName": "Marketing & Growth",
+      "minSalary": 105000,
+      "maxSalary": 140000,
+      "createdAt": "2024-01-15T00:00:00Z"
+    },
+    {
+      "id": "des-11",
+      "title": "Enterprise Account Executive",
+      "departmentId": "dept-5",
+      "departmentName": "Sales & Business Dev",
+      "minSalary": 90000,
+      "maxSalary": 135000,
+      "createdAt": "2024-01-15T00:00:00Z"
+    },
+    {
+      "id": "des-12",
+      "title": "Finance Controller",
+      "departmentId": "dept-6",
+      "departmentName": "Finance & Operations",
+      "minSalary": 115000,
+      "maxSalary": 155000,
+      "createdAt": "2024-01-15T00:00:00Z"
     }
   ],
   "users": [
     {
-      "id": "user-1",
-      "email": "keyur.sangani1234@gmail.com",
-      "firstName": "Keyur",
-      "lastName": "Sangani",
+      "id": "user-1792849567968",
+      "email": "superadmin@paneliya.com",
+      "password": "Admin@123",
+      "firstName": "Super",
+      "lastName": "Admin",
       "role": "SUPER_ADMIN",
-      "employeeId": "emp-1",
+      "isSuperAdmin": true,
+      "status": "Active",
+      "employeeId": "emp-1792849567968",
       "avatarUrl": "",
-      "createdAt": "2026-10-19T00:00:00Z",
-      "updatedAt": "2026-10-22T11:47:47.819Z",
-      "password": "Admin@123"
-    },
-    {
-      "id": "user-1792667024318",
-      "email": "jaydeep.khunt@paneliya.com",
-      "password": "MyPassword@789",
-      "firstName": "Jaydeep",
-      "lastName": "Khunt",
-      "role": "EMPLOYEE",
-      "employeeId": "emp-1792667024318",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "createdAt": "2026-10-22T11:03:44.318Z",
-      "updatedAt": "2026-10-22T11:03:44.318Z"
-    },
-    {
-      "id": "user-1792669199137",
-      "email": "raju@gmail.com",
-      "password": "raju@123",
-      "firstName": "Kalu",
-      "lastName": "Thummar",
-      "role": "EMPLOYEE",
-      "employeeId": "emp-1792669199137",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "createdAt": "2026-10-22T11:39:59.137Z",
-      "updatedAt": "2026-10-22T13:14:40.470Z"
-    },
-    {
-      "id": "user-1792670557552",
-      "email": "test.register@paneliya.com",
-      "password": "MyPassword@456",
-      "firstName": "Rahul",
-      "lastName": "Sharma",
-      "role": "EMPLOYEE",
-      "employeeId": "emp-1792670557552",
-      "avatarUrl": "",
-      "createdAt": "2026-10-22T12:02:37.552Z",
-      "updatedAt": "2026-10-22T12:02:37.552Z"
-    },
-    {
-      "id": "user-1792671839768",
-      "email": "new.user@paneliya.com",
-      "password": "Password@123",
-      "firstName": "John",
-      "lastName": "Doe",
-      "role": "EMPLOYEE",
-      "employeeId": "emp-1792671839768",
-      "avatarUrl": "",
-      "createdAt": "2026-10-22T12:23:59.768Z",
-      "updatedAt": "2026-10-22T12:23:59.768Z"
-    },
-    {
-      "id": "user-1792672030281",
-      "email": "ravi@gmail.com",
-      "password": "ravi@123",
-      "firstName": "ravi",
-      "lastName": "khunt",
-      "role": "EMPLOYEE",
-      "employeeId": "emp-1792672030281",
-      "avatarUrl": "",
-      "createdAt": "2026-10-22T12:27:10.281Z",
-      "updatedAt": "2026-10-22T12:27:10.281Z"
-    },
-    {
-      "id": "user-1792675051224",
-      "email": "test.signup99@paneliya.com",
-      "password": "Password@123",
-      "firstName": "Test",
-      "lastName": "User",
-      "role": "EMPLOYEE",
-      "employeeId": "emp-1792675051224",
-      "avatarUrl": "",
-      "createdAt": "2026-10-22T13:17:31.224Z",
-      "updatedAt": "2026-10-22T13:17:31.224Z"
+      "createdAt": "2026-10-24T13:46:07.968Z",
+      "updatedAt": "2026-10-24T13:46:07.968Z"
     }
   ],
   "employees": [
     {
-      "id": "emp-1792675051224",
-      "employeeCode": "EMP-18",
-      "userId": "user-1792675051224",
-      "password": "Password@123",
-      "firstName": "Test",
-      "lastName": "User",
-      "email": "test.signup99@paneliya.com",
+      "id": "emp-1792849567968",
+      "employeeCode": "EMP-004",
+      "userId": "user-1792849567968",
+      "password": "Admin@123",
+      "isSuperAdmin": true,
+      "firstName": "Super",
+      "lastName": "Admin",
+      "email": "superadmin@paneliya.com",
       "phone": "",
       "avatarUrl": "",
       "gender": "Other",
       "dateOfBirth": "",
       "address": "",
       "emergencyContact": {},
-      "joiningDate": "2026-10-22",
-      "employmentType": "Full-time",
-      "status": "Inactive",
-      "departmentId": "",
-      "departmentName": "",
-      "designationId": "",
-      "designationTitle": "",
-      "reportingManagerId": "",
-      "reportingManagerName": "",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "",
-      "bankDetails": {},
-      "taxInformation": {},
-      "education": [],
-      "previousExperience": [],
-      "skills": [],
-      "salary": {},
-      "createdAt": "2026-10-22T13:17:31.224Z",
-      "updatedAt": "2026-10-22T13:17:47.810Z"
-    },
-    {
-      "id": "emp-1792672030281",
-      "employeeCode": "EMP-17",
-      "userId": "user-1792672030281",
-      "password": "Ravi@123",
-      "firstName": "ravi",
-      "lastName": "khunt",
-      "email": "ravi@gmail.com",
-      "phone": "+1 (555) 234-5678",
-      "avatarUrl": "",
-      "gender": "Other",
-      "dateOfBirth": "",
-      "address": "",
-      "emergencyContact": {},
-      "joiningDate": "2026-10-22",
+      "joiningDate": "2026-10-24",
       "employmentType": "Full-time",
       "status": "Active",
       "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-4",
-      "designationTitle": "",
+      "departmentName": "Engineering",
+      "designationId": "des-1",
+      "designationTitle": "VP of Engineering",
       "reportingManagerId": "",
       "reportingManagerName": "",
       "workLocationId": "loc-1",
       "workLocationName": "Corporate HQ",
-      "shift": "",
+      "shift": "General Shift (9 AM - 6 PM)",
       "bankDetails": {},
       "taxInformation": {},
       "education": [],
       "previousExperience": [],
       "skills": [],
       "salary": {},
-      "createdAt": "2026-10-22T12:27:10.281Z",
-      "updatedAt": "2026-10-22T12:27:10.281Z"
+      "createdAt": "2026-10-24T13:46:07.968Z",
+      "updatedAt": "2026-10-24T13:46:07.968Z"
     },
     {
-      "id": "emp-1792671839768",
-      "employeeCode": "EMP-16",
-      "userId": "user-1792671839768",
-      "password": "Password@123",
-      "firstName": "John",
-      "lastName": "Doe",
-      "email": "new.user@paneliya.com",
-      "phone": "+1 (555) 234-5678",
-      "avatarUrl": "",
-      "gender": "Other",
-      "dateOfBirth": "",
-      "address": "",
-      "emergencyContact": {},
-      "joiningDate": "2026-10-22",
-      "employmentType": "Full-time",
-      "status": "Active",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-4",
-      "designationTitle": "",
-      "reportingManagerId": "",
-      "reportingManagerName": "",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "",
-      "bankDetails": {},
-      "taxInformation": {},
-      "education": [],
-      "previousExperience": [],
-      "skills": [],
-      "salary": {},
-      "createdAt": "2026-10-22T12:23:59.768Z",
-      "updatedAt": "2026-10-22T12:23:59.768Z"
-    },
-    {
-      "id": "emp-1792670557552",
-      "employeeCode": "EMP-15",
-      "userId": "user-1792670557552",
-      "password": "MyPassword@456",
-      "firstName": "Rahul",
-      "lastName": "Sharma",
-      "email": "test.register@paneliya.com",
+      "id": "emp-1792848272508",
+      "employeeCode": "EMP-003",
+      "userId": "user-1792848272507",
+      "password": "SecurePassword@123",
+      "isSuperAdmin": true,
+      "firstName": "Sanjay",
+      "lastName": "Patel",
+      "email": "new.superadmin@paneliya.com",
       "phone": "+91 9876543210",
       "avatarUrl": "",
       "gender": "Other",
       "dateOfBirth": "",
       "address": "",
       "emergencyContact": {},
-      "joiningDate": "2026-10-22",
+      "joiningDate": "2026-10-24",
+      "employmentType": "Full-time",
+      "status": "Active",
+      "departmentId": "dept-1",
+      "departmentName": "Engineering",
+      "designationId": "des-1",
+      "designationTitle": "VP of Engineering",
+      "reportingManagerId": "",
+      "reportingManagerName": "",
+      "workLocationId": "loc-1",
+      "workLocationName": "Corporate HQ",
+      "shift": "General Shift (9 AM - 6 PM)",
+      "bankDetails": {},
+      "taxInformation": {},
+      "education": [],
+      "previousExperience": [],
+      "skills": [],
+      "salary": {},
+      "createdAt": "2026-10-24T13:24:32.508Z",
+      "updatedAt": "2026-10-24T13:24:32.508Z"
+    },
+    {
+      "id": "emp-1792847928392",
+      "employeeCode": "EMP-002",
+      "userId": "user-1792847928392",
+      "password": "Admin@123",
+      "firstName": "Super",
+      "lastName": "Admin",
+      "email": "superadmin@paneliya.com",
+      "phone": "",
+      "avatarUrl": "",
+      "gender": "Other",
+      "dateOfBirth": "",
+      "address": "",
+      "emergencyContact": {},
+      "joiningDate": "2026-10-24",
       "employmentType": "Full-time",
       "status": "Active",
       "departmentId": "",
@@ -362,920 +302,67 @@
       "previousExperience": [],
       "skills": [],
       "salary": {},
-      "createdAt": "2026-10-22T12:02:37.552Z",
-      "updatedAt": "2026-10-22T12:02:37.552Z"
+      "createdAt": "2026-10-24T13:18:48.392Z",
+      "updatedAt": "2026-10-24T13:18:48.392Z"
     },
     {
-      "id": "emp-1792669199137",
-      "employeeCode": "EMP-110",
-      "userId": "user-1792669199137",
-      "password": "raju@123",
-      "firstName": "Kalu",
-      "lastName": "Thummar",
-      "email": "raju@gmail.com",
-      "phone": "+1 (555) 234-5678",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "gender": "Male",
-      "dateOfBirth": "1992-06-15",
-      "address": "Corporate HQ",
-      "emergencyContact": {
-        "name": "Sarah Jenkins",
-        "relationship": "Spouse",
-        "phone": "+1 (555) 999-9999"
-      },
-      "joiningDate": "2026-02-01",
-      "employmentType": "Full-time",
-      "status": "Active",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-4",
-      "designationTitle": "Software Engineer",
-      "reportingManagerId": "emp-1",
-      "reportingManagerName": "Sarah Connor",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "General Shift (9 AM - 6 PM)",
-      "bankDetails": {
-        "bankName": "Silicon Valley Bank",
-        "accountNumber": "99201948191",
-        "ifscOrRouting": "SVB00129",
-        "accountHolderName": "Alex Morgan"
-      },
-      "taxInformation": {
-        "taxId": "TX-733553",
-        "panOrSsn": "***-**-0000",
-        "taxRegime": "New Regime"
-      },
-      "education": [
-        []
-      ],
-      "previousExperience": [],
-      "skills": [
-        "TypeScript",
-        "NestJS",
-        "PostgreSQL"
-      ],
-      "salary": {
-        "basic": 5000,
-        "hra": 2000,
-        "allowances": 1200,
-        "bonus": 500,
-        "pf": 600,
-        "tax": 750,
-        "professionalTax": 200,
-        "gross": 8700,
-        "net": 7150
-      },
-      "createdAt": "2026-10-22T11:39:59.137Z",
-      "updatedAt": "2026-10-22T13:14:40.470Z"
-    },
-    {
-      "id": "emp-1792667024318",
-      "employeeCode": "EMP-13",
-      "userId": "user-1792667024318",
-      "password": "MyPassword@789",
-      "firstName": "Jaydeep",
+      "id": "emp-1792847774073",
+      "employeeCode": "EMP-001",
+      "userId": "user-1792847774073",
+      "password": "Ravi@123",
+      "isSuperAdmin": false,
+      "firstName": "Ravi",
       "lastName": "Khunt",
-      "email": "jaydeep.khunt@paneliya.com",
-      "phone": "+1 555-0199",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "gender": "Male",
-      "dateOfBirth": "1995-01-01",
-      "address": "Corporate HQ",
-      "emergencyContact": {
-        "name": "Emergency Contact",
-        "relationship": "Kin",
-        "phone": "+1 (555) 999-9999"
-      },
-      "joiningDate": "2026-10-22",
-      "employmentType": "Full-time",
-      "status": "Probation",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-4",
-      "designationTitle": "Software Engineer",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "General Shift (9 AM - 6 PM)",
-      "bankDetails": {
-        "bankName": "Silicon Valley Bank",
-        "accountNumber": "99201948191",
-        "ifscOrRouting": "SVB00129",
-        "accountHolderName": "Jaydeep Khunt"
-      },
-      "taxInformation": {
-        "taxId": "TX-285443",
-        "panOrSsn": "***-**-0000",
-        "taxRegime": "New Regime"
-      },
-      "education": [
-        {
-          "degree": "B.S. in Computer Science",
-          "institution": "University",
-          "year": 2020
-        }
-      ],
-      "previousExperience": [],
-      "skills": [
-        "JavaScript",
-        "Communication"
-      ],
-      "salary": {
-        "basic": 5000,
-        "hra": 2000,
-        "allowances": 1200,
-        "bonus": 500,
-        "pf": 600,
-        "tax": 750,
-        "professionalTax": 200,
-        "gross": 8700,
-        "net": 7150
-      },
-      "createdAt": "2026-10-22T11:03:44.318Z",
-      "updatedAt": "2026-10-22T11:03:44.318Z"
-    },
-    {
-      "id": "emp-1792666488266",
-      "employeeCode": "EMP-109",
-      "firstName": "Bapu",
-      "lastName": "KHUNT",
-      "email": "bapu@gmail.com",
+      "email": "ravi@gmail.com",
       "phone": "+1 (555) 234-5678",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "gender": "Male",
-      "dateOfBirth": "1992-06-15",
-      "address": "Corporate HQ",
-      "emergencyContact": {
-        "name": "Sarah Jenkins",
-        "relationship": "Spouse",
-        "phone": "+1 (555) 999-9999"
-      },
-      "joiningDate": "2026-02-01",
-      "employmentType": "Full-time",
-      "status": "Active",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-4",
-      "designationTitle": "Software Engineer",
-      "reportingManagerId": "emp-1",
-      "reportingManagerName": "Sarah Connor",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "General Shift (9 AM - 6 PM)",
-      "bankDetails": {
-        "bankName": "Silicon Valley Bank",
-        "accountNumber": "99201948191",
-        "ifscOrRouting": "SVB00129",
-        "accountHolderName": "Alex Morgan"
-      },
-      "taxInformation": {
-        "taxId": "TX-891042",
-        "panOrSsn": "***-**-0000",
-        "taxRegime": "New Regime"
-      },
-      "education": [
-        {
-          "degree": "B.S. in Computer Science",
-          "institution": "University",
-          "year": 2020
-        }
-      ],
-      "previousExperience": [],
-      "skills": [
-        "TypeScript",
-        "NestJS",
-        "PostgreSQL"
-      ],
-      "salary": {
-        "basic": 5000,
-        "hra": 2000,
-        "allowances": 1200,
-        "bonus": 500,
-        "pf": 600,
-        "tax": 750,
-        "professionalTax": 200,
-        "gross": 8700,
-        "net": 7150
-      },
-      "createdAt": "2026-10-22T10:54:48.266Z",
-      "updatedAt": "2026-10-22T10:54:48.266Z"
-    },
-    {
-      "id": "emp-1792588528256",
-      "employeeCode": "EMP-106",
-      "firstName": "keyur",
-      "lastName": "sangani",
-      "email": "kr@paneliya.com",
-      "phone": "+1 (555) 234-5688",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "gender": "Male",
-      "dateOfBirth": "1992-06-15",
-      "address": "Corporate HQ",
-      "emergencyContact": {
-        "name": "Sarah Jenkins",
-        "relationship": "Spouse",
-        "phone": "+1 (555) 999-9999"
-      },
-      "joiningDate": "2026-02-01",
-      "employmentType": "Full-time",
-      "status": "Active",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-4",
-      "designationTitle": "Software Engineer",
-      "reportingManagerId": "emp-1",
-      "reportingManagerName": "Sarah Connor",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "General Shift (9 AM - 6 PM)",
-      "bankDetails": {
-        "bankName": "Silicon Valley Bank",
-        "accountNumber": "99201948191",
-        "ifscOrRouting": "SVB00129",
-        "accountHolderName": "Alex Morgan"
-      },
-      "taxInformation": {
-        "taxId": "TX-293426",
-        "panOrSsn": "***-**-0000",
-        "taxRegime": "New Regime"
-      },
-      "education": [
-        {
-          "degree": "B.S. in Computer Science",
-          "institution": "University",
-          "year": 2020
-        }
-      ],
-      "previousExperience": [],
-      "skills": [
-        "TypeScript",
-        "NestJS",
-        "PostgreSQL"
-      ],
-      "salary": {
-        "basic": 5000,
-        "hra": 2000,
-        "allowances": 1200,
-        "bonus": 500,
-        "pf": 600,
-        "tax": 750,
-        "professionalTax": 200,
-        "gross": 8700,
-        "net": 7150
-      },
-      "createdAt": "2026-10-21T13:15:28.257Z",
-      "updatedAt": "2026-10-21T13:15:28.257Z"
-    },
-    {
-      "id": "emp-1792588511771",
-      "employeeCode": "EMP-105",
-      "firstName": "keyur",
-      "lastName": "sangani",
-      "email": "kr@paneliya.com",
-      "phone": "+1 (555) 234-5688",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "gender": "Male",
-      "dateOfBirth": "1992-06-15",
-      "address": "Corporate HQ",
-      "emergencyContact": {
-        "name": "Sarah Jenkins",
-        "relationship": "Spouse",
-        "phone": "+1 (555) 999-9999"
-      },
-      "joiningDate": "2026-02-01",
-      "employmentType": "Full-time",
-      "status": "Active",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-4",
-      "designationTitle": "Software Engineer",
-      "reportingManagerId": "emp-1",
-      "reportingManagerName": "Sarah Connor",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "General Shift (9 AM - 6 PM)",
-      "bankDetails": {
-        "bankName": "Silicon Valley Bank",
-        "accountNumber": "99201948191",
-        "ifscOrRouting": "SVB00129",
-        "accountHolderName": "Alex Morgan"
-      },
-      "taxInformation": {
-        "taxId": "TX-241943",
-        "panOrSsn": "***-**-0000",
-        "taxRegime": "New Regime"
-      },
-      "education": [
-        {
-          "degree": "B.S. in Computer Science",
-          "institution": "University",
-          "year": 2020
-        }
-      ],
-      "previousExperience": [],
-      "skills": [
-        "TypeScript",
-        "NestJS",
-        "PostgreSQL"
-      ],
-      "salary": {
-        "basic": 5000,
-        "hra": 2000,
-        "allowances": 1200,
-        "bonus": 500,
-        "pf": 600,
-        "tax": 750,
-        "professionalTax": 200,
-        "gross": 8700,
-        "net": 7150
-      },
-      "createdAt": "2026-10-21T13:15:11.772Z",
-      "updatedAt": "2026-10-21T13:15:11.772Z"
-    },
-    {
-      "id": "emp-1792588301611",
-      "employeeCode": "EMP-104",
-      "firstName": "RAVI",
-      "lastName": "KHUNT",
-      "email": "RK@paneliya.com",
-      "phone": "+1 (555) 234-5678",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "gender": "Male",
-      "dateOfBirth": "1992-06-15",
-      "address": "Corporate HQ",
-      "emergencyContact": {
-        "name": "Sarah Jenkins",
-        "relationship": "Spouse",
-        "phone": "+1 (555) 999-9999"
-      },
-      "joiningDate": "2026-02-01",
-      "employmentType": "Full-time",
-      "status": "Active",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-4",
-      "designationTitle": "Software Engineer",
-      "reportingManagerId": "emp-1",
-      "reportingManagerName": "Sarah Connor",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "General Shift (9 AM - 6 PM)",
-      "bankDetails": {
-        "bankName": "Silicon Valley Bank",
-        "accountNumber": "99201948191",
-        "ifscOrRouting": "SVB00129",
-        "accountHolderName": "Alex Morgan"
-      },
-      "taxInformation": {
-        "taxId": "TX-404804",
-        "panOrSsn": "***-**-0000",
-        "taxRegime": "New Regime"
-      },
-      "education": [
-        {
-          "degree": "B.S. in Computer Science",
-          "institution": "University",
-          "year": 2020
-        }
-      ],
-      "previousExperience": [],
-      "skills": [
-        "TypeScript",
-        "NestJS",
-        "PostgreSQL"
-      ],
-      "salary": {
-        "basic": 5000,
-        "hra": 2000,
-        "allowances": 1200,
-        "bonus": 500,
-        "pf": 600,
-        "tax": 750,
-        "professionalTax": 200,
-        "gross": 8700,
-        "net": 7150
-      },
-      "createdAt": "2026-10-21T13:11:41.612Z",
-      "updatedAt": "2026-10-21T13:11:41.612Z"
-    },
-    {
-      "id": "emp-1792588273327",
-      "employeeCode": "EMP-105",
-      "firstName": "RAVI",
-      "lastName": "KHUNT",
-      "email": "RK@paneliya.com",
-      "phone": "+1 (555) 234-5678",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "gender": "Male",
-      "dateOfBirth": "1992-06-15",
-      "address": "Corporate HQ",
-      "emergencyContact": {
-        "name": "Sarah Jenkins",
-        "relationship": "Spouse",
-        "phone": "+1 (555) 999-9999"
-      },
-      "joiningDate": "2026-02-01",
-      "employmentType": "Full-time",
-      "status": "Active",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-4",
-      "designationTitle": "Software Engineer",
-      "reportingManagerId": "emp-1",
-      "reportingManagerName": "Sarah Connor",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "General Shift (9 AM - 6 PM)",
-      "bankDetails": {
-        "bankName": "Silicon Valley Bank",
-        "accountNumber": "99201948191",
-        "ifscOrRouting": "SVB00129",
-        "accountHolderName": "Alex Morgan"
-      },
-      "taxInformation": {
-        "taxId": "TX-188119",
-        "panOrSsn": "***-**-0000",
-        "taxRegime": "New Regime"
-      },
-      "education": [
-        {
-          "degree": "B.S. in Computer Science",
-          "institution": "University",
-          "year": 2020
-        }
-      ],
-      "previousExperience": [],
-      "skills": [
-        "TypeScript",
-        "NestJS",
-        "PostgreSQL"
-      ],
-      "salary": {
-        "basic": 5000,
-        "hra": 2000,
-        "allowances": 1200,
-        "bonus": 500,
-        "pf": 600,
-        "tax": 750,
-        "professionalTax": 200,
-        "gross": 8700,
-        "net": 7150
-      },
-      "createdAt": "2026-10-21T13:11:13.327Z",
-      "updatedAt": "2026-10-21T13:11:13.327Z"
-    },
-    {
-      "id": "emp-1792588089203",
-      "employeeCode": "EMP-105",
-      "firstName": "RAVI",
-      "lastName": "KHUNT",
-      "email": "RK@paneliya.com",
-      "phone": "+1 (555) 234-5678",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "gender": "Male",
-      "dateOfBirth": "1992-06-15",
-      "address": "Corporate HQ",
-      "emergencyContact": {
-        "name": "Sarah Jenkins",
-        "relationship": "Spouse",
-        "phone": "+1 (555) 999-9999"
-      },
-      "joiningDate": "2026-02-01",
-      "employmentType": "Full-time",
-      "status": "Active",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-4",
-      "designationTitle": "Software Engineer",
-      "reportingManagerId": "emp-1",
-      "reportingManagerName": "Sarah Connor",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "General Shift (9 AM - 6 PM)",
-      "bankDetails": {
-        "bankName": "Silicon Valley Bank",
-        "accountNumber": "99201948191",
-        "ifscOrRouting": "SVB00129",
-        "accountHolderName": "Alex Morgan"
-      },
-      "taxInformation": {
-        "taxId": "TX-829594",
-        "panOrSsn": "***-**-0000",
-        "taxRegime": "New Regime"
-      },
-      "education": [
-        {
-          "degree": "B.S. in Computer Science",
-          "institution": "University",
-          "year": 2020
-        }
-      ],
-      "previousExperience": [],
-      "skills": [
-        "TypeScript",
-        "NestJS",
-        "PostgreSQL"
-      ],
-      "salary": {
-        "basic": 5000,
-        "hra": 2000,
-        "allowances": 1200,
-        "bonus": 500,
-        "pf": 600,
-        "tax": 750,
-        "professionalTax": 200,
-        "gross": 8700,
-        "net": 7150
-      },
-      "createdAt": "2026-10-21T13:08:09.203Z",
-      "updatedAt": "2026-10-21T13:08:09.204Z"
-    },
-    {
-      "id": "emp-1792587982674",
-      "employeeCode": "EMP-105",
-      "firstName": "RAVI",
-      "lastName": "KHUNT",
-      "email": "david.miller@paneliya.com",
-      "phone": "+1 (555) 234-5678",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "gender": "Male",
-      "dateOfBirth": "1992-06-15",
-      "address": "Corporate HQ",
-      "emergencyContact": {
-        "name": "Sarah Jenkins",
-        "relationship": "Spouse",
-        "phone": "+1 (555) 999-9999"
-      },
-      "joiningDate": "2026-02-01",
-      "employmentType": "Full-time",
-      "status": "Active",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-4",
-      "designationTitle": "Software Engineer",
-      "reportingManagerId": "emp-1",
-      "reportingManagerName": "Sarah Connor",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "General Shift (9 AM - 6 PM)",
-      "bankDetails": {
-        "bankName": "Silicon Valley Bank",
-        "accountNumber": "99201948191",
-        "ifscOrRouting": "SVB00129",
-        "accountHolderName": "Alex Morgan"
-      },
-      "taxInformation": {
-        "taxId": "TX-105403",
-        "panOrSsn": "***-**-0000",
-        "taxRegime": "New Regime"
-      },
-      "education": [
-        {
-          "degree": "B.S. in Computer Science",
-          "institution": "University",
-          "year": 2020
-        }
-      ],
-      "previousExperience": [],
-      "skills": [
-        "TypeScript",
-        "NestJS",
-        "PostgreSQL"
-      ],
-      "salary": {
-        "basic": 5000,
-        "hra": 2000,
-        "allowances": 1200,
-        "bonus": 500,
-        "pf": 600,
-        "tax": 750,
-        "professionalTax": 200,
-        "gross": 8700,
-        "net": 7150
-      },
-      "createdAt": "2026-10-21T13:06:22.675Z",
-      "updatedAt": "2026-10-21T13:06:22.675Z"
-    },
-    {
-      "id": "emp-1792587878654",
-      "employeeCode": "EMP-105",
-      "firstName": "RAVI",
-      "lastName": "KHUNT",
-      "email": "david.miller@paneliya.com",
-      "phone": "+1 (555) 234-5678",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "gender": "Male",
-      "dateOfBirth": "1992-06-15",
-      "address": "Corporate HQ",
-      "emergencyContact": {
-        "name": "Sarah Jenkins",
-        "relationship": "Spouse",
-        "phone": "+1 (555) 999-9999"
-      },
-      "joiningDate": "2026-02-01",
-      "employmentType": "Full-time",
-      "status": "Active",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-4",
-      "designationTitle": "Software Engineer",
-      "reportingManagerId": "emp-1",
-      "reportingManagerName": "Sarah Connor",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "General Shift (9 AM - 6 PM)",
-      "bankDetails": {
-        "bankName": "Silicon Valley Bank",
-        "accountNumber": "99201948191",
-        "ifscOrRouting": "SVB00129",
-        "accountHolderName": "Alex Morgan"
-      },
-      "taxInformation": {
-        "taxId": "TX-410658",
-        "panOrSsn": "***-**-0000",
-        "taxRegime": "New Regime"
-      },
-      "education": [
-        {
-          "degree": "B.S. in Computer Science",
-          "institution": "University",
-          "year": 2020
-        }
-      ],
-      "previousExperience": [],
-      "skills": [
-        "TypeScript",
-        "NestJS",
-        "PostgreSQL"
-      ],
-      "salary": {
-        "basic": 5000,
-        "hra": 2000,
-        "allowances": 1200,
-        "bonus": 500,
-        "pf": 600,
-        "tax": 750,
-        "professionalTax": 200,
-        "gross": 8700,
-        "net": 7150
-      },
-      "createdAt": "2026-10-21T13:04:38.655Z",
-      "updatedAt": "2026-10-21T13:04:38.655Z"
-    },
-    {
-      "id": "emp-1792587805386",
-      "employeeCode": "EMP-105",
-      "firstName": "RAVI",
-      "lastName": "Miller",
-      "email": "david.miller@paneliya.com",
-      "phone": "+1 (555) 234-5678",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "gender": "Male",
-      "dateOfBirth": "1992-06-15",
-      "address": "Corporate HQ",
-      "emergencyContact": {
-        "name": "Sarah Jenkins",
-        "relationship": "Spouse",
-        "phone": "+1 (555) 999-9999"
-      },
-      "joiningDate": "2026-02-01",
-      "employmentType": "Full-time",
-      "status": "Active",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-4",
-      "designationTitle": "Software Engineer",
-      "reportingManagerId": "emp-1",
-      "reportingManagerName": "Sarah Connor",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "General Shift (9 AM - 6 PM)",
-      "bankDetails": {
-        "bankName": "Silicon Valley Bank",
-        "accountNumber": "99201948191",
-        "ifscOrRouting": "SVB00129",
-        "accountHolderName": "Alex Morgan"
-      },
-      "taxInformation": {
-        "taxId": "TX-214726",
-        "panOrSsn": "***-**-0000",
-        "taxRegime": "New Regime"
-      },
-      "education": [
-        {
-          "degree": "B.S. in Computer Science",
-          "institution": "University",
-          "year": 2020
-        }
-      ],
-      "previousExperience": [],
-      "skills": [
-        "TypeScript",
-        "NestJS",
-        "PostgreSQL"
-      ],
-      "salary": {
-        "basic": 5000,
-        "hra": 2000,
-        "allowances": 1200,
-        "bonus": 500,
-        "pf": 600,
-        "tax": 750,
-        "professionalTax": 200,
-        "gross": 8700,
-        "net": 7150
-      },
-      "createdAt": "2026-10-21T13:03:25.387Z",
-      "updatedAt": "2026-10-21T13:03:25.387Z"
-    },
-    {
-      "id": "emp-1792587495958",
-      "employeeCode": "EMP-105",
-      "firstName": "David",
-      "lastName": "Miller",
-      "email": "david.miller@paneliya.com",
-      "phone": "+1 (555) 234-5678",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "gender": "Male",
-      "dateOfBirth": "1992-06-15",
-      "address": "Corporate HQ",
-      "emergencyContact": {
-        "name": "Sarah Jenkins",
-        "relationship": "Spouse",
-        "phone": "+1 (555) 999-9999"
-      },
-      "joiningDate": "2026-02-01",
-      "employmentType": "Full-time",
-      "status": "Active",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-4",
-      "designationTitle": "Software Engineer",
-      "reportingManagerId": "emp-1",
-      "reportingManagerName": "Sarah Connor",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "General Shift (9 AM - 6 PM)",
-      "bankDetails": {
-        "bankName": "Silicon Valley Bank",
-        "accountNumber": "99201948191",
-        "ifscOrRouting": "SVB00129",
-        "accountHolderName": "Alex Morgan"
-      },
-      "taxInformation": {
-        "taxId": "TX-821284",
-        "panOrSsn": "***-**-0000",
-        "taxRegime": "New Regime"
-      },
-      "education": [
-        {
-          "degree": "B.S. in Computer Science",
-          "institution": "University",
-          "year": 2020
-        }
-      ],
-      "previousExperience": [],
-      "skills": [
-        "TypeScript",
-        "NestJS",
-        "PostgreSQL"
-      ],
-      "salary": {
-        "basic": 5000,
-        "hra": 2000,
-        "allowances": 1200,
-        "bonus": 500,
-        "pf": 600,
-        "tax": 750,
-        "professionalTax": 200,
-        "gross": 8700,
-        "net": 7150
-      },
-      "createdAt": "2026-10-21T12:58:15.958Z",
-      "updatedAt": "2026-10-21T12:58:15.958Z"
-    },
-    {
-      "id": "emp-1792578296819",
-      "employeeCode": "EMP-2",
-      "firstName": "fhft",
-      "lastName": "fyhytuty",
-      "email": "ututr",
-      "phone": "1234567890",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "gender": "Male",
-      "dateOfBirth": "1995-05-15",
-      "address": "Corporate HQ",
-      "emergencyContact": {
-        "name": "Emergency Contact",
-        "relationship": "Spouse",
-        "phone": "1234567890"
-      },
-      "joiningDate": "2026-10-21",
-      "employmentType": "Full-time",
-      "status": "Probation",
-      "departmentId": "dept-1",
-      "departmentName": "Administration & Management",
-      "designationId": "des-1",
-      "designationTitle": "App Administrator",
-      "workLocationId": "loc-1",
-      "workLocationName": "Corporate HQ",
-      "shift": "General Shift (9 AM - 6 PM)",
-      "bankDetails": {
-        "bankName": "Silicon Valley Bank",
-        "accountNumber": "99201948191",
-        "ifscOrRouting": "SVB00129",
-        "accountHolderName": "fhft fyhytuty"
-      },
-      "taxInformation": {
-        "taxId": "TX-295080",
-        "panOrSsn": "***-**-0000",
-        "taxRegime": "New Regime"
-      },
-      "education": [
-        {
-          "degree": "B.S. in Computer Science",
-          "institution": "University",
-          "year": 2020
-        }
-      ],
-      "previousExperience": [],
-      "skills": [
-        "JavaScript",
-        "Communication"
-      ],
-      "salary": {
-        "basic": 6500,
-        "hra": 2600,
-        "allowances": 1500,
-        "bonus": 800,
-        "pf": 780,
-        "tax": 975,
-        "professionalTax": 200,
-        "gross": 11400,
-        "net": 9445
-      },
-      "createdAt": "2026-10-21T10:24:56.819Z",
-      "updatedAt": "2026-10-21T10:24:56.819Z"
-    },
-    {
-      "id": "emp-1",
-      "employeeCode": "EMP-1",
-      "userId": "user-1",
-      "firstName": "Keyur",
-      "lastName": "Sangani",
-      "email": "keyur.sangani1234@gmail.com",
-      "phone": "6352486893",
       "avatarUrl": "",
       "gender": "Male",
-      "dateOfBirth": "1996-05-15",
-      "address": "Surat, Gujarat",
+      "dateOfBirth": "1992-06-15",
+      "address": "",
       "emergencyContact": {
-        "name": "",
-        "relationship": "",
-        "phone": ""
+        "name": "Sarah Jenkins",
+        "relationship": "Spouse",
+        "phone": "+1 (555) 999-9999"
       },
-      "joiningDate": "2026-10-19",
+      "joiningDate": "2026-02-01",
       "employmentType": "Full-time",
       "status": "Active",
       "departmentId": "dept-1",
-      "departmentName": "--",
-      "designationId": "des-1",
-      "designationTitle": "App Administrator",
-      "reportingManagerId": "",
-      "reportingManagerName": "—",
+      "departmentName": "Engineering",
+      "designationId": "des-4",
+      "designationTitle": "Frontend Developer",
+      "reportingManagerId": "emp-1",
+      "reportingManagerName": "Sarah Connor",
       "workLocationId": "loc-1",
-      "workLocationName": "--",
-      "shift": "General Shift (09:00 AM – 06:00 PM)",
+      "workLocationName": "Corporate HQ",
+      "shift": "",
       "bankDetails": {
-        "bankName": "",
-        "accountNumber": "",
-        "ifscOrRouting": "",
-        "accountHolderName": "Keyur Sangani"
+        "bankName": "Silicon Valley Bank",
+        "accountNumber": "99201948191",
+        "ifscOrRouting": "SVB00129",
+        "accountHolderName": "Alex Morgan"
       },
-      "taxInformation": {
-        "taxId": "",
-        "panOrSsn": "",
-        "taxRegime": "New Regime"
-      },
+      "taxInformation": {},
       "education": [],
       "previousExperience": [],
       "skills": [
-        "App Administrator",
-        "Project Management"
+        "TypeScript",
+        "NestJS",
+        "PostgreSQL"
       ],
       "salary": {
-        "basic": 50000,
-        "hra": 20000,
-        "allowances": 10000,
-        "bonus": 5000,
-        "pf": 6000,
-        "tax": 8000,
-        "professionalTax": 200,
-        "gross": 85000,
-        "net": 70800
+        "basic": 5000,
+        "hra": 2000,
+        "allowances": 1200,
+        "bonus": 500,
+        "pf": 600,
+        "tax": 750,
+        "professionalTax": 0,
+        "gross": 8700,
+        "net": 7350
       },
-      "createdAt": "2026-10-19T09:00:00Z",
-      "updatedAt": "2026-10-19T00:00:00Z"
+      "createdAt": "2026-10-24T13:16:14.073Z",
+      "updatedAt": "2026-10-24T13:16:14.073Z"
     }
   ],
   "holidays": [
@@ -1298,28 +385,8 @@
   ],
   "leaveBalances": [
     {
-      "id": "bal-emp-1",
-      "employeeId": "emp-1",
-      "year": 2026,
-      "casualLeave": {
-        "total": 3.12,
-        "used": 1,
-        "remaining": 2.12
-      },
-      "sickLeave": {
-        "total": 0,
-        "used": 0,
-        "remaining": 0
-      },
-      "paidLeave": {
-        "total": 3.12,
-        "used": 0,
-        "remaining": 3.12
-      }
-    },
-    {
-      "id": "bal-emp-1792578296819",
-      "employeeId": "emp-1792578296819",
+      "id": "bal-emp-1792847615736",
+      "employeeId": "emp-1792847615736",
       "year": 2026,
       "casualLeave": {
         "total": 12,
@@ -1338,8 +405,8 @@
       }
     },
     {
-      "id": "bal-emp-1792587495958",
-      "employeeId": "emp-1792587495958",
+      "id": "bal-emp-1792847652396",
+      "employeeId": "emp-1792847652396",
       "year": 2026,
       "casualLeave": {
         "total": 12,
@@ -1358,8 +425,8 @@
       }
     },
     {
-      "id": "bal-emp-1792587805386",
-      "employeeId": "emp-1792587805386",
+      "id": "bal-emp-1792847652405",
+      "employeeId": "emp-1792847652405",
       "year": 2026,
       "casualLeave": {
         "total": 12,
@@ -1378,8 +445,8 @@
       }
     },
     {
-      "id": "bal-emp-1792587878654",
-      "employeeId": "emp-1792587878654",
+      "id": "bal-emp-1792847774073",
+      "employeeId": "emp-1792847774073",
       "year": 2026,
       "casualLeave": {
         "total": 12,
@@ -1398,248 +465,8 @@
       }
     },
     {
-      "id": "bal-emp-1792587982674",
-      "employeeId": "emp-1792587982674",
-      "year": 2026,
-      "casualLeave": {
-        "total": 12,
-        "used": 0,
-        "remaining": 12
-      },
-      "sickLeave": {
-        "total": 10,
-        "used": 0,
-        "remaining": 10
-      },
-      "paidLeave": {
-        "total": 15,
-        "used": 0,
-        "remaining": 15
-      }
-    },
-    {
-      "id": "bal-emp-1792588089203",
-      "employeeId": "emp-1792588089203",
-      "year": 2026,
-      "casualLeave": {
-        "total": 12,
-        "used": 0,
-        "remaining": 12
-      },
-      "sickLeave": {
-        "total": 10,
-        "used": 0,
-        "remaining": 10
-      },
-      "paidLeave": {
-        "total": 15,
-        "used": 0,
-        "remaining": 15
-      }
-    },
-    {
-      "id": "bal-emp-1792588273327",
-      "employeeId": "emp-1792588273327",
-      "year": 2026,
-      "casualLeave": {
-        "total": 12,
-        "used": 0,
-        "remaining": 12
-      },
-      "sickLeave": {
-        "total": 10,
-        "used": 0,
-        "remaining": 10
-      },
-      "paidLeave": {
-        "total": 15,
-        "used": 0,
-        "remaining": 15
-      }
-    },
-    {
-      "id": "bal-emp-1792588301611",
-      "employeeId": "emp-1792588301611",
-      "year": 2026,
-      "casualLeave": {
-        "total": 12,
-        "used": 0,
-        "remaining": 12
-      },
-      "sickLeave": {
-        "total": 10,
-        "used": 0,
-        "remaining": 10
-      },
-      "paidLeave": {
-        "total": 15,
-        "used": 0,
-        "remaining": 15
-      }
-    },
-    {
-      "id": "bal-emp-1792588511771",
-      "employeeId": "emp-1792588511771",
-      "year": 2026,
-      "casualLeave": {
-        "total": 12,
-        "used": 0,
-        "remaining": 12
-      },
-      "sickLeave": {
-        "total": 10,
-        "used": 0,
-        "remaining": 10
-      },
-      "paidLeave": {
-        "total": 15,
-        "used": 0,
-        "remaining": 15
-      }
-    },
-    {
-      "id": "bal-emp-1792588528256",
-      "employeeId": "emp-1792588528256",
-      "year": 2026,
-      "casualLeave": {
-        "total": 12,
-        "used": 0,
-        "remaining": 12
-      },
-      "sickLeave": {
-        "total": 10,
-        "used": 0,
-        "remaining": 10
-      },
-      "paidLeave": {
-        "total": 15,
-        "used": 0,
-        "remaining": 15
-      }
-    },
-    {
-      "id": "bal-emp-1792666488266",
-      "employeeId": "emp-1792666488266",
-      "year": 2026,
-      "casualLeave": {
-        "total": 12,
-        "used": 0,
-        "remaining": 12
-      },
-      "sickLeave": {
-        "total": 10,
-        "used": 0,
-        "remaining": 10
-      },
-      "paidLeave": {
-        "total": 15,
-        "used": 0,
-        "remaining": 15
-      }
-    },
-    {
-      "id": "bal-emp-1792667024318",
-      "employeeId": "emp-1792667024318",
-      "year": 2026,
-      "casualLeave": {
-        "total": 12,
-        "used": 0,
-        "remaining": 12
-      },
-      "sickLeave": {
-        "total": 10,
-        "used": 0,
-        "remaining": 10
-      },
-      "paidLeave": {
-        "total": 15,
-        "used": 0,
-        "remaining": 15
-      }
-    },
-    {
-      "id": "bal-emp-1792669199137",
-      "employeeId": "emp-1792669199137",
-      "year": 2026,
-      "casualLeave": {
-        "total": 12,
-        "used": 0,
-        "remaining": 12
-      },
-      "sickLeave": {
-        "total": 10,
-        "used": 0,
-        "remaining": 10
-      },
-      "paidLeave": {
-        "total": 15,
-        "used": 0,
-        "remaining": 15
-      }
-    },
-    {
-      "id": "bal-emp-1792670557552",
-      "employeeId": "emp-1792670557552",
-      "year": 2026,
-      "casualLeave": {
-        "total": 12,
-        "used": 0,
-        "remaining": 12
-      },
-      "sickLeave": {
-        "total": 10,
-        "used": 0,
-        "remaining": 10
-      },
-      "paidLeave": {
-        "total": 15,
-        "used": 0,
-        "remaining": 15
-      }
-    },
-    {
-      "id": "bal-emp-1792671839768",
-      "employeeId": "emp-1792671839768",
-      "year": 2026,
-      "casualLeave": {
-        "total": 12,
-        "used": 0,
-        "remaining": 12
-      },
-      "sickLeave": {
-        "total": 10,
-        "used": 0,
-        "remaining": 10
-      },
-      "paidLeave": {
-        "total": 15,
-        "used": 0,
-        "remaining": 15
-      }
-    },
-    {
-      "id": "bal-emp-1792672030281",
-      "employeeId": "emp-1792672030281",
-      "year": 2026,
-      "casualLeave": {
-        "total": 12,
-        "used": 0,
-        "remaining": 12
-      },
-      "sickLeave": {
-        "total": 10,
-        "used": 0,
-        "remaining": 10
-      },
-      "paidLeave": {
-        "total": 15,
-        "used": 0,
-        "remaining": 15
-      }
-    },
-    {
-      "id": "bal-emp-1792675051224",
-      "employeeId": "emp-1792675051224",
+      "id": "bal-emp-1792847928392",
+      "employeeId": "emp-1792847928392",
       "year": 2026,
       "casualLeave": {
         "total": 12,
@@ -1658,265 +485,9 @@
       }
     }
   ],
-  "leaveRequests": [
-    {
-      "id": "lr-1792575268109",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "employeeAvatar": "",
-      "departmentName": "--",
-      "leaveType": "Casual Leave",
-      "startDate": "2026-10-20",
-      "endDate": "2026-10-20",
-      "daysCount": 1,
-      "isHalfDay": false,
-      "reason": "Family function",
-      "status": "Approved",
-      "appliedDate": "2026-10-21",
-      "managerApproverId": "",
-      "managerApproverName": "—",
-      "comments": "Approved by Keyur Sangani (HR & Admin)",
-      "hrApprovedAt": "2026-10-21T10:16:54.243Z"
-    }
-  ],
-  "attendanceRecords": [
-    {
-      "id": "att-1792575060957",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-21",
-      "checkIn": "03:01 PM",
-      "checkOut": "03:29 PM",
-      "breakDurationMinutes": 0,
-      "workingHours": 8.5,
-      "overtimeHours": 0.5,
-      "status": "Late",
-      "remarks": "Self clock-out via Clan.biz Dashboard",
-      "createdAt": "2026-10-21T09:31:00.954Z"
-    },
-    {
-      "id": "att-1792415524974",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-19",
-      "checkIn": "06:42 PM",
-      "checkOut": "06:44 PM",
-      "breakDurationMinutes": 0,
-      "workingHours": 8.5,
-      "overtimeHours": 0.5,
-      "status": "Late",
-      "remarks": "Self clock-out via Clan.biz Dashboard",
-      "createdAt": "2026-10-19T13:12:04.972Z"
-    },
-    {
-      "id": "att-oct-1",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-01",
-      "checkIn": "",
-      "checkOut": "",
-      "breakDurationMinutes": 0,
-      "workingHours": 0,
-      "overtimeHours": 0,
-      "status": "Absent",
-      "remarks": "Absent",
-      "createdAt": "2026-10-01T09:00:00Z"
-    },
-    {
-      "id": "att-oct-2",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-02",
-      "checkIn": "",
-      "checkOut": "",
-      "breakDurationMinutes": 0,
-      "workingHours": 0,
-      "overtimeHours": 0,
-      "status": "Absent",
-      "remarks": "Absent",
-      "createdAt": "2026-10-02T09:00:00Z"
-    },
-    {
-      "id": "att-oct-3",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-03",
-      "checkIn": "",
-      "checkOut": "",
-      "breakDurationMinutes": 0,
-      "workingHours": 0,
-      "overtimeHours": 0,
-      "status": "Absent",
-      "remarks": "Absent",
-      "createdAt": "2026-10-03T09:00:00Z"
-    },
-    {
-      "id": "att-oct-4",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-04",
-      "checkIn": "",
-      "checkOut": "",
-      "breakDurationMinutes": 0,
-      "workingHours": 0,
-      "overtimeHours": 0,
-      "status": "Absent",
-      "remarks": "Absent",
-      "createdAt": "2026-10-04T09:00:00Z"
-    },
-    {
-      "id": "att-oct-5",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-05",
-      "checkIn": "",
-      "checkOut": "",
-      "breakDurationMinutes": 0,
-      "workingHours": 0,
-      "overtimeHours": 0,
-      "status": "Absent",
-      "remarks": "Absent",
-      "createdAt": "2026-10-05T09:00:00Z"
-    },
-    {
-      "id": "att-oct-6",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-06",
-      "checkIn": "",
-      "checkOut": "",
-      "breakDurationMinutes": 0,
-      "workingHours": 0,
-      "overtimeHours": 0,
-      "status": "Absent",
-      "remarks": "Absent",
-      "createdAt": "2026-10-06T09:00:00Z"
-    },
-    {
-      "id": "att-oct-7",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-07",
-      "checkIn": "",
-      "checkOut": "",
-      "breakDurationMinutes": 0,
-      "workingHours": 0,
-      "overtimeHours": 0,
-      "status": "Absent",
-      "remarks": "Absent",
-      "createdAt": "2026-10-07T09:00:00Z"
-    },
-    {
-      "id": "att-oct-8",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-08",
-      "checkIn": "",
-      "checkOut": "",
-      "breakDurationMinutes": 0,
-      "workingHours": 0,
-      "overtimeHours": 0,
-      "status": "Absent",
-      "remarks": "Absent",
-      "createdAt": "2026-10-08T09:00:00Z"
-    },
-    {
-      "id": "att-oct-9",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-09",
-      "checkIn": "",
-      "checkOut": "",
-      "breakDurationMinutes": 0,
-      "workingHours": 0,
-      "overtimeHours": 0,
-      "status": "Absent",
-      "remarks": "Absent",
-      "createdAt": "2026-10-09T09:00:00Z"
-    },
-    {
-      "id": "att-oct-10",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-10",
-      "checkIn": "",
-      "checkOut": "",
-      "breakDurationMinutes": 0,
-      "workingHours": 0,
-      "overtimeHours": 0,
-      "status": "Absent",
-      "remarks": "Absent",
-      "createdAt": "2026-10-10T09:00:00Z"
-    },
-    {
-      "id": "att-oct-11",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-11",
-      "checkIn": "",
-      "checkOut": "",
-      "breakDurationMinutes": 0,
-      "workingHours": 0,
-      "overtimeHours": 0,
-      "status": "Absent",
-      "remarks": "Absent",
-      "createdAt": "2026-10-11T09:00:00Z"
-    },
-    {
-      "id": "att-oct-12",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-12",
-      "checkIn": "",
-      "checkOut": "",
-      "breakDurationMinutes": 0,
-      "workingHours": 0,
-      "overtimeHours": 0,
-      "status": "Absent",
-      "remarks": "Absent",
-      "createdAt": "2026-10-12T09:00:00Z"
-    },
-    {
-      "id": "att-oct-13",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "date": "2026-10-13",
-      "checkIn": "",
-      "checkOut": "",
-      "breakDurationMinutes": 0,
-      "workingHours": 0,
-      "overtimeHours": 0,
-      "status": "Absent",
-      "remarks": "Absent",
-      "createdAt": "2026-10-13T09:00:00Z"
-    }
-  ],
-  "payrollRecords": [
-    {
-      "id": "pr-2026-10-emp-1",
-      "payrollMonth": "2026-10",
-      "employeeId": "emp-1",
-      "employeeName": "Keyur Sangani",
-      "employeeCode": "EMP-1",
-      "designationTitle": "App Administrator",
-      "departmentName": "--",
-      "basicSalary": 50000,
-      "hra": 20000,
-      "allowances": 10000,
-      "bonus": 5000,
-      "overtimePay": 0,
-      "grossSalary": 85000,
-      "pfDeduction": 6000,
-      "taxDeduction": 8000,
-      "professionalTax": 200,
-      "otherDeductions": 0,
-      "totalDeductions": 14200,
-      "netSalary": 70800,
-      "status": "Approved",
-      "paymentDate": "2026-10-28",
-      "paymentMethod": "Direct Bank Transfer"
-    }
-  ],
+  "leaveRequests": [],
+  "attendanceRecords": [],
+  "payrollRecords": [],
   "jobs": [],
   "candidates": [],
   "assets": [],
@@ -1939,815 +510,176 @@
       "targetAudience": "All Employees"
     }
   ],
-  "notifications": [
-    {
-      "id": "notif-1792577814243",
-      "title": "Leave Approved",
-      "message": "Your leave request for 2026-10-20 to 2026-10-20 has been approved.",
-      "type": "leave",
-      "isRead": false,
-      "createdAt": "2026-10-21T10:16:54.243Z",
-      "link": "/leaves"
-    },
-    {
-      "id": "notif-1792575268109",
-      "title": "New Leave Application",
-      "message": "Keyur Sangani applied for Casual Leave (1 days).",
-      "type": "leave",
-      "isRead": false,
-      "createdAt": "2026-10-21T09:34:28.109Z",
-      "link": "/leaves"
-    },
-    {
-      "id": "notif-1",
-      "title": "Welcome to paneliya technology",
-      "message": "New here? Read the Employee Guide to learn how to use attendance, leave, and your profile.",
-      "type": "SYSTEM",
-      "read": false,
-      "createdAt": "2026-10-19T09:00:00Z",
-      "link": "/account/dashboard"
-    }
-  ],
+  "notifications": [],
   "documents": [],
   "auditLogs": [
     {
-      "id": "log-1792675067810-341",
-      "userId": "sys",
-      "userName": "Admin",
-      "userRole": "HR_ADMIN",
-      "action": "EMPLOYEE_DEACTIVATED",
-      "module": "Employee Management",
-      "recordId": "emp-1792675051224",
-      "details": "Marked employee Test User as Inactive",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T13:17:47.810Z"
-    },
-    {
-      "id": "log-1792675062594-511",
-      "userId": "user-1792675051224",
-      "userName": "Test User",
-      "userRole": "EMPLOYEE",
+      "id": "log-1792849585702-523",
+      "userId": "user-1792849567968",
+      "userName": "Super Admin",
+      "userRole": "SUPER_ADMIN",
       "action": "USER_LOGIN",
       "module": "Authentication",
-      "recordId": "user-1792675051224",
-      "details": "User test.signup99@paneliya.com logged in successfully",
+      "recordId": "user-1792849567968",
+      "details": "User superadmin@paneliya.com logged in successfully",
       "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T13:17:42.594Z"
+      "createdAt": "2026-10-24T13:46:25.702Z"
     },
     {
-      "id": "log-1792675051224-195",
-      "userId": "user-1792675051224",
-      "userName": "Test User",
-      "userRole": "EMPLOYEE",
+      "id": "log-1792849567968-81",
+      "userId": "system-bootstrap",
+      "userName": "System Bootstrap",
+      "userRole": "SUPER_ADMIN",
+      "action": "SUPER_ADMIN_CREATE_USER",
+      "module": "SuperAdmin",
+      "recordId": "user-1792849567968",
+      "details": "Super admin created account for superadmin@paneliya.com with role SUPER_ADMIN (isSuperAdmin: true)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-24T13:46:07.968Z"
+    },
+    {
+      "id": "log-1792849518124-447",
+      "userId": "user-1792848317452",
+      "userName": "Sanjay Patel",
+      "userRole": "SUPER_ADMIN",
+      "action": "SUPER_ADMIN_DELETE_USER",
+      "module": "SuperAdmin",
+      "recordId": "user-1792848317452",
+      "details": "Super admin permanently deleted account for keyur@gmail.com",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-24T13:45:18.124Z"
+    },
+    {
+      "id": "log-1792849434140-128",
+      "userId": "user-1792848317452",
+      "userName": "Sanjay Patel",
+      "userRole": "SUPER_ADMIN",
+      "action": "SUPER_ADMIN_DELETE_USER",
+      "module": "SuperAdmin",
+      "recordId": "user-1792847774073",
+      "details": "Super admin permanently deleted account for ravi@gmail.com",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-24T13:43:54.140Z"
+    },
+    {
+      "id": "log-1792849292895-621",
+      "userId": "user-1792848317452",
+      "userName": "Sanjay Patel",
+      "userRole": "SUPER_ADMIN",
+      "action": "SUPER_ADMIN_DELETE_USER",
+      "module": "SuperAdmin",
+      "recordId": "user-1792847928392",
+      "details": "Super admin permanently deleted account for superadmin@paneliya.com",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-24T13:41:32.895Z"
+    },
+    {
+      "id": "log-1792849120450-256",
+      "userId": "user-1792847928392",
+      "userName": "Super Admin",
+      "userRole": "SUPER_ADMIN",
+      "action": "SUPER_ADMIN_DELETE_USER",
+      "module": "SuperAdmin",
+      "recordId": "user-1792848272507",
+      "details": "Super admin permanently deleted account for new.superadmin@paneliya.com",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-24T13:38:40.450Z"
+    },
+    {
+      "id": "log-1792849120439-360",
+      "userId": "user-1792847928392",
+      "userName": "Super Admin",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1792847928392",
+      "details": "User superadmin@paneliya.com logged in successfully",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-24T13:38:40.439Z"
+    },
+    {
+      "id": "log-1792848400041-244",
+      "userId": "user-1792848317452",
+      "userName": "Sanjay Patel",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1792848317452",
+      "details": "User keyur@gmail.com logged in successfully",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-24T13:26:40.041Z"
+    },
+    {
+      "id": "log-1792848317452-951",
+      "userId": "user-1792848272507",
+      "userName": "Sanjay Patel",
+      "userRole": "SUPER_ADMIN",
+      "action": "SUPER_ADMIN_CREATE_USER",
+      "module": "SuperAdmin",
+      "recordId": "user-1792848317452",
+      "details": "Super admin created account for keyur@gmail.com with role SUPER_ADMIN (isSuperAdmin: true)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-24T13:25:17.452Z"
+    },
+    {
+      "id": "log-1792848272508-961",
+      "userId": "user-1792847928392",
+      "userName": "Super Admin",
+      "userRole": "SUPER_ADMIN",
+      "action": "SUPER_ADMIN_CREATE_USER",
+      "module": "SuperAdmin",
+      "recordId": "user-1792848272507",
+      "details": "Super admin created account for new.superadmin@paneliya.com with role SUPER_ADMIN (isSuperAdmin: true)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-24T13:24:32.508Z"
+    },
+    {
+      "id": "log-1792848227162-948",
+      "userId": "user-1792847928392",
+      "userName": "Super Admin",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1792847928392",
+      "details": "User superadmin@paneliya.com logged in successfully",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-24T13:23:47.162Z"
+    },
+    {
+      "id": "log-1792847928402-985",
+      "userId": "user-1792847928392",
+      "userName": "Super Admin",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1792847928392",
+      "details": "User superadmin@paneliya.com logged in successfully",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-24T13:18:48.402Z"
+    },
+    {
+      "id": "log-1792847928392-540",
+      "userId": "user-1792847928392",
+      "userName": "Super Admin",
+      "userRole": "SUPER_ADMIN",
       "action": "USER_REGISTERED",
       "module": "Authentication",
-      "recordId": "user-1792675051224",
-      "details": "User test.signup99@paneliya.com registered new account",
+      "recordId": "user-1792847928392",
+      "details": "User superadmin@paneliya.com registered new account",
       "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T13:17:31.224Z"
+      "createdAt": "2026-10-24T13:18:48.392Z"
     },
     {
-      "id": "log-1792674880471-267",
+      "id": "log-1792847774073-63",
       "userId": "sys",
       "userName": "Admin",
-      "userRole": "HR_ADMIN",
-      "action": "EMPLOYEE_UPDATED",
-      "module": "Employee Management",
-      "recordId": "emp-1792669199137",
-      "details": "Updated details for employee Kalu Thummar (EMP-110)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T13:14:40.471Z"
-    },
-    {
-      "id": "log-1792674525744-436",
-      "userId": "user-1792669199137",
-      "userName": "Kalu Thummar",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792669199137",
-      "details": "User raju@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T13:08:45.744Z"
-    },
-    {
-      "id": "log-1792674366261-982",
-      "userId": "user-1792669199137",
-      "userName": "Kalu Thummar",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792669199137",
-      "details": "User raju@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T13:06:06.261Z"
-    },
-    {
-      "id": "log-1792673459567-109",
-      "userId": "user-1792669199137",
-      "userName": "Kalu Thummar",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792669199137",
-      "details": "User raju@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:50:59.567Z"
-    },
-    {
-      "id": "log-1792673415318-96",
-      "userId": "user-1792669199137",
-      "userName": "Kalu Thummar",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792669199137",
-      "details": "User raju@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:50:15.318Z"
-    },
-    {
-      "id": "log-1792673223116-578",
-      "userId": "user-1792669199137",
-      "userName": "Kalu Thummar",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792669199137",
-      "details": "User raju@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:47:03.116Z"
-    },
-    {
-      "id": "log-1792672621534-986",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:37:01.534Z"
-    },
-    {
-      "id": "log-1792672584637-623",
-      "userId": "user-1792669199137",
-      "userName": "Kalu Thummar",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792669199137",
-      "details": "User raju@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:36:24.637Z"
-    },
-    {
-      "id": "log-1792672558795-273",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:35:58.795Z"
-    },
-    {
-      "id": "log-1792672549804-998",
-      "userId": "user-1792672030281",
-      "userName": "ravi khunt",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792672030281",
-      "details": "User ravi@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:35:49.804Z"
-    },
-    {
-      "id": "log-1792672527888-168",
-      "userId": "user-1792672030281",
-      "userName": "ravi khunt",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792672030281",
-      "details": "User ravi@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:35:27.888Z"
-    },
-    {
-      "id": "log-1792672483046-744",
-      "userId": "user-1792672030281",
-      "userName": "ravi khunt",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792672030281",
-      "details": "User ravi@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:34:43.046Z"
-    },
-    {
-      "id": "log-1792672466959-663",
-      "userId": "user-1792672030281",
-      "userName": "ravi khunt",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792672030281",
-      "details": "User ravi@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:34:26.959Z"
-    },
-    {
-      "id": "log-1792672409169-506",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:33:29.169Z"
-    },
-    {
-      "id": "log-1792672304545-750",
-      "userId": "user-1792672030281",
-      "userName": "ravi khunt",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792672030281",
-      "details": "User ravi@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:31:44.545Z"
-    },
-    {
-      "id": "log-1792672264941-948",
-      "userId": "user-1792672030281",
-      "userName": "ravi khunt",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792672030281",
-      "details": "User ravi@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:31:04.941Z"
-    },
-    {
-      "id": "log-1792672173136-681",
-      "userId": "user-1792672030281",
-      "userName": "ravi khunt",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792672030281",
-      "details": "User ravi@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:29:33.136Z"
-    },
-    {
-      "id": "log-1792672103145-462",
-      "userId": "user-1792672030281",
-      "userName": "ravi khunt",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792672030281",
-      "details": "User ravi@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:28:23.145Z"
-    },
-    {
-      "id": "log-1792672030281-882",
-      "userId": "user-1792672030281",
-      "userName": "ravi khunt",
-      "userRole": "EMPLOYEE",
-      "action": "USER_REGISTERED",
-      "module": "Authentication",
-      "recordId": "user-1792672030281",
-      "details": "User ravi@gmail.com registered new account",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:27:10.281Z"
-    },
-    {
-      "id": "log-1792671892878-561",
-      "userId": "user-1792671839768",
-      "userName": "John Doe",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792671839768",
-      "details": "User new.user@paneliya.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:24:52.878Z"
-    },
-    {
-      "id": "log-1792671839768-900",
-      "userId": "user-1792671839768",
-      "userName": "John Doe",
-      "userRole": "EMPLOYEE",
-      "action": "USER_REGISTERED",
-      "module": "Authentication",
-      "recordId": "user-1792671839768",
-      "details": "User new.user@paneliya.com registered new account",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:23:59.768Z"
-    },
-    {
-      "id": "log-1792670557562-100",
-      "userId": "user-1792670557552",
-      "userName": "Rahul Sharma",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792670557552",
-      "details": "User test.register@paneliya.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:02:37.562Z"
-    },
-    {
-      "id": "log-1792670557552-516",
-      "userId": "user-1792670557552",
-      "userName": "Rahul Sharma",
-      "userRole": "EMPLOYEE",
-      "action": "USER_REGISTERED",
-      "module": "Authentication",
-      "recordId": "user-1792670557552",
-      "details": "User test.register@paneliya.com registered new account",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T12:02:37.552Z"
-    },
-    {
-      "id": "log-1792669834908-965",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T11:50:34.908Z"
-    },
-    {
-      "id": "log-1792669667819-68",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T11:47:47.819Z"
-    },
-    {
-      "id": "log-1792669391093-490",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T11:43:11.093Z"
-    },
-    {
-      "id": "log-1792669199137-937",
-      "userId": "sys",
-      "userName": "Admin",
-      "userRole": "HR_ADMIN",
+      "userRole": "ADMIN",
       "action": "EMPLOYEE_CREATED",
       "module": "Employee Management",
-      "recordId": "emp-1792669199137",
-      "details": "Created new employee Kalu Thummar (EMP-110)",
+      "recordId": "emp-1792847774073",
+      "details": "Created new employee Ravi Khunt (EMP-001)",
       "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T11:39:59.137Z"
-    },
-    {
-      "id": "log-1792667186022-992",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T11:06:26.022Z"
-    },
-    {
-      "id": "log-1792667024327-258",
-      "userId": "user-1792667024318",
-      "userName": "Jaydeep Khunt",
-      "userRole": "EMPLOYEE",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1792667024318",
-      "details": "User jaydeep.khunt@paneliya.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T11:03:44.327Z"
-    },
-    {
-      "id": "log-1792667024318-35",
-      "userId": "sys",
-      "userName": "Admin",
-      "userRole": "HR_ADMIN",
-      "action": "EMPLOYEE_CREATED",
-      "module": "Employee Management",
-      "recordId": "emp-1792667024318",
-      "details": "Created new employee Jaydeep Khunt (EMP-13)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T11:03:44.318Z"
-    },
-    {
-      "id": "log-1792666699965-542",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T10:58:19.965Z"
-    },
-    {
-      "id": "log-1792666488266-310",
-      "userId": "sys",
-      "userName": "Admin",
-      "userRole": "HR_ADMIN",
-      "action": "EMPLOYEE_CREATED",
-      "module": "Employee Management",
-      "recordId": "emp-1792666488266",
-      "details": "Created new employee Bapu KHUNT (EMP-109)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-22T10:54:48.266Z"
-    },
-    {
-      "id": "log-1792588528257-729",
-      "userId": "sys",
-      "userName": "Admin",
-      "userRole": "HR_ADMIN",
-      "action": "EMPLOYEE_CREATED",
-      "module": "Employee Management",
-      "recordId": "emp-1792588528256",
-      "details": "Created new employee keyur sangani (EMP-106)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T13:15:28.257Z"
-    },
-    {
-      "id": "log-1792588511772-97",
-      "userId": "sys",
-      "userName": "Admin",
-      "userRole": "HR_ADMIN",
-      "action": "EMPLOYEE_CREATED",
-      "module": "Employee Management",
-      "recordId": "emp-1792588511771",
-      "details": "Created new employee keyur sangani (EMP-105)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T13:15:11.772Z"
-    },
-    {
-      "id": "log-1792588455145-748",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T13:14:15.145Z"
-    },
-    {
-      "id": "log-1792588301612-721",
-      "userId": "sys",
-      "userName": "Admin",
-      "userRole": "HR_ADMIN",
-      "action": "EMPLOYEE_CREATED",
-      "module": "Employee Management",
-      "recordId": "emp-1792588301611",
-      "details": "Created new employee RAVI KHUNT (EMP-104)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T13:11:41.612Z"
-    },
-    {
-      "id": "log-1792588273327-552",
-      "userId": "sys",
-      "userName": "Admin",
-      "userRole": "HR_ADMIN",
-      "action": "EMPLOYEE_CREATED",
-      "module": "Employee Management",
-      "recordId": "emp-1792588273327",
-      "details": "Created new employee RAVI KHUNT (EMP-105)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T13:11:13.327Z"
-    },
-    {
-      "id": "log-1792588089204-457",
-      "userId": "sys",
-      "userName": "Admin",
-      "userRole": "HR_ADMIN",
-      "action": "EMPLOYEE_CREATED",
-      "module": "Employee Management",
-      "recordId": "emp-1792588089203",
-      "details": "Created new employee RAVI KHUNT (EMP-105)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T13:08:09.204Z"
-    },
-    {
-      "id": "log-1792587982675-352",
-      "userId": "sys",
-      "userName": "Admin",
-      "userRole": "HR_ADMIN",
-      "action": "EMPLOYEE_CREATED",
-      "module": "Employee Management",
-      "recordId": "emp-1792587982674",
-      "details": "Created new employee RAVI KHUNT (EMP-105)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T13:06:22.675Z"
-    },
-    {
-      "id": "log-1792587878655-182",
-      "userId": "sys",
-      "userName": "Admin",
-      "userRole": "HR_ADMIN",
-      "action": "EMPLOYEE_CREATED",
-      "module": "Employee Management",
-      "recordId": "emp-1792587878654",
-      "details": "Created new employee RAVI KHUNT (EMP-105)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T13:04:38.655Z"
-    },
-    {
-      "id": "log-1792587805387-975",
-      "userId": "sys",
-      "userName": "Admin",
-      "userRole": "HR_ADMIN",
-      "action": "EMPLOYEE_CREATED",
-      "module": "Employee Management",
-      "recordId": "emp-1792587805386",
-      "details": "Created new employee RAVI Miller (EMP-105)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T13:03:25.387Z"
-    },
-    {
-      "id": "log-1792587495958-879",
-      "userId": "sys",
-      "userName": "Admin",
-      "userRole": "HR_ADMIN",
-      "action": "EMPLOYEE_CREATED",
-      "module": "Employee Management",
-      "recordId": "emp-1792587495958",
-      "details": "Created new employee David Miller (EMP-105)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T12:58:15.958Z"
-    },
-    {
-      "id": "log-1792586058572-991",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T12:34:18.572Z"
-    },
-    {
-      "id": "log-1792586045665-6",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T12:34:05.665Z"
-    },
-    {
-      "id": "log-1792586043470-669",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T12:34:03.470Z"
-    },
-    {
-      "id": "log-1792586033460-144",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T12:33:53.460Z"
-    },
-    {
-      "id": "log-1792585676757-324",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T12:27:56.757Z"
-    },
-    {
-      "id": "log-1792584530063-559",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T12:08:50.063Z"
-    },
-    {
-      "id": "log-1792583134869-806",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "USER_LOGIN",
-      "module": "Authentication",
-      "recordId": "user-1",
-      "details": "User keyur.sangani1234@gmail.com logged in successfully",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T11:45:34.869Z"
-    },
-    {
-      "id": "log-1792578296819-773",
-      "userId": "sys",
-      "userName": "Admin",
-      "userRole": "HR_ADMIN",
-      "action": "EMPLOYEE_CREATED",
-      "module": "Employee Management",
-      "recordId": "emp-1792578296819",
-      "details": "Created new employee fhft fyhytuty (EMP-2)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T10:24:56.819Z"
-    },
-    {
-      "id": "log-1792577814243-300",
-      "userId": "sys",
-      "userName": "Keyur Sangani",
-      "userRole": "SUPER_ADMIN",
-      "action": "LEAVE_APPROVED",
-      "module": "Leave Management",
-      "recordId": "lr-1792575268109",
-      "details": "Approved leave request for Keyur Sangani (1 days)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T10:16:54.243Z"
-    },
-    {
-      "id": "log-1792576742491-669",
-      "userId": "emp-1",
-      "userName": "Keyur Sangani",
-      "userRole": "EMPLOYEE",
-      "action": "ATTENDANCE_CHECKOUT",
-      "module": "Attendance",
-      "recordId": "att-1792575060957",
-      "details": "Checked out at 03:29 PM with 8.5 working hours",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T09:59:02.491Z"
-    },
-    {
-      "id": "log-1792576384083-743",
-      "userId": "emp-1",
-      "userName": "Keyur Sangani",
-      "userRole": "EMPLOYEE",
-      "action": "ATTENDANCE_CHECKIN",
-      "module": "Attendance",
-      "recordId": "att-1792575060957",
-      "details": "Checked in at 03:23 PM (Late)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T09:53:04.083Z"
-    },
-    {
-      "id": "log-1792576376430-349",
-      "userId": "emp-1",
-      "userName": "Keyur Sangani",
-      "userRole": "EMPLOYEE",
-      "action": "ATTENDANCE_CHECKOUT",
-      "module": "Attendance",
-      "recordId": "att-1792575060957",
-      "details": "Checked out at 03:22 PM with 8.5 working hours",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T09:52:56.430Z"
-    },
-    {
-      "id": "log-1792576119030-558",
-      "userId": "emp-1",
-      "userName": "Keyur Sangani",
-      "userRole": "EMPLOYEE",
-      "action": "ATTENDANCE_CHECKIN",
-      "module": "Attendance",
-      "recordId": "att-1792575060957",
-      "details": "Checked in at 03:18 PM (Late)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T09:48:39.030Z"
-    },
-    {
-      "id": "log-1792575268109-430",
-      "userId": "emp-1",
-      "userName": "Keyur Sangani",
-      "userRole": "EMPLOYEE",
-      "action": "LEAVE_APPLIED",
-      "module": "Leave Management",
-      "recordId": "lr-1792575268109",
-      "details": "Applied for 1 day(s) of Casual Leave (2026-10-20 to 2026-10-20)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T09:34:28.109Z"
-    },
-    {
-      "id": "log-1792575066933-485",
-      "userId": "emp-1",
-      "userName": "Keyur Sangani",
-      "userRole": "EMPLOYEE",
-      "action": "ATTENDANCE_CHECKOUT",
-      "module": "Attendance",
-      "recordId": "att-1792575060957",
-      "details": "Checked out at 03:01 PM with 8.5 working hours",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T09:31:06.933Z"
-    },
-    {
-      "id": "log-1792575060957-203",
-      "userId": "emp-1",
-      "userName": "Keyur Sangani",
-      "userRole": "EMPLOYEE",
-      "action": "ATTENDANCE_CHECKIN",
-      "module": "Attendance",
-      "recordId": "att-1792575060957",
-      "details": "Checked in at 03:01 PM (Late)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-21T09:31:00.957Z"
-    },
-    {
-      "id": "log-1792415773044-575",
-      "userId": "sys",
-      "userName": "Finance Admin",
-      "userRole": "FINANCE_ADMIN",
-      "action": "PAYROLL_GENERATED",
-      "module": "Payroll",
-      "details": "Generated payroll run for month 2026-10 (1 records created)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-19T13:16:13.044Z"
-    },
-    {
-      "id": "log-1792415665805-193",
-      "userId": "emp-1",
-      "userName": "Keyur Sangani",
-      "userRole": "EMPLOYEE",
-      "action": "ATTENDANCE_CHECKOUT",
-      "module": "Attendance",
-      "recordId": "att-1792415524974",
-      "details": "Checked out at 06:44 PM with 8.5 working hours",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-19T13:14:25.805Z"
-    },
-    {
-      "id": "log-1792415524974-679",
-      "userId": "emp-1",
-      "userName": "Keyur Sangani",
-      "userRole": "EMPLOYEE",
-      "action": "ATTENDANCE_CHECKIN",
-      "module": "Attendance",
-      "recordId": "att-1792415524974",
-      "details": "Checked in at 06:42 PM (Late)",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-19T13:12:04.974Z"
-    },
-    {
-      "id": "audit-1",
-      "userId": "user-1",
-      "userName": "Keyur Sangani",
-      "userRole": "App Administrator",
-      "action": "LOGIN",
-      "module": "Auth",
-      "recordId": "user-1",
-      "details": "Signed into paneliya technology HR & Project Management OS",
-      "ipAddress": "127.0.0.1",
-      "createdAt": "2026-10-19T18:00:00Z"
+      "createdAt": "2026-10-24T13:16:14.073Z"
     }
   ]
 }

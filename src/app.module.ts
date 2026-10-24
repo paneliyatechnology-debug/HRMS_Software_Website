@@ -19,6 +19,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module.js';
 import { ReportsModule } from './modules/reports/reports.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
+import { SuperAdminModule } from './modules/super-admin/super-admin.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -27,6 +28,7 @@ import { AppService } from './app.service.js';
     DatabaseModule,
     EventsModule,
     AuthModule,
+    SuperAdminModule,
     EmployeesModule,
     OrganizationModule,
     AttendanceModule,

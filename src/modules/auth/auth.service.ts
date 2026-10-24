@@ -24,6 +24,8 @@ export class AuthService {
     const designation = this.db.designations.find((d) => d.id === data.designationId);
     const location = this.db.locations[0];
 
+    const isSuperAdmin = role === Role.SUPER_ADMIN;
+
     // Create User record
     const newUser: User = {
       id: userId,
@@ -32,6 +34,8 @@ export class AuthService {
       firstName: data.firstName,
       lastName: data.lastName,
       role,
+      isSuperAdmin,
+      status: 'Active',
       employeeId,
       avatarUrl: '',
       createdAt: new Date().toISOString(),
@@ -39,11 +43,22 @@ export class AuthService {
     };
     this.db.users.push(newUser);
 
-    // Create corresponding Employee record
-    const nextCodeNum = this.db.employees.length + 1;
+    // Create corresponding Employee record with auto-generated employeeCode
+    let maxEmpNum = 0;
+    for (const emp of this.db.employees) {
+      if (emp.employeeCode) {
+        const match = emp.employeeCode.match(/(\d+)/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxEmpNum) maxEmpNum = num;
+        }
+      }
+    }
+    const autoEmployeeCode = `EMP-${String(maxEmpNum + 1).padStart(3, '0')}`;
+
     const newEmployee: Employee = {
       id: employeeId,
-      employeeCode: `EMP-${nextCodeNum}`,
+      employeeCode: autoEmployeeCode,
       userId,
       password: data.password,
       firstName: data.firstName,
@@ -114,6 +129,8 @@ export class AuthService {
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         role: newUser.role,
+        isSuperAdmin: newUser.isSuperAdmin ?? (newUser.role === Role.SUPER_ADMIN),
+        status: newUser.status || 'Active',
         employeeId: newUser.employeeId,
         avatarUrl: newUser.avatarUrl,
       },
@@ -158,6 +175,8 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        isSuperAdmin: user.isSuperAdmin ?? (user.role === Role.SUPER_ADMIN),
+        status: user.status || 'Active',
         employeeId: user.employeeId,
         avatarUrl: user.avatarUrl,
       },
@@ -223,7 +242,11 @@ export class AuthService {
 
     // Omit sensitive password from profile response
     const { password: _, ...safeUser } = user;
-    return safeUser;
+    return {
+      ...safeUser,
+      isSuperAdmin: user.isSuperAdmin ?? (user.role === Role.SUPER_ADMIN),
+      status: user.status || 'Active',
+    };
   }
 
   switchRole(targetRole: Role) {
@@ -234,7 +257,11 @@ export class AuthService {
     const { password: _, ...safeUser } = matchedUser;
     return {
       accessToken: `jwt_token_${matchedUser.id}_${Date.now()}`,
-      user: safeUser,
+      user: {
+        ...safeUser,
+        isSuperAdmin: matchedUser.isSuperAdmin ?? (matchedUser.role === Role.SUPER_ADMIN),
+        status: matchedUser.status || 'Active',
+      },
     };
   }
 

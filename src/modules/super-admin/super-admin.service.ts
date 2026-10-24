@@ -1,0 +1,934 @@
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
+import { DatabaseService } from '../../database/database.service.js';
+import {
+  User,
+  Role,
+  Employee,
+  EmployeeStatus,
+  LeaveStatus,
+  AuditLog,
+} from '../../common/types.js';
+import { CreateSuperAdminUserDto } from './dto/create-super-admin-user.dto.js';
+import { UpdateSuperAdminUserDto } from './dto/update-super-admin-user.dto.js';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto.js';
+import { UpdateUserStatusDto } from './dto/update-user-status.dto.js';
+import { ResetUserPasswordDto } from './dto/reset-user-password.dto.js';
+import { QuerySuperAdminUsersDto } from './dto/query-super-admin-users.dto.js';
+import { UpdateSystemSettingsDto } from './dto/system-settings.dto.js';
+import { LeaveOverrideDto } from './dto/leave-override.dto.js';
+
+@Injectable()
+export class SuperAdminService {
+  constructor(private readonly db: DatabaseService) {}
+
+  // -------------------------------------------------------------
+  // 1. MASTER SYSTEM DASHBOARD & METRICS (Badhu access kari sake)
+  // -------------------------------------------------------------
+  getDashboardOverview() {
+    const totalUsers = this.db.users.length;
+    const superAdminsCount = this.db.users.filter(
+      (u) => u.role === Role.SUPER_ADMIN || u.isSuperAdmin === true,
+    ).length;
+
+    // Role Distribution Breakdown
+    const roleBreakdown: Record<string, number> = {};
+    for (const roleKey of Object.values(Role)) {
+      roleBreakdown[roleKey] = this.db.users.filter((u) => u.role === roleKey).length;
+    }
+
+    // Employee Status Distribution
+    const employeeStatusBreakdown: Record<string, number> = {};
+    for (const emp of this.db.employees) {
+      const st = emp.status || 'Active';
+      employeeStatusBreakdown[st] = (employeeStatusBreakdown[st] || 0) + 1;
+    }
+
+    // Today's Attendance Snapshot
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayRecords = this.db.attendanceRecords.filter(
+      (a) => a.date?.startsWith(todayStr) || a.date === todayStr,
+    );
+    const attendanceStats = {
+      totalMarkedToday: todayRecords.length,
+      present: todayRecords.filter((a) => a.status === 'Present').length,
+      late: todayRecords.filter((a) => a.status === 'Late').length,
+      halfDay: todayRecords.filter((a) => a.status === 'Half Day').length,
+      onLeave: todayRecords.filter((a) => a.status === 'On Leave').length,
+      absent: Math.max(0, this.db.employees.length - todayRecords.length),
+    };
+
+    // Pending Action Overviews across modules
+    const pendingActions = {
+      pendingLeaves: this.db.leaveRequests.filter((l) => l.status === LeaveStatus.PENDING).length,
+      pendingResignations: this.db.resignations.filter((r) => r.status === 'Submitted').length,
+      pendingDocumentVerifications: this.db.documents.filter(
+        (d) => d.verificationStatus === 'Pending',
+      ).length,
+      openJobOpenings: this.db.jobs.filter((j) => j.status === 'Published').length,
+      activeCandidatesInPipeline: this.db.candidates.filter(
+        (c) => c.status !== 'Hired' && c.status !== 'Rejected',
+      ).length,
+      availableAssets: this.db.assets.filter((a) => a.status === 'Available').length,
+      assignedAssets: this.db.assets.filter((a) => a.status === 'Assigned').length,
+    };
+
+    // Financial / Payroll Snapshot
+    const totalPayrollRecords = this.db.payrollRecords.length;
+    const totalGrossPayout = this.db.payrollRecords.reduce(
+      (sum, p) => sum + (p.netSalary || p.grossSalary || 0),
+      0,
+    );
+
+    // System Vitality & Hardware Health
+    const mem = process.memoryUsage();
+    const systemHealth = {
+      status: 'HEALTHY',
+      serverTime: new Date().toISOString(),
+      uptimeSeconds: Math.floor(process.uptime()),
+      nodeVersion: process.version,
+      memory: {
+        heapUsedMB: Math.round((mem.heapUsed / 1024 / 1024) * 100) / 100,
+        heapTotalMB: Math.round((mem.heapTotal / 1024 / 1024) * 100) / 100,
+        rssMB: Math.round((mem.rss / 1024 / 1024) * 100) / 100,
+      },
+      collectionsCount: {
+        users: this.db.users.length,
+        employees: this.db.employees.length,
+        departments: this.db.departments.length,
+        designations: this.db.designations.length,
+        locations: this.db.locations.length,
+        attendanceRecords: this.db.attendanceRecords.length,
+        leaveRequests: this.db.leaveRequests.length,
+        payrollRecords: this.db.payrollRecords.length,
+        jobs: this.db.jobs.length,
+        candidates: this.db.candidates.length,
+        assets: this.db.assets.length,
+        trainingPrograms: this.db.trainingPrograms.length,
+        resignations: this.db.resignations.length,
+        documents: this.db.documents.length,
+        auditLogs: this.db.auditLogs.length,
+      },
+    };
+
+    // Recent 10 Security & State Change Audit Logs
+    const recentAudits = [...this.db.auditLogs]
+      .reverse()
+      .slice(0, 10);
+
+    return {
+      overview: {
+        totalUsers,
+        superAdminsCount,
+        totalEmployees: this.db.employees.length,
+        totalDepartments: this.db.departments.length,
+        totalDesignations: this.db.designations.length,
+        totalLocations: this.db.locations.length,
+      },
+      roleBreakdown,
+      employeeStatusBreakdown,
+      attendanceStats,
+      pendingActions,
+      payrollSnapshot: {
+        totalPayrollRecords,
+        cumulativeDisbursementAmount: Math.round(totalGrossPayout),
+      },
+      systemHealth,
+      recentAudits,
+    };
+  }
+
+  // -------------------------------------------------------------
+  // 2. USER & SUPER ADMIN ACCOUNT MANAGEMENT (RBAC)
+  // -------------------------------------------------------------
+  getUsers(query: QuerySuperAdminUsersDto) {
+    let list = [...this.db.users];
+
+    if (query.search) {
+      const q = query.search.toLowerCase();
+      list = list.filter(
+        (u) =>
+          u.firstName?.toLowerCase().includes(q) ||
+          u.lastName?.toLowerCase().includes(q) ||
+          u.email?.toLowerCase().includes(q),
+      );
+    }
+
+    if (query.role) {
+      list = list.filter((u) => u.role === query.role);
+    }
+
+    if (query.status) {
+      list = list.filter((u) => (u.status || 'Active').toLowerCase() === query.status?.toLowerCase());
+    }
+
+    if (query.isSuperAdmin !== undefined) {
+      list = list.filter((u) => {
+        const isSA = u.role === Role.SUPER_ADMIN || u.isSuperAdmin === true;
+        return isSA === query.isSuperAdmin;
+      });
+    }
+
+    const total = list.length;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
+    const startIndex = (page - 1) * limit;
+    const paginated = list.slice(startIndex, startIndex + limit);
+
+    // Map safe user profiles with linked employee metadata
+    const items = paginated.map((u) => {
+      const { password: _, ...safeUser } = u;
+      const linkedEmployee = u.employeeId
+        ? this.db.employees.find((e) => e.id === u.employeeId || e.userId === u.id)
+        : null;
+
+      return {
+        ...safeUser,
+        isSuperAdmin: u.isSuperAdmin ?? (u.role === Role.SUPER_ADMIN),
+        status: u.status || 'Active',
+        employeeCode: linkedEmployee?.employeeCode || null,
+        departmentName: linkedEmployee?.departmentName || null,
+        designationTitle: linkedEmployee?.designationTitle || null,
+      };
+    });
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      items,
+    };
+  }
+
+  getUserById(id: string) {
+    const user = this.db.users.find(
+      (u) => u.id.toLowerCase() === id.toLowerCase() || u.email.toLowerCase() === id.toLowerCase(),
+    );
+
+    if (!user) {
+      throw new NotFoundException(`User with ID or email "${id}" not found.`);
+    }
+
+    const { password: _, ...safeUser } = user;
+    const linkedEmployee = this.db.employees.find(
+      (e) => e.userId === user.id || e.id === user.employeeId,
+    );
+
+    const userAuditLogs = this.db.auditLogs
+      .filter((a) => a.userId === user.id || a.recordId === user.id)
+      .slice(-20)
+      .reverse();
+
+    return {
+      ...safeUser,
+      isSuperAdmin: user.isSuperAdmin ?? (user.role === Role.SUPER_ADMIN),
+      status: user.status || 'Active',
+      linkedEmployee: linkedEmployee || null,
+      recentActivity: userAuditLogs,
+    };
+  }
+
+  createUser(dto: CreateSuperAdminUserDto, actingAdmin?: User) {
+    const existing = this.db.users.find(
+      (u) => u.email.toLowerCase() === dto.email.toLowerCase(),
+    );
+
+    if (existing) {
+      throw new ConflictException(`User with email "${dto.email}" already exists.`);
+    }
+
+    const userId = `user-${Date.now()}`;
+    const employeeId = `emp-${Date.now()}`;
+    const role = dto.role || Role.SUPER_ADMIN;
+    const isSuperAdmin = dto.isSuperAdmin !== undefined ? dto.isSuperAdmin : role === Role.SUPER_ADMIN;
+    const status = dto.status || 'Active';
+
+    const newUser: User = {
+      id: userId,
+      email: dto.email,
+      password: dto.password,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      role,
+      isSuperAdmin,
+      status,
+      employeeId,
+      avatarUrl: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.db.users.unshift(newUser);
+
+    // Also create matching employee record
+    const department = this.db.departments.find((d) => d.id === dto.departmentId) || this.db.departments[0];
+    const designation = this.db.designations.find((d) => d.id === dto.designationId) || this.db.designations[0];
+    const location = this.db.locations[0];
+
+    let maxEmpNum = 0;
+    for (const emp of this.db.employees) {
+      if (emp.employeeCode) {
+        const match = emp.employeeCode.match(/(\d+)/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxEmpNum) maxEmpNum = num;
+        }
+      }
+    }
+    const autoEmployeeCode = `EMP-${String(maxEmpNum + 1).padStart(3, '0')}`;
+
+    const newEmployee: Employee = {
+      id: employeeId,
+      employeeCode: autoEmployeeCode,
+      userId,
+      password: dto.password,
+      isSuperAdmin,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      email: dto.email,
+      phone: dto.phone || '',
+      avatarUrl: '',
+      gender: 'Other',
+      dateOfBirth: '',
+      address: '',
+      emergencyContact: {} as any,
+      joiningDate: new Date().toISOString().split('T')[0],
+      employmentType: 'Full-time',
+      status: EmployeeStatus.ACTIVE,
+      departmentId: department?.id || '',
+      departmentName: department?.name || '',
+      designationId: designation?.id || '',
+      designationTitle: designation?.title || '',
+      reportingManagerId: '',
+      reportingManagerName: '',
+      workLocationId: location?.id || '',
+      workLocationName: location?.name || '',
+      shift: 'General Shift (9 AM - 6 PM)',
+      bankDetails: {} as any,
+      taxInformation: {} as any,
+      education: [],
+      previousExperience: [],
+      skills: [],
+      salary: {} as any,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.db.employees.unshift(newEmployee);
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      actingAdmin?.role || Role.SUPER_ADMIN,
+      'SUPER_ADMIN_CREATE_USER',
+      'SuperAdmin',
+      `Super admin created account for ${newUser.email} with role ${newUser.role} (isSuperAdmin: ${isSuperAdmin})`,
+      newUser.id,
+    );
+
+    this.db.persist();
+
+    const { password: _, ...safeUser } = newUser;
+    return {
+      message: 'Super Admin successfully created user account',
+      user: safeUser,
+    };
+  }
+
+  updateUser(id: string, dto: UpdateSuperAdminUserDto, actingAdmin?: User) {
+    const user = this.db.users.find((u) => u.id === id);
+    if (!user) {
+      throw new NotFoundException(`User with ID "${id}" not found.`);
+    }
+
+    if (dto.email && dto.email.toLowerCase() !== user.email.toLowerCase()) {
+      const emailConflict = this.db.users.find(
+        (u) => u.email.toLowerCase() === dto.email!.toLowerCase() && u.id !== id,
+      );
+      if (emailConflict) {
+        throw new ConflictException(`Email "${dto.email}" is already taken by another user.`);
+      }
+      user.email = dto.email;
+    }
+
+    if (dto.firstName) user.firstName = dto.firstName;
+    if (dto.lastName) user.lastName = dto.lastName;
+    if (dto.avatarUrl !== undefined) user.avatarUrl = dto.avatarUrl;
+    if (dto.status) user.status = dto.status;
+
+    if (dto.role) {
+      user.role = dto.role;
+      if (dto.role === Role.SUPER_ADMIN) {
+        user.isSuperAdmin = true;
+      }
+    }
+
+    if (dto.isSuperAdmin !== undefined) {
+      user.isSuperAdmin = dto.isSuperAdmin;
+    }
+
+    user.updatedAt = new Date().toISOString();
+
+    // Sync to linked employee if exists
+    const employee = this.db.employees.find((e) => e.userId === user.id || e.id === user.employeeId);
+    if (employee) {
+      if (dto.firstName) employee.firstName = dto.firstName;
+      if (dto.lastName) employee.lastName = dto.lastName;
+      if (dto.email) employee.email = dto.email;
+      if (dto.isSuperAdmin !== undefined) employee.isSuperAdmin = dto.isSuperAdmin;
+      employee.updatedAt = new Date().toISOString();
+    }
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      actingAdmin?.role || Role.SUPER_ADMIN,
+      'SUPER_ADMIN_UPDATE_USER',
+      'SuperAdmin',
+      `Super admin updated user profile for ${user.email}`,
+      user.id,
+    );
+
+    this.db.persist();
+
+    const { password: _, ...safeUser } = user;
+    return {
+      message: 'User updated successfully',
+      user: safeUser,
+    };
+  }
+
+  updateUserRole(id: string, dto: UpdateUserRoleDto, actingAdmin?: User) {
+    const user = this.db.users.find((u) => u.id === id);
+    if (!user) {
+      throw new NotFoundException(`User with ID "${id}" not found.`);
+    }
+
+    // Protection: Ensure at least one super admin exists
+    const isDemotingSuperAdmin =
+      (user.role === Role.SUPER_ADMIN || user.isSuperAdmin === true) &&
+      dto.role !== Role.SUPER_ADMIN &&
+      dto.isSuperAdmin === false;
+
+    if (isDemotingSuperAdmin) {
+      const activeSuperAdmins = this.db.users.filter(
+        (u) => (u.role === Role.SUPER_ADMIN || u.isSuperAdmin === true) && u.id !== id,
+      );
+      if (activeSuperAdmins.length === 0) {
+        throw new BadRequestException(
+          'Cannot demote the only remaining Super Admin in the system.',
+        );
+      }
+    }
+
+    user.role = dto.role;
+    user.isSuperAdmin = dto.isSuperAdmin !== undefined ? dto.isSuperAdmin : dto.role === Role.SUPER_ADMIN;
+    user.updatedAt = new Date().toISOString();
+
+    const employee = this.db.employees.find((e) => e.userId === user.id || e.id === user.employeeId);
+    if (employee) {
+      employee.isSuperAdmin = user.isSuperAdmin;
+      employee.updatedAt = new Date().toISOString();
+    }
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      actingAdmin?.role || Role.SUPER_ADMIN,
+      'SUPER_ADMIN_ROLE_CHANGE',
+      'SuperAdmin',
+      `Super admin changed role of ${user.email} to ${user.role} (isSuperAdmin: ${user.isSuperAdmin})`,
+      user.id,
+    );
+
+    this.db.persist();
+
+    const { password: _, ...safeUser } = user;
+    return {
+      message: `User role successfully updated to ${dto.role}`,
+      user: safeUser,
+    };
+  }
+
+  updateUserStatus(id: string, dto: UpdateUserStatusDto, actingAdmin?: User) {
+    const user = this.db.users.find((u) => u.id === id);
+    if (!user) {
+      throw new NotFoundException(`User with ID "${id}" not found.`);
+    }
+
+    // Prevent suspending the last super admin
+    if (
+      dto.status !== 'Active' &&
+      (user.role === Role.SUPER_ADMIN || user.isSuperAdmin === true)
+    ) {
+      const otherSuperAdmins = this.db.users.filter(
+        (u) =>
+          (u.role === Role.SUPER_ADMIN || u.isSuperAdmin === true) &&
+          u.id !== id &&
+          (u.status || 'Active') === 'Active',
+      );
+      if (otherSuperAdmins.length === 0) {
+        throw new BadRequestException(
+          'Cannot deactivate or suspend the only active Super Admin.',
+        );
+      }
+    }
+
+    user.status = dto.status;
+    user.updatedAt = new Date().toISOString();
+
+    const employee = this.db.employees.find((e) => e.userId === user.id || e.id === user.employeeId);
+    if (employee && dto.status === 'Inactive') {
+      employee.status = EmployeeStatus.INACTIVE;
+      employee.updatedAt = new Date().toISOString();
+    }
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      actingAdmin?.role || Role.SUPER_ADMIN,
+      'SUPER_ADMIN_STATUS_CHANGE',
+      'SuperAdmin',
+      `Super admin changed status of ${user.email} to "${dto.status}". Reason: ${dto.reason || 'None provided'}`,
+      user.id,
+    );
+
+    this.db.persist();
+
+    const { password: _, ...safeUser } = user;
+    return {
+      message: `User status changed to ${dto.status}`,
+      user: safeUser,
+    };
+  }
+
+  resetUserPassword(id: string, dto: ResetUserPasswordDto, actingAdmin?: User) {
+    const user = this.db.users.find((u) => u.id === id);
+    if (!user) {
+      throw new NotFoundException(`User with ID "${id}" not found.`);
+    }
+
+    user.password = dto.newPassword;
+    user.updatedAt = new Date().toISOString();
+
+    const employee = this.db.employees.find((e) => e.userId === user.id || e.id === user.employeeId);
+    if (employee) {
+      employee.password = dto.newPassword;
+      employee.updatedAt = new Date().toISOString();
+    }
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      actingAdmin?.role || Role.SUPER_ADMIN,
+      'SUPER_ADMIN_RESET_PASSWORD',
+      'SuperAdmin',
+      `Super admin reset password for user ${user.email}`,
+      user.id,
+    );
+
+    this.db.persist();
+
+    return {
+      message: `Password for user ${user.email} has been reset successfully.`,
+      userId: user.id,
+    };
+  }
+
+  deleteUser(id: string, actingAdmin?: User) {
+    const userIndex = this.db.users.findIndex((u) => u.id === id);
+    if (userIndex === -1) {
+      throw new NotFoundException(`User with ID "${id}" not found.`);
+    }
+
+    const user = this.db.users[userIndex];
+
+    this.db.users.splice(userIndex, 1);
+
+    // Also remove matching employee record if exists
+    const empIndex = this.db.employees.findIndex(
+      (e) => e.userId === user.id || e.id === user.employeeId || e.email?.toLowerCase() === user.email.toLowerCase(),
+    );
+    if (empIndex !== -1) {
+      this.db.employees.splice(empIndex, 1);
+    }
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      actingAdmin?.role || Role.SUPER_ADMIN,
+      'SUPER_ADMIN_DELETE_USER',
+      'SuperAdmin',
+      `Super admin permanently deleted account for ${user.email}`,
+      id,
+    );
+
+    this.db.persist();
+
+    return {
+      message: `User account ${user.email} has been permanently deleted.`,
+      deletedUserId: id,
+    };
+  }
+
+  async clearAllUsers(actingAdmin?: User) {
+    const deletedCount = this.db.users.length;
+    this.db.users = [];
+    this.db.persist();
+
+    // Also clear from MySQL if connected
+    if (this.db['mysqlPool'] && this.db['isMysqlConnected']) {
+      try {
+        await this.db['mysqlPool'].query('DELETE FROM users');
+      } catch {
+        // Ignored
+      }
+    }
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      Role.SUPER_ADMIN,
+      'SUPER_ADMIN_CLEAR_ALL_USERS',
+      'SuperAdmin',
+      `Super admin permanently deleted all ${deletedCount} user entries (super admins, admins, and users).`,
+      'users',
+    );
+
+    return {
+      message: `Successfully deleted all ${deletedCount} user entries (Super Admin, Admin, and User).`,
+      remainingUsersCount: 0,
+      deletedCount,
+    };
+  }
+
+  // -------------------------------------------------------------
+  // 3. MASTER CROSS-MODULE OVERRIDES (BADHU ACCESS KARI SAKE)
+  // -------------------------------------------------------------
+  getAllEmployeesMaster(departmentId?: string, status?: string) {
+    let list = [...this.db.employees];
+    if (departmentId) {
+      list = list.filter((e) => e.departmentId === departmentId);
+    }
+    if (status) {
+      list = list.filter((e) => e.status?.toLowerCase() === status.toLowerCase());
+    }
+
+    return {
+      total: list.length,
+      employees: list,
+    };
+  }
+
+  getAllDepartmentsMaster() {
+    return this.db.departments.map((dept) => {
+      const emps = this.db.employees.filter((e) => e.departmentId === dept.id);
+      const designations = this.db.designations.filter((d) => d.departmentId === dept.id);
+      return {
+        ...dept,
+        calculatedHeadcount: emps.length,
+        designationsCount: designations.length,
+        designations,
+      };
+    });
+  }
+
+  getAllLeavesMaster(status?: string) {
+    let list = [...this.db.leaveRequests];
+    if (status) {
+      list = list.filter((l) => l.status.toLowerCase() === status.toLowerCase());
+    }
+
+    return list.map((l) => {
+      const emp = this.db.employees.find((e) => e.id === l.employeeId);
+      return {
+        ...l,
+        employeeCode: emp?.employeeCode || null,
+        employeeName: emp ? `${emp.firstName} ${emp.lastName}` : 'Unknown Employee',
+        departmentName: emp?.departmentName || null,
+      };
+    });
+  }
+
+  overrideLeaveRequest(id: string, dto: LeaveOverrideDto, actingAdmin?: User) {
+    const leave = this.db.leaveRequests.find((l) => l.id === id);
+    if (!leave) {
+      throw new NotFoundException(`Leave request with ID "${id}" not found.`);
+    }
+
+    const previousStatus = leave.status;
+    leave.status = dto.status;
+    leave.hrApprovedAt = new Date().toISOString();
+    leave.managerApprovedAt = new Date().toISOString();
+    leave.managerApproverName = actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName} (Super Admin)` : 'Super Admin Override';
+    leave.comments = dto.comments || `Overridden to ${dto.status} by Super Admin`;
+
+    // Audit log
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      Role.SUPER_ADMIN,
+      'SUPER_ADMIN_LEAVE_OVERRIDE',
+      'Leaves',
+      `Super admin forced leave status from "${previousStatus}" to "${dto.status}" for employee ${leave.employeeId}`,
+      leave.id,
+    );
+
+    this.db.persist();
+
+    return {
+      message: `Leave request ${id} successfully overridden to "${dto.status}" by Super Admin.`,
+      leave,
+    };
+  }
+
+  getAllPayrollMaster(month?: string) {
+    let records = [...this.db.payrollRecords];
+    if (month) {
+      records = records.filter((p) => p.payrollMonth === month || p.payrollMonth?.includes(month));
+    }
+
+    const totalDisbursed = records.reduce((acc, p) => acc + (p.netSalary || 0), 0);
+    const totalTax = records.reduce((acc, p) => acc + (p.taxDeduction || 0), 0);
+    const totalPf = records.reduce((acc, p) => acc + (p.pfDeduction || 0), 0);
+
+    return {
+      totalRecords: records.length,
+      aggregateFinancials: {
+        totalNetDisbursement: Math.round(totalDisbursed),
+        totalTaxWithheld: Math.round(totalTax),
+        totalProvidentFund: Math.round(totalPf),
+      },
+      records,
+    };
+  }
+
+  getAllAuditLogsMaster(module?: string, search?: string) {
+    let logs = [...this.db.auditLogs].reverse();
+
+    if (module) {
+      logs = logs.filter((l) => l.module?.toLowerCase() === module.toLowerCase());
+    }
+
+    if (search) {
+      const q = search.toLowerCase();
+      logs = logs.filter(
+        (l) =>
+          l.action?.toLowerCase().includes(q) ||
+          l.userName?.toLowerCase().includes(q) ||
+          l.details?.toLowerCase().includes(q),
+      );
+    }
+
+    return {
+      total: logs.length,
+      logs,
+    };
+  }
+
+  pruneAuditLogs(retentionDays = 90, actingAdmin?: User) {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+
+    const initialCount = this.db.auditLogs.length;
+    this.db.auditLogs = this.db.auditLogs.filter((log) => {
+      const logDate = new Date(log.createdAt);
+      return logDate >= cutoffDate;
+    });
+
+    const prunedCount = initialCount - this.db.auditLogs.length;
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      Role.SUPER_ADMIN,
+      'SUPER_ADMIN_AUDIT_PRUNE',
+      'SuperAdmin',
+      `Super admin pruned ${prunedCount} audit logs older than ${retentionDays} days.`,
+      'audit_logs',
+    );
+
+    this.db.persist();
+
+    return {
+      message: `Audit logs pruning complete. Removed ${prunedCount} records older than ${retentionDays} days.`,
+      remainingLogsCount: this.db.auditLogs.length,
+      prunedCount,
+    };
+  }
+
+  // -------------------------------------------------------------
+  // 4. ENTERPRISE SYSTEM CONFIGURATION & MAINTENANCE
+  // -------------------------------------------------------------
+  getSystemSettings() {
+    return {
+      companyName: 'Paneliya Enterprise HRMS',
+      supportEmail: 'admin@paneliya.com',
+      timeZone: 'Asia/Kolkata',
+      currency: 'INR',
+      maintenanceMode: false,
+      allowRegistration: true,
+      twoFactorAuthEnforced: false,
+      sessionTimeoutMinutes: 120,
+      activeModules: [
+        'Authentication',
+        'Super Admin',
+        'Employees',
+        'Organization',
+        'Attendance',
+        'Leaves',
+        'Payroll',
+        'Recruitment',
+        'Performance',
+        'Training',
+        'Assets',
+        'Resignations',
+        'Holidays',
+        'Documents',
+        'Announcements',
+        'Notifications',
+        'Audit Logs',
+        'Reports & Analytics',
+        'Settings',
+      ],
+      rbacRoles: Object.values(Role),
+      superAdminGuaranteed: true,
+    };
+  }
+
+  updateSystemSettings(dto: UpdateSystemSettingsDto, actingAdmin?: User) {
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      Role.SUPER_ADMIN,
+      'SUPER_ADMIN_UPDATE_SETTINGS',
+      'SuperAdmin',
+      `Super admin updated enterprise system configuration`,
+      'system_settings',
+    );
+
+    return {
+      message: 'System settings updated successfully by Super Admin',
+      updatedSettings: {
+        ...this.getSystemSettings(),
+        ...dto,
+      },
+    };
+  }
+
+  toggleMaintenanceMode(enable: boolean, actingAdmin?: User) {
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      Role.SUPER_ADMIN,
+      'SUPER_ADMIN_MAINTENANCE_TOGGLE',
+      'SuperAdmin',
+      `Super admin turned maintenance mode ${enable ? 'ON' : 'OFF'}`,
+      'system_maintenance',
+    );
+
+    return {
+      message: `System maintenance mode is now ${enable ? 'ENABLED' : 'DISABLED'}.`,
+      maintenanceMode: enable,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  createDatabaseBackup(actingAdmin?: User) {
+    const dataDir = path.resolve(process.cwd(), 'data');
+    const backupsDir = path.join(dataDir, 'backups');
+
+    if (!fs.existsSync(backupsDir)) {
+      fs.mkdirSync(backupsDir, { recursive: true });
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupFileName = `backup_hrms_${timestamp}.json`;
+    const backupFilePath = path.join(backupsDir, backupFileName);
+
+    const snapshot = {
+      timestamp: new Date().toISOString(),
+      initiatedBy: actingAdmin?.email || 'super-admin',
+      version: '1.0.0',
+      data: {
+        locations: this.db.locations,
+        departments: this.db.departments,
+        designations: this.db.designations,
+        users: this.db.users,
+        employees: this.db.employees,
+        holidays: this.db.holidays,
+        leaveBalances: this.db.leaveBalances,
+        leaveRequests: this.db.leaveRequests,
+        attendanceRecords: this.db.attendanceRecords,
+        payrollRecords: this.db.payrollRecords,
+        jobs: this.db.jobs,
+        candidates: this.db.candidates,
+        assets: this.db.assets,
+        trainingPrograms: this.db.trainingPrograms,
+        employeeTrainings: this.db.employeeTrainings,
+        performanceCycles: this.db.performanceCycles,
+        performanceReviews: this.db.performanceReviews,
+        resignations: this.db.resignations,
+        announcements: this.db.announcements,
+        notifications: this.db.notifications,
+        documents: this.db.documents,
+        auditLogs: this.db.auditLogs,
+      },
+    };
+
+    fs.writeFileSync(backupFilePath, JSON.stringify(snapshot, null, 2), 'utf-8');
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      Role.SUPER_ADMIN,
+      'SUPER_ADMIN_DATABASE_BACKUP',
+      'SuperAdmin',
+      `Super admin generated database backup snapshot: ${backupFileName}`,
+      backupFileName,
+    );
+
+    return {
+      message: 'Database backup snapshot generated successfully',
+      backupFileName,
+      backupFilePath,
+      totalEntitiesBackedUp: Object.keys(snapshot.data).length,
+      createdAt: snapshot.timestamp,
+    };
+  }
+
+  getDatabaseStats() {
+    return {
+      locations: this.db.locations.length,
+      departments: this.db.departments.length,
+      designations: this.db.designations.length,
+      users: this.db.users.length,
+      superAdmins: this.db.users.filter(
+        (u) => u.role === Role.SUPER_ADMIN || u.isSuperAdmin === true,
+      ).length,
+      employees: this.db.employees.length,
+      holidays: this.db.holidays.length,
+      leaveBalances: this.db.leaveBalances.length,
+      leaveRequests: this.db.leaveRequests.length,
+      attendanceRecords: this.db.attendanceRecords.length,
+      payrollRecords: this.db.payrollRecords.length,
+      jobs: this.db.jobs.length,
+      candidates: this.db.candidates.length,
+      assets: this.db.assets.length,
+      trainingPrograms: this.db.trainingPrograms.length,
+      employeeTrainings: this.db.employeeTrainings.length,
+      performanceCycles: this.db.performanceCycles.length,
+      performanceReviews: this.db.performanceReviews.length,
+      resignations: this.db.resignations.length,
+      announcements: this.db.announcements.length,
+      notifications: this.db.notifications.length,
+      documents: this.db.documents.length,
+      auditLogs: this.db.auditLogs.length,
+    };
+  }
+}

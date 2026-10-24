@@ -41,40 +41,20 @@ export class SettingsService {
     },
     rolesPermissions: {
       SUPER_ADMIN: { label: 'Super Admin', canManageAll: true, canEditSettings: true },
-      HR_ADMIN: {
-        label: 'HR Admin',
+      ADMIN: {
+        label: 'Admin',
         canManageEmployees: true,
         canProcessPayroll: true,
         canApproveLeaves: true,
-      },
-      HR_EXECUTIVE: {
-        label: 'HR Executive',
-        canManageEmployees: true,
         canReviewAttendance: true,
-      },
-      MANAGER: {
-        label: 'Manager',
-        canViewTeam: true,
-        canApproveTeamLeaves: true,
-        canReviewPerformance: true,
+        canManageJobs: true,
+        canManageAssets: true,
       },
       EMPLOYEE: {
         label: 'Employee',
         canViewOwnProfile: true,
         canApplyLeave: true,
         canViewPayslips: true,
-      },
-      RECRUITER: {
-        label: 'Recruiter',
-        canManageJobs: true,
-        canManageCandidates: true,
-        canScheduleInterviews: true,
-      },
-      FINANCE_ADMIN: {
-        label: 'Finance Admin',
-        canProcessPayroll: true,
-        canManageSalary: true,
-        canViewReports: true,
       },
     },
   };

@@ -46,7 +46,7 @@ export class DocumentsService {
     this.db.logAudit(
       'sys',
       verifiedBy,
-      'HR_ADMIN',
+      'ADMIN',
       'DOCUMENT_VERIFIED',
       'Document Management',
       `Document "${doc.title}" for ${doc.employeeName} marked as ${dto.status}`,

@@ -9,6 +9,7 @@ import {
   IsArray,
 } from 'class-validator';
 import { EmployeeStatus, Role } from '../../../common/types.js';
+import { Transform } from 'class-transformer';
 
 export class SalaryDto {
   @ApiPropertyOptional({ example: 5000 })
@@ -82,11 +83,6 @@ export class BankDetailsDto {
 }
 
 export class CreateEmployeeDto {
-  @ApiPropertyOptional({ example: 'EMP-105', description: 'Employee unique identity code' })
-  @IsString()
-  @IsOptional()
-  employeeCode?: string;
-
   @ApiProperty({ example: 'David', description: 'First name' })
   @IsString()
   @IsNotEmpty()
@@ -113,8 +109,9 @@ export class CreateEmployeeDto {
   @ApiPropertyOptional({
     enum: Role,
     example: Role.EMPLOYEE,
-    description: 'Access role for employee portal login (e.g. EMPLOYEE, MANAGER, HR_EXECUTIVE)',
+    description: 'Access role for login (SUPER_ADMIN, ADMIN, or EMPLOYEE)',
   })
+  @Transform(({ value }) => (typeof value === 'string' ? value.toUpperCase().trim() : value))
   @IsEnum(Role)
   @IsOptional()
   role?: Role;

@@ -379,6 +379,1092 @@
       ]
     },
     {
+      "name": "Super Admin",
+      "description": "Master Super Admin operations, full cross-module access, system health, user RBAC, and maintenance",
+      "item": [
+        {
+          "name": "Master Super Admin Dashboard & System Vitality",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/dashboard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "dashboard"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Provides high-level cross-module insights: user role distribution, employee statuses, live attendance snapshot, pending approvals, financial payroll metrics, and system memory/hardware health."
+          },
+          "response": []
+        },
+        {
+          "name": "Master Database Collection Counts",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/database-stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "database-stats"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Retrieves item counts for all 22 internal data models and tables in HRMS."
+          },
+          "response": []
+        },
+        {
+          "name": "List and filter all system users with RBAC perspectives",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Search string matching firstName, lastName, or email"
+                },
+                {
+                  "key": "role",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter users by Role"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter users by status (Active, Suspended, Inactive)"
+                },
+                {
+                  "key": "isSuperAdmin",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter only Super Admin users"
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Records per page"
+                }
+              ],
+              "variable": []
+            },
+            "description": "Allows super admins to view all accounts, filter by keyword, system role (SUPER_ADMIN, HR_ADMIN, MANAGER, EMPLOYEE, etc.), active/suspended status, or isSuperAdmin flag."
+          },
+          "response": []
+        },
+        {
+          "name": "Create new user account (Admin, Super Admin, HR, Manager)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "users"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Super Admin direct user provisioning. Allows setting isSuperAdmin flag, custom role, status, and creates the corresponding employee record automatically."
+          },
+          "response": []
+        },
+        {
+          "name": "Get detailed user dossier",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/users/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "users",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "emp-1",
+                  "description": "User ID or user email address"
+                }
+              ]
+            },
+            "description": "Retrieves complete user record, linked employee record, and recent audit activity."
+          },
+          "response": []
+        },
+        {
+          "name": "Update user account profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/users/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "users",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "emp-1",
+                  "description": "User ID"
+                }
+              ]
+            },
+            "description": "Updates user contact info, role, isSuperAdmin status, and avatar."
+          },
+          "response": []
+        },
+        {
+          "name": "Permanently delete user account",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/users/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "users",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "emp-1",
+                  "description": "User ID"
+                }
+              ]
+            },
+            "description": "Deletes user record with safety checks (super admins cannot delete themselves or the last remaining super admin)."
+          },
+          "response": []
+        },
+        {
+          "name": "Change user role (Promote to Super Admin, HR, Manager, etc.)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/users/{id}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "users",
+                "{id}",
+                "role"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "emp-1",
+                  "description": "User ID"
+                }
+              ]
+            },
+            "description": "Modifies user role and synchronizes isSuperAdmin boolean status. Enforces protection to ensure at least one active Super Admin remains."
+          },
+          "response": []
+        },
+        {
+          "name": "Change user account status (Active, Suspended, Inactive)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/users/{id}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "users",
+                "{id}",
+                "status"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "emp-1",
+                  "description": "User ID"
+                }
+              ]
+            },
+            "description": "Enables super admins to suspend suspicious accounts or activate users. Prevents suspending the sole active Super Admin."
+          },
+          "response": []
+        },
+        {
+          "name": "Force reset user password",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/users/{id}/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "users",
+                "{id}",
+                "reset-password"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "emp-1",
+                  "description": "User ID"
+                }
+              ]
+            },
+            "description": "Super admin override to immediately set a new password for any user account."
+          },
+          "response": []
+        },
+        {
+          "name": "Permanently delete all user entries (Super Admin, Admin, and User)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/users/all/clear",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "users",
+                "all",
+                "clear"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Bulk deletes all user entries from both memory, database.json, and MySQL."
+          },
+          "response": []
+        },
+        {
+          "name": "Master Employee Directory (Full Unredacted Dossier)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "employees"
+              ],
+              "query": [
+                {
+                  "key": "departmentId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by Department"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by Employment Status"
+                }
+              ],
+              "variable": []
+            },
+            "description": "Super Admin view of all employees across all branches, including sensitive compensation, bank information, and status."
+          },
+          "response": []
+        },
+        {
+          "name": "Master Departments & Designations Structure",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/departments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "departments"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Retrieves all departments with calculated headcounts and designations list."
+          },
+          "response": []
+        },
+        {
+          "name": "Master Leave Tracker across all departments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/leaves",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "leaves"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by Pending, Approved, Rejected"
+                }
+              ],
+              "variable": []
+            },
+            "description": "Super Admin view of all leaves applied, with employee names and department codes."
+          },
+          "response": []
+        },
+        {
+          "name": "Super Admin Direct Leave Override (Force Approve/Reject)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/leaves/{id}/override",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "leaves",
+                "{id}",
+                "override"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "emp-1",
+                  "description": "Leave Request ID"
+                }
+              ]
+            },
+            "description": "Executive override: bypasses regular multi-tier approval chains to instantly Approve or Reject any employee leave application."
+          },
+          "response": []
+        },
+        {
+          "name": "Master Enterprise Payroll Ledger",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/payroll",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "payroll"
+              ],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by month (e.g., \"October 2026\")"
+                }
+              ],
+              "variable": []
+            },
+            "description": "Company-wide view of payroll records, net payouts, tax deductions, and provident fund."
+          },
+          "response": []
+        },
+        {
+          "name": "Master Security Audit Trail Logs",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/audit-logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "module",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by module name"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Search in action, user, or details"
+                }
+              ],
+              "variable": []
+            },
+            "description": "Full unredacted audit trail of all actions, actors, IP addresses, and state changes."
+          },
+          "response": []
+        },
+        {
+          "name": "Prune old audit logs for database compliance",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/audit-logs/prune",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "audit-logs",
+                "prune"
+              ],
+              "query": [
+                {
+                  "key": "retentionDays",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Days of logs to keep"
+                }
+              ],
+              "variable": []
+            },
+            "description": "Deletes audit log entries older than the specified retention window (default: 90 days)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Enterprise Master Settings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "settings"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Retrieves global enterprise config, time zones, maintenance flags, and active modules."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Enterprise Master Settings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "settings"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Updates company name, support emails, session timeouts, and security policies."
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle System Maintenance Mode",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/maintenance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "maintenance"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Enables or disables system maintenance mode across the enterprise."
+          },
+          "response": []
+        },
+        {
+          "name": "Trigger Full Database Snapshot Backup",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/backup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "backup"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Creates a complete timestamped JSON snapshot of all 22 database collections in data/backups/ directory."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Employees",
       "description": "Employee profiles, 11-tab records, directory search",
       "item": [
@@ -490,6 +1576,43 @@
               "variable": []
             },
             "description": "Onboards a new employee, initializes default leave balances, and logs an audit record."
+          },
+          "response": []
+        },
+        {
+          "name": "Get next auto-generated employee identity code (e.g. EMP-001)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/next-code",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "next-code"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Calculates the next sequential unique employee identity code for employee onboarding."
           },
           "response": []
         },

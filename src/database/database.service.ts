@@ -125,7 +125,7 @@ export class DatabaseService implements OnModuleInit {
         this.locations = parsed.locations || initialLocations;
         this.departments = parsed.departments || initialDepartments;
         this.designations = parsed.designations || initialDesignations;
-        this.users = parsed.users || initialUsers;
+        this.users = parsed.users !== undefined ? parsed.users : initialUsers;
         this.employees = parsed.employees || initialEmployees;
         this.holidays = parsed.holidays || initialHolidays;
         this.leaveBalances = parsed.leaveBalances || initialLeaveBalances;

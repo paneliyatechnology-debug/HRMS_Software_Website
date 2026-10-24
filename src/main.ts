@@ -54,16 +54,17 @@ async function bootstrap() {
     .setTitle('Paneliya Enterprise HRMS API')
     .setDescription(
       'Clean Architecture Modular REST API for Paneliya HRMS with full lifecycle coverage.\n\n' +
-        '### Architecture Highlights:\n' +
-        '- **Clean Architecture**: Folder-wise modular structure under `src/modules/`\n' +
-        '- **Full Lifecycle Coverage**: Authentication, Employees, Organization, Attendance, Leaves, Payroll, Recruitment, Performance, Training, Assets, Resignations, Holidays, Documents, Announcements, Notifications, Audit Logs, Reports & Analytics, and Settings\n' +
-        '- **Real-time WebSockets**: Socket.IO Gateway on port 4000\n' +
-        '- **Type-Safe Validation**: Interactive DTO schemas with class-validator & Swagger decorators',
+      '### Architecture Highlights:\n' +
+      '- **Clean Architecture**: Folder-wise modular structure under `src/modules/`\n' +
+      '- **Full Lifecycle Coverage**: Authentication, Employees, Organization, Attendance, Leaves, Payroll, Recruitment, Performance, Training, Assets, Resignations, Holidays, Documents, Announcements, Notifications, Audit Logs, Reports & Analytics, and Settings\n' +
+      '- **Real-time WebSockets**: Socket.IO Gateway on port 4000\n' +
+      '- **Type-Safe Validation**: Interactive DTO schemas with class-validator & Swagger decorators',
     )
     .setVersion('1.0.0')
     .addBearerAuth()
     .addTag('System Health', 'API status and system vitality')
     .addTag('Authentication', 'JWT authentication, RBAC session switching, user accounts')
+    .addTag('Super Admin', 'Master Super Admin operations, full cross-module access, system health, user RBAC, and maintenance')
     .addTag('Employees', 'Employee profiles, 11-tab records, directory search')
     .addTag('Organization', 'Departments, designations, branch locations, visual org hierarchy')
     .addTag('Attendance', 'Punch clock, biometric reader sync, manual regularizations')
@@ -93,18 +94,18 @@ async function bootstrap() {
     },
   });
 
-function getNetworkIps(): string[] {
-  const ips: string[] = [];
-  const interfaces = os.networkInterfaces();
-  for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name] || []) {
-      if (iface.family === 'IPv4' && !iface.internal) {
-        ips.push(iface.address);
+  function getNetworkIps(): string[] {
+    const ips: string[] = [];
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+      for (const iface of interfaces[name] || []) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          ips.push(iface.address);
+        }
       }
     }
+    return ips;
   }
-  return ips;
-}
 
   const port = Number(process.env.PORT) || 4000;
   const host = process.env.HOST || '0.0.0.0';

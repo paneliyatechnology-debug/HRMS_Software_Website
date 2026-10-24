@@ -20,6 +20,16 @@ export class EmployeesController {
     return this.employeesService.findAll(query);
   }
 
+  @Get('next-code')
+  @ApiOperation({
+    summary: 'Get next auto-generated employee identity code (e.g. EMP-001)',
+    description: 'Calculates the next sequential unique employee identity code for employee onboarding.',
+  })
+  @ApiResponse({ status: 200, description: 'Next available employee code' })
+  getNextCode() {
+    return this.employeesService.getNextCode();
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: 'Get employee details with all 11 tab summaries',

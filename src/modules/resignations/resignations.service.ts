@@ -6,7 +6,7 @@ import { UpdateClearanceDto } from './dto/update-clearance.dto.js';
 
 @Injectable()
 export class ResignationsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly db: DatabaseService) { }
 
   findAll() {
     return this.db.resignations;
@@ -84,7 +84,7 @@ export class ResignationsService {
     this.db.logAudit(
       'sys',
       actorName,
-      'HR_ADMIN',
+      'ADMIN',
       'EXIT_CLEARANCE_UPDATED',
       'Exit Management',
       `Updated exit clearance for ${record.employeeName}. All clear: ${allClear}`,

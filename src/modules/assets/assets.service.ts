@@ -49,7 +49,7 @@ export class AssetsService {
     this.db.logAudit(
       'sys',
       actorName,
-      'HR_ADMIN',
+      'ADMIN',
       'ASSET_ASSIGNED',
       'Asset Management',
       `Assigned asset ${asset.name} (${asset.assetCode}) to ${employee.firstName} ${employee.lastName}`,
@@ -75,7 +75,7 @@ export class AssetsService {
     this.db.logAudit(
       'sys',
       actorName,
-      'HR_ADMIN',
+      'ADMIN',
       'ASSET_RETURNED',
       'Asset Management',
       `Returned asset ${asset.name} from ${previousEmpName}`,

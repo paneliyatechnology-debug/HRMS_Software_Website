@@ -75,10 +75,31 @@ export class EmployeesService {
     };
   }
 
+  generateNextEmployeeCode(): string {
+    let maxNum = 0;
+    for (const emp of this.db.employees) {
+      if (emp.employeeCode) {
+        const match = emp.employeeCode.match(/(\d+)/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num;
+          }
+        }
+      }
+    }
+    const nextNum = maxNum + 1;
+    return `EMP-${String(nextNum).padStart(3, '0')}`;
+  }
+
+  getNextCode(): { nextCode: string } {
+    return { nextCode: this.generateNextEmployeeCode() };
+  }
+
   create(data: CreateEmployeeDto, actorName = 'Admin') {
     const newId = `emp-${Date.now()}`;
-    const nextCodeNum = this.db.employees.length + 1;
-    const employeeCode = data.employeeCode || `EMP-${nextCodeNum}`;
+    // Strict automatic generation of sequential employee ID (e.g. EMP-001, EMP-002, etc.)
+    const employeeCode = this.generateNextEmployeeCode();
 
     const department = this.db.departments.find((d) => d.id === data.departmentId);
     const designation = this.db.designations.find((d) => d.id === data.designationId);
@@ -113,12 +134,14 @@ export class EmployeesService {
     const userId = `user-${Date.now()}`;
     const userPassword = data.password || '';
     const userRole = data.role || Role.EMPLOYEE;
+    const isSuperAdmin = userRole === Role.SUPER_ADMIN;
 
     const newEmployee: Employee = {
       id: newId,
       employeeCode,
       userId,
       password: userPassword,
+      isSuperAdmin,
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
@@ -165,6 +188,8 @@ export class EmployeesService {
         firstName: newEmployee.firstName,
         lastName: newEmployee.lastName,
         role: userRole,
+        isSuperAdmin,
+        status: 'Active',
         employeeId: newEmployee.id,
         avatarUrl: newEmployee.avatarUrl,
         createdAt: new Date().toISOString(),
@@ -200,7 +225,7 @@ export class EmployeesService {
     this.db.logAudit(
       'sys',
       actorName,
-      'HR_ADMIN',
+      'ADMIN',
       'EMPLOYEE_CREATED',
       'Employee Management',
       `Created new employee ${newEmployee.firstName} ${newEmployee.lastName} (${newEmployee.employeeCode})`,
@@ -248,7 +273,7 @@ export class EmployeesService {
     this.db.logAudit(
       'sys',
       actorName,
-      'HR_ADMIN',
+      'ADMIN',
       'EMPLOYEE_UPDATED',
       'Employee Management',
       `Updated details for employee ${updated.firstName} ${updated.lastName} (${updated.employeeCode})`,
@@ -273,7 +298,7 @@ export class EmployeesService {
     this.db.logAudit(
       'sys',
       actorName,
-      'HR_ADMIN',
+      'ADMIN',
       'EMPLOYEE_DEACTIVATED',
       'Employee Management',
       `Marked employee ${employee.firstName} ${employee.lastName} as Inactive`,
