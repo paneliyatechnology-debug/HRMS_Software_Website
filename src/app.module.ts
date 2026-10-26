@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { DatabaseModule } from './database/database.module.js';
 import { EventsModule } from './modules/events/events.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
@@ -20,8 +21,10 @@ import { AuditLogsModule } from './modules/audit-logs/audit-logs.module.js';
 import { ReportsModule } from './modules/reports/reports.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module.js';
+import { CompaniesModule } from './modules/companies/companies.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
 
 @Module({
   imports: [
@@ -29,6 +32,7 @@ import { AppService } from './app.service.js';
     EventsModule,
     AuthModule,
     SuperAdminModule,
+    CompaniesModule,
     EmployeesModule,
     OrganizationModule,
     AttendanceModule,
@@ -48,6 +52,12 @@ import { AppService } from './app.service.js';
     SettingsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
 })
 export class AppModule {}

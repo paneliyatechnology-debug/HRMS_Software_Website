@@ -2,8 +2,18 @@
   "info": {
     "_postman_id": "a9b8c7d6-e5f4-4321-b123-9876543210ab",
     "name": "Paneliya Enterprise HRMS API",
-    "description": "Comprehensive Postman collection for Paneliya HRMS Backend API covering all 19 modules, DTO validations, and endpoints.",
+    "description": "Professional Postman collection for Paneliya Multi-Company HRMS Backend API.\n\n### Roles Hierarchy:\n- **SUPER_ADMIN**: Platform software owner, manages companies, assigns admins, cross-company reporting\n- **ADMIN**: Company administrator, strictly isolated to own company, creates/manages company employees\n- **EMPLOYEE**: Company employee, read-only permissions for organizational data\n\n### Getting Started:\n1. Run request **\"1. Super Admin Login\"** in the **\"⭐ 0. Multi-Company Walkthrough\"** folder.\n2. The login test script will automatically save the `token` variable.\n3. All subsequent requests in this collection automatically inherit the `{{token}}` bearer token.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
   },
   "variable": [
     {
@@ -17,12 +27,361 @@
       "type": "string"
     },
     {
-      "key": "bearerToken",
+      "key": "companyId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "companyCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "employeeToken",
       "value": "",
       "type": "string"
     }
   ],
   "item": [
+    {
+      "name": "⭐ 0. Multi-Company Walkthrough (Step-by-Step Flow)",
+      "description": "Run these 10 requests in sequence to verify complete Multi-Company architecture, token authentication, code generation, and cross-company isolation.",
+      "item": [
+        {
+          "name": "Step 1: Super Admin Login (Auto-saves {{token}})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set(\"token\", jsonData.accessToken);",
+                  "    pm.environment.set(\"token\", jsonData.accessToken);",
+                  "    console.log(\"Super Admin Token Saved:\", jsonData.accessToken);",
+                  "}",
+                  "pm.test(\"Status is 200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@paneliya.com\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login with platform Super Admin credentials."
+          }
+        },
+        {
+          "name": "Step 2: Super Admin - List All Companies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/companies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "companies"
+              ]
+            },
+            "description": "Lists all companies currently registered on the platform."
+          }
+        },
+        {
+          "name": "Step 3: Super Admin - Create Company (Auto-saves {{companyId}} & CMP-Code)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.company) {",
+                  "    pm.collectionVariables.set(\"companyId\", jsonData.company.id);",
+                  "    pm.collectionVariables.set(\"companyCode\", jsonData.company.companyCode);",
+                  "    pm.environment.set(\"companyId\", jsonData.company.id);",
+                  "    pm.environment.set(\"companyCode\", jsonData.company.companyCode);",
+                  "    console.log(\"Created Company Code:\", jsonData.company.companyCode);",
+                  "}",
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"ABC Technologies Pvt Ltd\",\n  \"email\": \"contact@abctechnologies.com\",\n  \"phone\": \"+91 98765 43210\",\n  \"address\": \"Ring Road, Surat, Gujarat, India\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/companies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "companies"
+              ]
+            },
+            "description": "Super Admin registers a new company. The backend automatically generates a unique Company Code (e.g. CMP-000002)."
+          }
+        },
+        {
+          "name": "Step 4: Super Admin - Create Admin for Company",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin.abctech@gmail.com\",\n  \"password\": \"AdminPassword@123\",\n  \"firstName\": \"Ravi\",\n  \"lastName\": \"Admin\",\n  \"role\": \"ADMIN\",\n  \"companyId\": \"{{companyId}}\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "users"
+              ]
+            },
+            "description": "Super Admin provisions a company administrator linked to the newly created company."
+          }
+        },
+        {
+          "name": "Step 5: Login as Company Admin (Auto-saves {{token}} as Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set(\"token\", jsonData.accessToken);",
+                  "    pm.collectionVariables.set(\"adminToken\", jsonData.accessToken);",
+                  "    pm.environment.set(\"token\", jsonData.accessToken);",
+                  "    pm.environment.set(\"adminToken\", jsonData.accessToken);",
+                  "    console.log(\"Logged in as Company Admin:\", jsonData.user.email);",
+                  "}",
+                  "pm.test(\"Admin Login Successful\", function () {",
+                  "    pm.expect(jsonData.user.role).to.eql(\"ADMIN\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin.abctech@gmail.com\",\n  \"password\": \"AdminPassword@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login as the newly assigned company administrator."
+          }
+        },
+        {
+          "name": "Step 6: Company Admin - Get Next Employee Code (Scoped)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/next-code",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "next-code"
+              ]
+            },
+            "description": "Retrieves the next auto-generated sequential Employee Code scoped to this Admin company (e.g. EMP-000001 or EMP-000002)."
+          }
+        },
+        {
+          "name": "Step 7: Company Admin - Create Employee for Company",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Amit\",\n  \"lastName\": \"Shah\",\n  \"email\": \"amit.shah@abctech.com\",\n  \"password\": \"Employee@123\",\n  \"phone\": \"+91 99887 76655\",\n  \"employmentType\": \"Full-time\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees"
+              ]
+            },
+            "description": "Company Admin creates an employee. The backend automatically associates the employee with this Admin company and generates the scoped Employee Code."
+          }
+        },
+        {
+          "name": "Step 8: Company Admin - List Company Employees (Isolated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees"
+              ]
+            },
+            "description": "Retrieves employee directory. Returns only employees belonging to this Admin company (Zero cross-company data leakage)."
+          }
+        },
+        {
+          "name": "Step 9: Company Admin - View Own Company Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/companies/my-company",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                "my-company"
+              ]
+            },
+            "description": "Returns profile details for the authenticated user assigned company."
+          }
+        },
+        {
+          "name": "Step 10: Cross-Company Access Denied Test (Should return 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Expect 403 Forbidden on Cross-Company Access\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/emp-1793009147556",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "emp-1793009147556"
+              ]
+            },
+            "description": "Attempts to access an employee record from Company A while authenticated as Admin of Company B. Verified to reject with 403 Forbidden."
+          }
+        }
+      ]
+    },
     {
       "name": "System Health",
       "description": "API status and system vitality",
@@ -30,16 +389,6 @@
         {
           "name": "API Root vitality",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -67,16 +416,6 @@
         {
           "name": "System health and API status",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -109,16 +448,6 @@
         {
           "name": "Register new user account",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -153,7 +482,10 @@
               "query": [],
               "variable": []
             },
-            "description": "Creates a new user credentials account with password and initializes their employee profile."
+            "description": "Creates a new user credentials account with password and initializes their employee profile.",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "response": [],
           "event": [
@@ -164,10 +496,12 @@
                   "var jsonData = pm.response.json();",
                   "if (jsonData.accessToken) {",
                   "    pm.collectionVariables.set(\"token\", jsonData.accessToken);",
-                  "    pm.collectionVariables.set(\"bearerToken\", jsonData.accessToken);",
                   "    pm.environment.set(\"token\", jsonData.accessToken);",
-                  "    pm.environment.set(\"bearerToken\", jsonData.accessToken);",
-                  "    console.log(\"Auth token saved:\", jsonData.accessToken);",
+                  "    console.log(\"Auth token auto-saved:\", jsonData.accessToken);",
+                  "}",
+                  "if (jsonData.user && jsonData.user.companyId) {",
+                  "    pm.collectionVariables.set(\"companyId\", jsonData.user.companyId);",
+                  "    pm.environment.set(\"companyId\", jsonData.user.companyId);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -178,16 +512,6 @@
         {
           "name": "Login user and receive JWT session",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -203,7 +527,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"keyur.sangani1234@gmail.com\",\n  \"password\": \"AnyPasswordOrEmpty\"\n}",
+              "raw": "{\n  \"email\": \"superadmin@paneliya.com\",\n  \"password\": \"Admin@123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -222,7 +546,10 @@
               "query": [],
               "variable": []
             },
-            "description": "Authenticates with email/password and returns a bearer JWT access token with full user details."
+            "description": "Authenticates with email/password and returns a bearer JWT access token with full user details.",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "response": [],
           "event": [
@@ -233,10 +560,12 @@
                   "var jsonData = pm.response.json();",
                   "if (jsonData.accessToken) {",
                   "    pm.collectionVariables.set(\"token\", jsonData.accessToken);",
-                  "    pm.collectionVariables.set(\"bearerToken\", jsonData.accessToken);",
                   "    pm.environment.set(\"token\", jsonData.accessToken);",
-                  "    pm.environment.set(\"bearerToken\", jsonData.accessToken);",
-                  "    console.log(\"Auth token saved:\", jsonData.accessToken);",
+                  "    console.log(\"Auth token auto-saved:\", jsonData.accessToken);",
+                  "}",
+                  "if (jsonData.user && jsonData.user.companyId) {",
+                  "    pm.collectionVariables.set(\"companyId\", jsonData.user.companyId);",
+                  "    pm.environment.set(\"companyId\", jsonData.user.companyId);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -247,16 +576,6 @@
         {
           "name": "Get current logged-in user profile",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -291,16 +610,6 @@
         {
           "name": "Instantly switch active session role for testing RBAC perspectives",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -342,16 +651,6 @@
         {
           "name": "List all demo users",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -385,16 +684,6 @@
         {
           "name": "Master Super Admin Dashboard & System Vitality",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -422,16 +711,6 @@
         {
           "name": "Master Database Collection Counts",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -452,23 +731,247 @@
               "query": [],
               "variable": []
             },
-            "description": "Retrieves item counts for all 22 internal data models and tables in HRMS."
+            "description": "Retrieves item counts for all internal data models and tables in HRMS."
+          },
+          "response": []
+        },
+        {
+          "name": "List all registered companies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/companies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "companies"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Retrieves all registered companies along with employee count and admin details."
+          },
+          "response": []
+        },
+        {
+          "name": "Create and register a new company (auto-generates CMP-000001 code)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"ABC Technologies\",\n  \"email\": \"contact@abctech.com\",\n  \"phone\": \"+91 98765 43210\",\n  \"address\": \"Ring Road, Surat, Gujarat\",\n  \"status\": \"Active\",\n  \"adminEmail\": \"admin@abctech.com\",\n  \"adminPassword\": \"AdminPassword@123\",\n  \"adminFirstName\": \"Ravi\",\n  \"adminLastName\": \"Patel\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/companies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "companies"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Registers a new enterprise client company with auto-generated unique Company Code."
+          },
+          "response": []
+        },
+        {
+          "name": "Get company details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/companies/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "companies",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Company ID or Company Code"
+                }
+              ]
+            },
+            "description": "Retrieves complete company profile, assigned admin, and employee roster count."
+          },
+          "response": []
+        },
+        {
+          "name": "Update company profile or status (Active/Inactive)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"ABC Technologies Pvt Ltd\",\n  \"phone\": \"+91 99999 88888\",\n  \"status\": \"Active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/companies/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "companies",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Company ID or Company Code"
+                }
+              ]
+            },
+            "description": "Updates company metadata, assigned administrator, or activates/suspends the company."
+          },
+          "response": []
+        },
+        {
+          "name": "View employees of a selected company",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/companies/{id}/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "companies",
+                "{id}",
+                "employees"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Company ID or Company Code"
+                }
+              ]
+            },
+            "description": "Retrieves all employees belonging to the specified company ID or Company Code."
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Admin account to a company",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user-1793009147556\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/companies/{id}/assign-admin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "companies",
+                "{id}",
+                "assign-admin"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Company ID"
+                }
+              ]
+            },
+            "description": "Associates an existing or newly created user as the designated Administrator for a company."
           },
           "response": []
         },
         {
           "name": "List and filter all system users with RBAC perspectives",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -497,7 +1000,7 @@
                   "key": "role",
                   "value": "",
                   "disabled": true,
-                  "description": "Filter users by Role"
+                  "description": "Filter users by Role (SUPER_ADMIN, ADMIN, or EMPLOYEE)"
                 },
                 {
                   "key": "status",
@@ -526,23 +1029,13 @@
               ],
               "variable": []
             },
-            "description": "Allows super admins to view all accounts, filter by keyword, system role (SUPER_ADMIN, HR_ADMIN, MANAGER, EMPLOYEE, etc.), active/suspended status, or isSuperAdmin flag."
+            "description": "Allows super admins to view all accounts, filter by keyword, system role (SUPER_ADMIN, ADMIN, EMPLOYEE), active/suspended status, or isSuperAdmin flag."
           },
           "response": []
         },
         {
-          "name": "Create new user account (Admin, Super Admin, HR, Manager)",
+          "name": "Create new user account (SUPER_ADMIN, ADMIN, or EMPLOYEE)",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -558,7 +1051,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"email\": \"ravi.admin@abctech.com\",\n  \"password\": \"Password@123\",\n  \"firstName\": \"Ravi\",\n  \"lastName\": \"Admin\",\n  \"role\": \"ADMIN\",\n  \"companyId\": \"cmp-1\",\n  \"status\": \"Active\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -584,16 +1077,6 @@
         {
           "name": "Get detailed user dossier",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -616,7 +1099,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "User ID or user email address"
                 }
               ]
@@ -628,16 +1111,6 @@
         {
           "name": "Update user account profile",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -653,7 +1126,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"firstName\": \"Ravi Updated\",\n  \"lastName\": \"Admin\",\n  \"status\": \"Active\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -674,7 +1147,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "User ID"
                 }
               ]
@@ -686,16 +1159,6 @@
         {
           "name": "Permanently delete user account",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "DELETE",
             "header": [
               {
@@ -718,7 +1181,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "User ID"
                 }
               ]
@@ -730,16 +1193,6 @@
         {
           "name": "Change user role (Promote to Super Admin, HR, Manager, etc.)",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -755,7 +1208,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"role\": \"ADMIN\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -777,7 +1230,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "User ID"
                 }
               ]
@@ -789,16 +1242,6 @@
         {
           "name": "Change user account status (Active, Suspended, Inactive)",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -814,7 +1257,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"status\": \"Active\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -836,7 +1279,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "User ID"
                 }
               ]
@@ -848,16 +1291,6 @@
         {
           "name": "Force reset user password",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -895,7 +1328,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "User ID"
                 }
               ]
@@ -907,16 +1340,6 @@
         {
           "name": "Permanently delete all user entries (Super Admin, Admin, and User)",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "DELETE",
             "header": [
               {
@@ -946,16 +1369,6 @@
         {
           "name": "Master Employee Directory (Full Unredacted Dossier)",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -996,16 +1409,6 @@
         {
           "name": "Master Departments & Designations Structure",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -1033,16 +1436,6 @@
         {
           "name": "Master Leave Tracker across all departments",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -1077,16 +1470,6 @@
         {
           "name": "Super Admin Direct Leave Override (Force Approve/Reject)",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -1124,7 +1507,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Leave Request ID"
                 }
               ]
@@ -1136,16 +1519,6 @@
         {
           "name": "Master Enterprise Payroll Ledger",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -1180,16 +1553,6 @@
         {
           "name": "Master Security Audit Trail Logs",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -1230,16 +1593,6 @@
         {
           "name": "Prune old audit logs for database compliance",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "DELETE",
             "header": [
               {
@@ -1275,16 +1628,6 @@
         {
           "name": "Get Enterprise Master Settings",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -1312,16 +1655,6 @@
         {
           "name": "Update Enterprise Master Settings",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -1363,16 +1696,6 @@
         {
           "name": "Toggle System Maintenance Mode",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -1414,16 +1737,6 @@
         {
           "name": "Trigger Full Database Snapshot Backup",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -1469,18 +1782,8 @@
       "description": "Employee profiles, 11-tab records, directory search",
       "item": [
         {
-          "name": "List employees with search and filters",
+          "name": "List employees with search and company isolation",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -1521,27 +1824,23 @@
                   "value": "",
                   "disabled": true,
                   "description": "Filter by Employment Type (Full-time, Contract, etc.)"
+                },
+                {
+                  "key": "companyId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by Company ID (SuperAdmin only)"
                 }
               ],
               "variable": []
             },
-            "description": "Retrieves all employees with optional filters for full-text search, department, status, and employment type."
+            "description": "Retrieves employees. For ADMIN, results are strictly isolated to their own company."
           },
           "response": []
         },
         {
-          "name": "Create new employee",
+          "name": "Create new employee [ADMIN / SUPER_ADMIN only]",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -1557,7 +1856,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"employeeCode\": \"EMP-105\",\n  \"firstName\": \"David\",\n  \"lastName\": \"Miller\",\n  \"email\": \"david.miller@paneliya.com\",\n  \"password\": \"Employee@123\",\n  \"role\": \"EMPLOYEE\",\n  \"phone\": \"+1 (555) 234-5678\",\n  \"gender\": \"Male\",\n  \"dateOfBirth\": \"1992-06-15\",\n  \"departmentId\": \"dept-1\",\n  \"designationId\": \"des-1\",\n  \"workLocationId\": \"loc-1\",\n  \"joiningDate\": \"2026-02-01\",\n  \"employmentType\": \"Full-time\",\n  \"status\": \"Active\",\n  \"skills\": [\n    \"TypeScript\",\n    \"NestJS\",\n    \"PostgreSQL\"\n  ],\n  \"salary\": {\n    \"basic\": 5000,\n    \"hra\": 2000,\n    \"allowances\": 1200,\n    \"bonus\": 500,\n    \"pf\": 600,\n    \"tax\": 750\n  }\n}",
+              "raw": "{\n  \"firstName\": \"Amit\",\n  \"lastName\": \"Shah\",\n  \"email\": \"amit.shah@paneliya.com\",\n  \"password\": \"Employee@123\",\n  \"phone\": \"+91 98765 43210\",\n  \"employmentType\": \"Full-time\",\n  \"status\": \"Active\",\n  \"salary\": {\n    \"basic\": 5000,\n    \"hra\": 2000,\n    \"allowances\": 1200,\n    \"bonus\": 500,\n    \"pf\": 600,\n    \"tax\": 750\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1575,23 +1874,13 @@
               "query": [],
               "variable": []
             },
-            "description": "Onboards a new employee, initializes default leave balances, and logs an audit record."
+            "description": "**Role Required: ADMIN or SUPER_ADMIN**\n\nAdmin creates an employee for their own company. SuperAdmin can specify target companyId."
           },
           "response": []
         },
         {
-          "name": "Get next auto-generated employee identity code (e.g. EMP-001)",
+          "name": "Get next auto-generated employee identity code (e.g. EMP-000001)",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -1609,7 +1898,14 @@
                 "employees",
                 "next-code"
               ],
-              "query": [],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "",
+                  "disabled": true,
+                  "description": ""
+                }
+              ],
               "variable": []
             },
             "description": "Calculates the next sequential unique employee identity code for employee onboarding."
@@ -1617,18 +1913,8 @@
           "response": []
         },
         {
-          "name": "Get employee details with all 11 tab summaries",
+          "name": "Get employee details with 11 tab summaries",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -1650,8 +1936,8 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
-                  "description": "Employee ID or Employee Code (e.g., EMP-1)"
+                  "value": "cmp-1",
+                  "description": "Employee ID or Employee Code"
                 }
               ]
             },
@@ -1660,18 +1946,8 @@
           "response": []
         },
         {
-          "name": "Update employee record",
+          "name": "Update employee record [ADMIN / SUPER_ADMIN only]",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -1687,7 +1963,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"David\",\n  \"lastName\": \"Miller Updated\",\n  \"phone\": \"+1 (555) 999-8888\",\n  \"salary\": {\n    \"basic\": 6000\n  }\n}",
+              "raw": "{\n  \"firstName\": \"Amit\",\n  \"lastName\": \"Shah Updated\",\n  \"phone\": \"+91 99999 88888\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1707,28 +1983,18 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Employee ID"
                 }
               ]
             },
-            "description": "Updates employee details including salary, department, contact info, and tax settings."
+            "description": "**Role Required: ADMIN or SUPER_ADMIN**\n\nUpdates employee details. Admin can only update employees in their own company."
           },
           "response": []
         },
         {
-          "name": "Deactivate employee (soft-delete)",
+          "name": "Deactivate employee (soft-delete) [ADMIN / SUPER_ADMIN only]",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "DELETE",
             "header": [
               {
@@ -1750,12 +2016,12 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Employee ID"
                 }
               ]
             },
-            "description": "Marks employee status as Inactive for compliance and audit preservation."
+            "description": "**Role Required: ADMIN or SUPER_ADMIN**\n\nMarks employee status as Inactive to preserve audit trails and attendance/payroll history."
           },
           "response": []
         }
@@ -1768,16 +2034,6 @@
         {
           "name": "List all departments with active employee count",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -1805,16 +2061,6 @@
         {
           "name": "Create department",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -1830,7 +2076,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Artificial Intelligence\",\n  \"code\": \"AI\",\n  \"headName\": \"Keyur Sangani\",\n  \"description\": \"Research and deployment of machine learning systems.\"\n}",
+              "raw": "{\n  \"name\": \"Artificial Intelligence\",\n  \"code\": \"AI\",\n  \"description\": \"Research and deployment of machine learning systems.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1856,16 +2102,6 @@
         {
           "name": "Update department",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -1902,7 +2138,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Department ID"
                 }
               ]
@@ -1914,16 +2150,6 @@
         {
           "name": "List all designations",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -1951,16 +2177,6 @@
         {
           "name": "Create designation",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -2002,16 +2218,6 @@
         {
           "name": "List company locations",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -2039,16 +2245,6 @@
         {
           "name": "Get visual organization hierarchy tree",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -2082,16 +2278,6 @@
         {
           "name": "List attendance records with filters",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -2137,16 +2323,6 @@
         {
           "name": "Get current punch clock state for employee",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -2181,16 +2357,6 @@
         {
           "name": "Employee Clock-in",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -2206,7 +2372,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"employeeId\": \"emp-1\",\n  \"remarks\": \"Morning shift clock-in\"\n}",
+              "raw": "{\n  \"employeeId\": \"emp-1793009147556\",\n  \"remarks\": \"Morning shift clock-in\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2232,16 +2398,6 @@
         {
           "name": "Employee Clock-out",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -2257,7 +2413,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"employeeId\": \"emp-1\",\n  \"remarks\": \"Evening clock-out\"\n}",
+              "raw": "{\n  \"employeeId\": \"emp-1793009147556\",\n  \"remarks\": \"Evening clock-out\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2283,16 +2439,6 @@
         {
           "name": "HR manual regularization / correction entry",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -2308,7 +2454,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"employeeId\": \"emp-1\",\n  \"date\": \"2026-10-21\",\n  \"checkIn\": \"09:00 AM\",\n  \"checkOut\": \"06:00 PM\",\n  \"status\": \"Present\",\n  \"remarks\": \"Manual correction by HR\"\n}",
+              "raw": "{\n  \"employeeId\": \"emp-1793009147556\",\n  \"date\": \"2026-10-26\",\n  \"checkIn\": \"09:00 AM\",\n  \"checkOut\": \"06:00 PM\",\n  \"status\": \"Present\",\n  \"remarks\": \"Manual correction by HR\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2334,16 +2480,6 @@
         {
           "name": "Biometric hardware machine sync (ZKTeco / eSSL device webhook)",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -2359,7 +2495,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"deviceId\": \"ZK-TERMINAL-01\",\n  \"logs\": [\n    {\n      \"deviceId\": \"ZK-DEV-01\",\n      \"employeeCode\": \"EMP-1\",\n      \"punchTime\": \"2026-10-21T09:05:00\",\n      \"type\": \"IN\"\n    }\n  ]\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2391,16 +2527,6 @@
         {
           "name": "List all leave applications with status filter",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -2440,16 +2566,6 @@
         {
           "name": "Get employee leave balances",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -2484,16 +2600,6 @@
         {
           "name": "Employee apply for leave",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -2509,7 +2615,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"employeeId\": \"emp-1\",\n  \"leaveType\": \"Casual Leave\",\n  \"startDate\": \"2026-11-01\",\n  \"endDate\": \"2026-11-03\",\n  \"isHalfDay\": false,\n  \"reason\": \"Attending personal family commitments\"\n}",
+              "raw": "{\n  \"employeeId\": \"emp-1793009147556\",\n  \"leaveType\": \"Casual Leave\",\n  \"startDate\": \"2026-11-01\",\n  \"endDate\": \"2026-11-03\",\n  \"isHalfDay\": false,\n  \"reason\": \"Attending family function\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2535,16 +2641,6 @@
         {
           "name": "Approve leave request (updates balance)",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -2560,7 +2656,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"role\": \"HR_ADMIN\",\n  \"approverName\": \"Keyur Sangani\",\n  \"comments\": \"Approved as per company leave policy\"\n}",
+              "raw": "{\n  \"approverName\": \"Admin\",\n  \"comments\": \"Approved as per leave policy\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2581,7 +2677,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Leave Request ID"
                 }
               ]
@@ -2593,16 +2689,6 @@
         {
           "name": "Reject leave request",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -2618,7 +2704,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"approverName\": \"Keyur Sangani\",\n  \"reason\": \"Critical sprint delivery milestone during requested dates\"\n}",
+              "raw": "{\n  \"approverName\": \"Admin\",\n  \"reason\": \"Milestone delivery scheduled during requested dates\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2639,7 +2725,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Leave Request ID"
                 }
               ]
@@ -2657,16 +2743,6 @@
         {
           "name": "List payroll records",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -2712,16 +2788,6 @@
         {
           "name": "Get formatted printable payslip by record ID",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -2744,7 +2810,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Payroll Record ID"
                 }
               ]
@@ -2756,16 +2822,6 @@
         {
           "name": "Generate monthly payroll run for all active employees",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -2781,7 +2837,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"month\": \"2026-10\",\n  \"actorName\": \"Keyur Sangani\"\n}",
+              "raw": "{\n  \"month\": \"2026-10\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2807,16 +2863,6 @@
         {
           "name": "Update payroll record status (Approved, Processed, Paid)",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -2832,7 +2878,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"Paid\",\n  \"actorName\": \"Keyur Sangani\"\n}",
+              "raw": "{\n  \"status\": \"Paid\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2853,7 +2899,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Payroll Record ID"
                 }
               ]
@@ -2871,16 +2917,6 @@
         {
           "name": "List all published job openings",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -2908,16 +2944,6 @@
         {
           "name": "Create new job opening",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -2933,7 +2959,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Senior AI Engineer\",\n  \"departmentId\": \"dept-1\",\n  \"departmentName\": \"Administration & Management\",\n  \"designationTitle\": \"Senior AI Engineer\",\n  \"location\": \"Surat, Gujarat (Hybrid)\",\n  \"employmentType\": \"Full-time\",\n  \"experienceLevel\": \"Senior\",\n  \"openingsCount\": 2,\n  \"salaryRange\": \"$130,000 - $170,000\",\n  \"description\": \"Build and deploy enterprise AI infrastructure.\",\n  \"skillsRequired\": [\n    \"Python\",\n    \"PyTorch\",\n    \"NestJS\"\n  ]\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2959,16 +2985,6 @@
         {
           "name": "List candidates, optionally filtered by jobId",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -3003,16 +3019,6 @@
         {
           "name": "Add new candidate",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -3028,7 +3034,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"jobId\": \"job-1\",\n  \"jobTitle\": \"Senior Full Stack Engineer\",\n  \"fullName\": \"Lucas Scott\",\n  \"email\": \"lucas.scott@example.com\",\n  \"phone\": \"+1 (555) 789-0123\",\n  \"experienceYears\": 5,\n  \"currentCompany\": \"Acme Corp\",\n  \"skills\": [\n    \"React\",\n    \"Node.js\",\n    \"PostgreSQL\"\n  ],\n  \"source\": \"LinkedIn\",\n  \"notes\": \"Strong portfolio and open source contributor.\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3054,16 +3060,6 @@
         {
           "name": "Update candidate pipeline stage",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -3079,7 +3075,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"Interview\",\n  \"actorName\": \"Lead Recruiter\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3101,7 +3097,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Candidate ID"
                 }
               ]
@@ -3113,16 +3109,6 @@
         {
           "name": "Schedule interview round for candidate",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -3138,7 +3124,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"round\": \"Technical Architecture Round\",\n  \"interviewerName\": \"Keyur Sangani\",\n  \"scheduledAt\": \"2026-10-25 10:00 AM PST\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3160,7 +3146,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Candidate ID"
                 }
               ]
@@ -3172,16 +3158,6 @@
         {
           "name": "One-click convert hired candidate to employee",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -3197,7 +3173,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"actorName\": \"Keyur Sangani\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3219,7 +3195,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Candidate ID"
                 }
               ]
@@ -3237,16 +3213,6 @@
         {
           "name": "List all review cycles",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -3274,16 +3240,6 @@
         {
           "name": "List reviews, optionally filtered by employeeId",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -3318,16 +3274,6 @@
         {
           "name": "Submit self-assessment or manager appraisal rating",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -3343,7 +3289,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"selfRating\": 4.5,\n  \"selfComments\": \"Delivered core microservices ahead of sprint deadline\",\n  \"managerRating\": 4.8,\n  \"managerFeedback\": \"Outstanding performance and team leadership\",\n  \"appraisalRecommended\": \"Promotion to Lead Software Engineer recommended\",\n  \"role\": \"MANAGER\",\n  \"actorName\": \"Keyur Sangani\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3365,7 +3311,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Performance Review ID"
                 }
               ]
@@ -3383,16 +3329,6 @@
         {
           "name": "List all training programs",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -3420,16 +3356,6 @@
         {
           "name": "Create new training program",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -3445,7 +3371,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Advanced System Design with NestJS\",\n  \"description\": \"Master clean architecture, microservices, and distributed events\",\n  \"trainerName\": \"Keyur Sangani\",\n  \"skillsCovered\": [\n    \"NestJS\",\n    \"TypeScript\",\n    \"Clean Architecture\"\n  ],\n  \"startDate\": \"2026-11-10\",\n  \"endDate\": \"2026-11-20\",\n  \"durationHours\": 16\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3471,16 +3397,6 @@
         {
           "name": "List employee training enrollments",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -3515,16 +3431,6 @@
         {
           "name": "Enroll employee in training course",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -3540,7 +3446,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"trainingId\": \"trn-1\",\n  \"employeeId\": \"emp-1\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3566,16 +3472,6 @@
         {
           "name": "Update training progress percentage",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -3591,7 +3487,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"progressPercent\": 75\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3613,7 +3509,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Enrollment ID"
                 }
               ]
@@ -3631,16 +3527,6 @@
         {
           "name": "List company assets",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -3674,16 +3560,6 @@
         {
           "name": "Create new hardware/device asset",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -3699,7 +3575,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"assetCode\": \"AST-101\",\n  \"name\": \"MacBook Pro M3 Max 16\\\"\",\n  \"category\": \"Laptop\",\n  \"serialNumber\": \"C02G879QMD6T\",\n  \"condition\": \"Excellent\",\n  \"purchaseDate\": \"2026-01-15\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3724,16 +3600,6 @@
         {
           "name": "Assign asset to employee",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -3749,7 +3615,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"employeeId\": \"emp-1\",\n  \"actorName\": \"Keyur Sangani\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3770,7 +3636,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Asset ID"
                 }
               ]
@@ -3782,16 +3648,6 @@
         {
           "name": "Mark asset returned from employee",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -3807,7 +3663,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"condition\": \"Good\",\n  \"actorName\": \"Keyur Sangani\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3828,7 +3684,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Asset ID"
                 }
               ]
@@ -3846,16 +3702,6 @@
         {
           "name": "List all resignation records",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -3882,16 +3728,6 @@
         {
           "name": "Employee submit resignation",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -3907,7 +3743,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"employeeId\": \"emp-1\",\n  \"noticePeriodDays\": 30,\n  \"reason\": \"Relocating to another city for family reasons\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3933,16 +3769,6 @@
         {
           "name": "Update exit clearance checklist",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -3958,7 +3784,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"clearance\": {\n    \"departmentClearance\": true,\n    \"assetReturned\": true,\n    \"financeSettlement\": true,\n    \"exitInterviewCompleted\": true\n  },\n  \"actorName\": \"Keyur Sangani\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3979,7 +3805,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Resignation ID"
                 }
               ]
@@ -3997,16 +3823,6 @@
         {
           "name": "List all calendar holidays",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -4033,16 +3849,6 @@
         {
           "name": "Add company holiday",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -4058,7 +3864,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Thanksgiving Day\",\n  \"date\": \"2026-11-26\",\n  \"dayOfWeek\": \"Thursday\",\n  \"type\": \"Public\",\n  \"description\": \"Annual Thanksgiving celebration\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4083,16 +3889,6 @@
         {
           "name": "Delete holiday",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "DELETE",
             "header": [
               {
@@ -4114,7 +3910,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Holiday ID"
                 }
               ]
@@ -4132,16 +3928,6 @@
         {
           "name": "List documents, optionally by employeeId",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -4175,16 +3961,6 @@
         {
           "name": "Upload document metadata",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -4200,7 +3976,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"employeeId\": \"emp-1\",\n  \"title\": \"Offer Letter - Signed\",\n  \"category\": \"Contracts\",\n  \"fileUrl\": \"http://localhost:4000/uploads/documents/sample.pdf\",\n  \"fileSize\": \"1.2 MB\",\n  \"expiryDate\": \"2028-12-31\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4225,16 +4001,6 @@
         {
           "name": "Upload actual physical document file",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -4276,16 +4042,6 @@
         {
           "name": "Verify or reject uploaded document",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -4301,7 +4057,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"Verified\",\n  \"verifiedBy\": \"Keyur Sangani\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4322,7 +4078,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Document ID"
                 }
               ]
@@ -4340,16 +4096,6 @@
         {
           "name": "List company announcements",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -4376,16 +4122,6 @@
         {
           "name": "Publish new company announcement",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -4401,7 +4137,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Annual Paneliya Tech Summit 2026\",\n  \"content\": \"All team members are invited to register for keynote tracks.\",\n  \"targetAudience\": \"All\",\n  \"priority\": \"High\",\n  \"authorName\": \"Keyur Sangani\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4432,16 +4168,6 @@
         {
           "name": "List all notifications",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -4468,16 +4194,6 @@
         {
           "name": "Mark specific notification as read",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -4514,7 +4230,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "emp-1",
+                  "value": "cmp-1",
                   "description": "Notification ID"
                 }
               ]
@@ -4526,16 +4242,6 @@
         {
           "name": "Mark all notifications as read",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -4583,16 +4289,6 @@
         {
           "name": "List security and state change audit logs",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -4632,16 +4328,6 @@
         {
           "name": "Get unified executive dashboard statistics",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -4669,16 +4355,6 @@
         {
           "name": "Get raw data for CSV/Excel/PDF export",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -4719,16 +4395,6 @@
         {
           "name": "Get enterprise system settings and policies",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
             "header": [
               {
@@ -4755,16 +4421,6 @@
         {
           "name": "Update system settings and policies",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
             "header": [
               {
@@ -4780,7 +4436,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"company\": {\n    \"name\": \"Paneliya Technology Inc.\",\n    \"tagline\": \"Enterprise Cloud & Next-Gen Software Engineering\",\n    \"currency\": \"USD ($)\"\n  },\n  \"workSchedule\": {\n    \"workingHoursPerDay\": 8,\n    \"defaultShift\": \"09:00 AM - 06:00 PM\",\n    \"gracePeriodMinutes\": 15\n  }\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4799,6 +4455,119 @@
               "variable": []
             },
             "description": "Updates configuration, work hours, and payroll policies."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Companies",
+      "description": "",
+      "item": [
+        {
+          "name": "Get assigned company profile for current logged-in user",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/companies/my-company",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                "my-company"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Retrieves current company information for the authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "Get company profile by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Company ID or Company Code"
+                }
+              ]
+            },
+            "description": "Admin can only view their own company. SuperAdmin can view any company."
+          },
+          "response": []
+        },
+        {
+          "name": "Update own company details [ADMIN or SUPER_ADMIN]",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"Paneliya Technologies Pvt Ltd\",\n  \"phone\": \"+91 98765 43210\",\n  \"address\": \"Surat, Gujarat, India\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/companies/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Company ID or Company Code"
+                }
+              ]
+            },
+            "description": "Admin can update their own company contact info. Admin cannot modify another company."
           },
           "response": []
         }

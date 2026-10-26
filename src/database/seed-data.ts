@@ -30,7 +30,23 @@ import {
   Announcement,
   NotificationItem,
   AuditLog,
+  Company,
 } from '../common/types.js';
+
+export const initialCompanies: Company[] = [
+  {
+    id: 'cmp-1',
+    companyCode: 'CMP-000001',
+    companyName: 'Paneliya Technologies',
+    name: 'Paneliya Technologies',
+    email: 'info@paneliya.com',
+    phone: '+91 98765 43210',
+    address: 'paneliya technology, Surat, Gujarat, India',
+    status: 'Active',
+    createdAt: '2024-01-15T09:00:00Z',
+    updatedAt: '2024-01-15T09:00:00Z',
+  },
+];
 
 export const initialLocations: Location[] = [
   {

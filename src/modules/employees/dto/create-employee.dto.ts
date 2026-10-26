@@ -215,4 +215,9 @@ export class CreateEmployeeDto {
   @ApiPropertyOptional({ example: [{ company: 'Tech Inc', role: 'Developer', years: 3 }], description: 'Previous work experience' })
   @IsOptional()
   previousExperience?: any[];
+
+  @ApiPropertyOptional({ example: 'cmp-1', description: 'Company ID (SuperAdmin only; for Admin it is automatically inferred)' })
+  @IsString()
+  @IsOptional()
+  companyId?: string;
 }

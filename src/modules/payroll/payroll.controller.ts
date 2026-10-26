@@ -1,11 +1,12 @@
-import { Controller, Get, Post, Put, Body, Param, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Body, Param, Query, Req } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { PayrollService } from './payroll.service.js';
 import { GeneratePayrollDto } from './dto/generate-payroll.dto.js';
 import { UpdatePayrollStatusDto } from './dto/update-payroll-status.dto.js';
 import { QueryPayrollDto } from './dto/query-payroll.dto.js';
 
 @ApiTags('Payroll')
+@ApiBearerAuth()
 @Controller('payroll')
 export class PayrollController {
   constructor(private readonly payrollService: PayrollService) {}
@@ -16,8 +17,8 @@ export class PayrollController {
     description: 'Retrieves monthly payroll disbursement records filtered by month, status, or employee ID.',
   })
   @ApiResponse({ status: 200, description: 'List of payroll records' })
-  findAll(@Query() query: QueryPayrollDto) {
-    return this.payrollService.findAll(query);
+  findAll(@Query() query: QueryPayrollDto, @Req() req: any) {
+    return this.payrollService.findAll(query, req.user);
   }
 
   @Get('payslip/:id')

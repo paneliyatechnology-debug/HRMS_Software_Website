@@ -14,6 +14,7 @@ import {
   EmployeeStatus,
   LeaveStatus,
   AuditLog,
+  Company,
 } from '../../common/types.js';
 import { CreateSuperAdminUserDto } from './dto/create-super-admin-user.dto.js';
 import { UpdateSuperAdminUserDto } from './dto/update-super-admin-user.dto.js';
@@ -23,6 +24,8 @@ import { ResetUserPasswordDto } from './dto/reset-user-password.dto.js';
 import { QuerySuperAdminUsersDto } from './dto/query-super-admin-users.dto.js';
 import { UpdateSystemSettingsDto } from './dto/system-settings.dto.js';
 import { LeaveOverrideDto } from './dto/leave-override.dto.js';
+import { CreateCompanyDto } from './dto/create-company.dto.js';
+import { UpdateCompanyDto } from './dto/update-company.dto.js';
 
 @Injectable()
 export class SuperAdminService {
@@ -250,6 +253,16 @@ export class SuperAdminService {
     const isSuperAdmin = dto.isSuperAdmin !== undefined ? dto.isSuperAdmin : role === Role.SUPER_ADMIN;
     const status = dto.status || 'Active';
 
+    // Target company assignment
+    let targetCompany: Company | undefined;
+    if (dto.companyId) {
+      targetCompany = this.db.companies.find(
+        (c) => c.id === dto.companyId || c.companyCode === dto.companyId,
+      );
+    } else if (role !== Role.SUPER_ADMIN && this.db.companies.length > 0) {
+      targetCompany = this.db.companies[0];
+    }
+
     const newUser: User = {
       id: userId,
       email: dto.email,
@@ -259,6 +272,8 @@ export class SuperAdminService {
       role,
       isSuperAdmin,
       status,
+      companyId: targetCompany?.id || null,
+      companyCode: targetCompany?.companyCode || undefined,
       employeeId,
       avatarUrl: '',
       createdAt: new Date().toISOString(),
@@ -266,13 +281,23 @@ export class SuperAdminService {
     };
     this.db.users.unshift(newUser);
 
+    if (role === Role.ADMIN && targetCompany) {
+      targetCompany.adminUserId = userId;
+      targetCompany.updatedAt = new Date().toISOString();
+    }
+
     // Also create matching employee record
     const department = this.db.departments.find((d) => d.id === dto.departmentId) || this.db.departments[0];
     const designation = this.db.designations.find((d) => d.id === dto.designationId) || this.db.designations[0];
     const location = this.db.locations[0];
 
+    // Scoped employee code generation
     let maxEmpNum = 0;
-    for (const emp of this.db.employees) {
+    const scopedList = targetCompany
+      ? this.db.employees.filter((e) => e.companyId === targetCompany?.id)
+      : this.db.employees;
+
+    for (const emp of scopedList) {
       if (emp.employeeCode) {
         const match = emp.employeeCode.match(/(\d+)/);
         if (match) {
@@ -281,11 +306,13 @@ export class SuperAdminService {
         }
       }
     }
-    const autoEmployeeCode = `EMP-${String(maxEmpNum + 1).padStart(3, '0')}`;
+    const autoEmployeeCode = `EMP-${String(maxEmpNum + 1).padStart(6, '0')}`;
 
     const newEmployee: Employee = {
       id: employeeId,
       employeeCode: autoEmployeeCode,
+      companyId: targetCompany?.id || '',
+      companyCode: targetCompany?.companyCode || '',
       userId,
       password: dto.password,
       isSuperAdmin,
@@ -320,6 +347,15 @@ export class SuperAdminService {
       updatedAt: new Date().toISOString(),
     };
     this.db.employees.unshift(newEmployee);
+
+    this.db.leaveBalances.push({
+      id: `bal-${newEmployee.id}`,
+      employeeId: newEmployee.id,
+      year: 2026,
+      casualLeave: { total: 12, used: 0, remaining: 12 },
+      sickLeave: { total: 10, used: 0, remaining: 10 },
+      paidLeave: { total: 15, used: 0, remaining: 15 },
+    });
 
     this.db.logAudit(
       actingAdmin?.id || 'super-admin',
@@ -929,6 +965,306 @@ export class SuperAdminService {
       notifications: this.db.notifications.length,
       documents: this.db.documents.length,
       auditLogs: this.db.auditLogs.length,
+      companies: this.db.companies.length,
+    };
+  }
+
+  // -------------------------------------------------------------
+  // MULTI-COMPANY MANAGEMENT (SuperAdmin only)
+  // -------------------------------------------------------------
+  getCompanies() {
+    return this.db.companies.map((c) => {
+      const companyEmployees = this.db.employees.filter((e) => e.companyId === c.id);
+      const companyAdmins = this.db.users.filter(
+        (u) => u.companyId === c.id && u.role === Role.ADMIN,
+      );
+      const adminUser = c.adminUserId
+        ? this.db.users.find((u) => u.id === c.adminUserId)
+        : companyAdmins[0] || null;
+
+      const safeAdmin = adminUser
+        ? {
+            id: adminUser.id,
+            email: adminUser.email,
+            firstName: adminUser.firstName,
+            lastName: adminUser.lastName,
+            role: adminUser.role,
+            status: adminUser.status || 'Active',
+          }
+        : null;
+
+      return {
+        ...c,
+        totalEmployees: companyEmployees.length,
+        totalAdmins: companyAdmins.length,
+        adminUser: safeAdmin,
+      };
+    });
+  }
+
+  getCompanyById(id: string) {
+    const company = this.db.companies.find(
+      (c) =>
+        c.id.toLowerCase() === id.toLowerCase() ||
+        c.companyCode.toLowerCase() === id.toLowerCase(),
+    );
+    if (!company) {
+      throw new NotFoundException(`Company with ID or code "${id}" not found.`);
+    }
+
+    const companyEmployees = this.db.employees.filter((e) => e.companyId === company.id);
+    const companyAdmins = this.db.users
+      .filter((u) => u.companyId === company.id && u.role === Role.ADMIN)
+      .map(({ password: _, ...safe }) => safe);
+
+    const adminUser = company.adminUserId
+      ? this.db.users.find((u) => u.id === company.adminUserId)
+      : companyAdmins[0] || null;
+
+    return {
+      ...company,
+      totalEmployees: companyEmployees.length,
+      employees: companyEmployees,
+      admins: companyAdmins,
+      adminUser: adminUser
+        ? {
+            id: adminUser.id,
+            email: adminUser.email,
+            firstName: adminUser.firstName,
+            lastName: adminUser.lastName,
+          }
+        : null,
+    };
+  }
+
+  createCompany(dto: CreateCompanyDto, actingAdmin?: User) {
+    const companyName = (dto.companyName || dto.name || '').trim();
+    if (!companyName) {
+      throw new BadRequestException('Company name is required.');
+    }
+
+    // Auto-generate globally unique sequential Company Code (e.g. CMP-000001, CMP-000002)
+    const companyCode = this.db.generateNextCompanyCode();
+    const companyId = `cmp-${Date.now()}`;
+
+    const newCompany: Company = {
+      id: companyId,
+      companyCode,
+      companyName,
+      name: companyName,
+      email: dto.email || '',
+      phone: dto.phone || '',
+      address: dto.address || '',
+      status: dto.status || 'Active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // If initial admin credentials are provided, automatically create the company Admin
+    if (dto.adminEmail && dto.adminPassword) {
+      const existingUser = this.db.users.find(
+        (u) => u.email.toLowerCase() === dto.adminEmail!.toLowerCase(),
+      );
+      if (existingUser) {
+        throw new ConflictException(`User with email "${dto.adminEmail}" already exists.`);
+      }
+
+      const adminUserId = `user-${Date.now()}`;
+      const adminEmpId = `emp-${Date.now()}`;
+      const adminUser: User = {
+        id: adminUserId,
+        email: dto.adminEmail,
+        password: dto.adminPassword,
+        firstName: dto.adminFirstName || 'Company',
+        lastName: dto.adminLastName || 'Admin',
+        role: Role.ADMIN,
+        isSuperAdmin: false,
+        status: 'Active',
+        companyId: newCompany.id,
+        companyCode: newCompany.companyCode,
+        employeeId: adminEmpId,
+        avatarUrl: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      this.db.users.unshift(adminUser);
+
+      const adminEmp: Employee = {
+        id: adminEmpId,
+        employeeCode: 'EMP-000001',
+        companyId: newCompany.id,
+        companyCode: newCompany.companyCode,
+        userId: adminUserId,
+        password: dto.adminPassword,
+        isSuperAdmin: false,
+        firstName: adminUser.firstName,
+        lastName: adminUser.lastName,
+        email: adminUser.email,
+        phone: dto.phone || '',
+        avatarUrl: '',
+        gender: 'Other',
+        dateOfBirth: '',
+        address: dto.address || '',
+        emergencyContact: {} as any,
+        joiningDate: new Date().toISOString().split('T')[0],
+        employmentType: 'Full-time',
+        status: EmployeeStatus.ACTIVE,
+        departmentId: this.db.departments[0]?.id || '',
+        departmentName: this.db.departments[0]?.name || '',
+        designationId: this.db.designations[0]?.id || '',
+        designationTitle: 'Administrator',
+        reportingManagerId: '',
+        reportingManagerName: '',
+        workLocationId: this.db.locations[0]?.id || '',
+        workLocationName: this.db.locations[0]?.name || '',
+        shift: 'General Shift (9 AM - 6 PM)',
+        bankDetails: {} as any,
+        taxInformation: {} as any,
+        education: [],
+        previousExperience: [],
+        skills: ['Management'],
+        salary: {} as any,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      this.db.employees.unshift(adminEmp);
+
+      this.db.leaveBalances.push({
+        id: `bal-${adminEmp.id}`,
+        employeeId: adminEmp.id,
+        year: 2026,
+        casualLeave: { total: 12, used: 0, remaining: 12 },
+        sickLeave: { total: 10, used: 0, remaining: 10 },
+        paidLeave: { total: 15, used: 0, remaining: 15 },
+      });
+
+      newCompany.adminUserId = adminUserId;
+    }
+
+    this.db.companies.push(newCompany);
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      actingAdmin?.role || Role.SUPER_ADMIN,
+      'COMPANY_CREATED',
+      'SuperAdmin',
+      `Registered new company "${newCompany.companyName}" with code ${newCompany.companyCode}`,
+      newCompany.id,
+    );
+
+    this.db.persist();
+    return {
+      message: 'Company registered successfully',
+      company: newCompany,
+    };
+  }
+
+  updateCompany(id: string, dto: UpdateCompanyDto, actingAdmin?: User) {
+    const company = this.db.companies.find(
+      (c) =>
+        c.id.toLowerCase() === id.toLowerCase() ||
+        c.companyCode.toLowerCase() === id.toLowerCase(),
+    );
+    if (!company) {
+      throw new NotFoundException(`Company with ID or code "${id}" not found.`);
+    }
+
+    if (dto.companyName) {
+      company.companyName = dto.companyName;
+      company.name = dto.companyName;
+    }
+    if (dto.name) {
+      company.name = dto.name;
+      company.companyName = dto.name;
+    }
+    if (dto.email !== undefined) company.email = dto.email;
+    if (dto.phone !== undefined) company.phone = dto.phone;
+    if (dto.address !== undefined) company.address = dto.address;
+    if (dto.status !== undefined) company.status = dto.status;
+    if (dto.adminUserId !== undefined) company.adminUserId = dto.adminUserId;
+    company.updatedAt = new Date().toISOString();
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      actingAdmin?.role || Role.SUPER_ADMIN,
+      'COMPANY_UPDATED',
+      'SuperAdmin',
+      `Updated company profile for ${company.companyCode} (${company.companyName})`,
+      company.id,
+    );
+
+    this.db.persist();
+    return company;
+  }
+
+  getCompanyEmployees(id: string) {
+    const company = this.db.companies.find(
+      (c) =>
+        c.id.toLowerCase() === id.toLowerCase() ||
+        c.companyCode.toLowerCase() === id.toLowerCase(),
+    );
+    if (!company) {
+      throw new NotFoundException(`Company with ID or code "${id}" not found.`);
+    }
+
+    return this.db.employees.filter((e) => e.companyId === company.id);
+  }
+
+  assignCompanyAdmin(companyId: string, userId: string, actingAdmin?: User) {
+    const company = this.db.companies.find(
+      (c) =>
+        c.id.toLowerCase() === companyId.toLowerCase() ||
+        c.companyCode.toLowerCase() === companyId.toLowerCase(),
+    );
+    if (!company) {
+      throw new NotFoundException(`Company "${companyId}" not found.`);
+    }
+
+    const user = this.db.users.find((u) => u.id === userId);
+    if (!user) {
+      throw new NotFoundException(`User "${userId}" not found.`);
+    }
+
+    user.companyId = company.id;
+    user.companyCode = company.companyCode;
+    user.role = Role.ADMIN;
+    user.updatedAt = new Date().toISOString();
+
+    company.adminUserId = user.id;
+    company.updatedAt = new Date().toISOString();
+
+    const linkedEmp = this.db.employees.find(
+      (e) => e.id === user.employeeId || e.userId === user.id,
+    );
+    if (linkedEmp) {
+      linkedEmp.companyId = company.id;
+      linkedEmp.companyCode = company.companyCode;
+      linkedEmp.updatedAt = new Date().toISOString();
+    }
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      actingAdmin?.role || Role.SUPER_ADMIN,
+      'COMPANY_ADMIN_ASSIGNED',
+      'SuperAdmin',
+      `Assigned user ${user.email} as Admin for company ${company.companyCode}`,
+      company.id,
+    );
+
+    this.db.persist();
+    return {
+      message: `User ${user.email} assigned as Admin for company ${company.companyCode}`,
+      company,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        companyId: user.companyId,
+        companyCode: user.companyCode,
+      },
     };
   }
 }

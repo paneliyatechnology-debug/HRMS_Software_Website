@@ -80,4 +80,9 @@ export class CreateSuperAdminUserDto {
   @IsString()
   @IsOptional()
   designationId?: string;
+
+  @ApiPropertyOptional({ example: 'cmp-1', description: 'Target Company ID (for ADMIN or EMPLOYEE)' })
+  @IsString()
+  @IsOptional()
+  companyId?: string;
 }

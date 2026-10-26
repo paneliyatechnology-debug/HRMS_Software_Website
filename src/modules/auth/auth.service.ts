@@ -131,6 +131,8 @@ export class AuthService {
         role: newUser.role,
         isSuperAdmin: newUser.isSuperAdmin ?? (newUser.role === Role.SUPER_ADMIN),
         status: newUser.status || 'Active',
+        companyId: newUser.companyId || (this.db.companies[0]?.id || null),
+        companyCode: newUser.companyCode || (this.db.companies[0]?.companyCode || null),
         employeeId: newUser.employeeId,
         avatarUrl: newUser.avatarUrl,
       },
@@ -156,6 +158,17 @@ export class AuthService {
       throw new UnauthorizedException('Password is required for this account.');
     }
 
+    if (user.status && user.status.toLowerCase() === 'inactive') {
+      throw new UnauthorizedException('Your account is deactivated. Contact company administrator.');
+    }
+
+    // Default company if missing
+    if (user.role !== Role.SUPER_ADMIN && !user.companyId && this.db.companies.length > 0) {
+      user.companyId = this.db.companies[0].id;
+      user.companyCode = this.db.companies[0].companyCode;
+      this.db.persist();
+    }
+
     const token = `jwt_token_${user.id}_${Date.now()}`;
     this.db.logAudit(
       user.id,
@@ -177,6 +190,8 @@ export class AuthService {
         role: user.role,
         isSuperAdmin: user.isSuperAdmin ?? (user.role === Role.SUPER_ADMIN),
         status: user.status || 'Active',
+        companyId: user.companyId || null,
+        companyCode: user.companyCode || null,
         employeeId: user.employeeId,
         avatarUrl: user.avatarUrl,
       },

@@ -76,6 +76,20 @@ export enum ResignationStatus {
   REJECTED = 'Rejected',
 }
 
+export interface Company {
+  id: string;
+  companyCode: string;
+  companyName: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  status: 'Active' | 'Inactive';
+  adminUserId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -85,6 +99,8 @@ export interface User {
   role: Role;
   isSuperAdmin?: boolean;
   status?: string;
+  companyId?: string | null;
+  companyCode?: string;
   employeeId?: string;
   avatarUrl?: string;
   createdAt: string;
@@ -124,6 +140,8 @@ export interface Location {
 export interface Employee {
   id: string;
   employeeCode: string;
+  companyId?: string;
+  companyCode?: string;
   userId?: string;
   password?: string;
   isSuperAdmin?: boolean;

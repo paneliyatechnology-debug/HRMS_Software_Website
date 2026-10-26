@@ -14,11 +14,25 @@ export async function getMysqlPool() {
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
+    connectTimeout: 5000, // 5s timeout — prevents indefinite hang if MySQL is offline
   });
 }
 
 export async function initializeMysqlTables(pool: mysql.Pool) {
   const tableDefinitions = [
+    `CREATE TABLE IF NOT EXISTS companies (
+      id VARCHAR(64) PRIMARY KEY,
+      companyCode VARCHAR(50) NOT NULL UNIQUE,
+      companyName VARCHAR(255) NOT NULL,
+      email VARCHAR(255),
+      phone VARCHAR(50),
+      address TEXT,
+      status VARCHAR(50) DEFAULT 'Active',
+      adminUserId VARCHAR(64),
+      createdAt VARCHAR(50),
+      updatedAt VARCHAR(50)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
     `CREATE TABLE IF NOT EXISTS locations (
       id VARCHAR(64) PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
@@ -419,6 +433,30 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
   }
 
   try {
+    await pool.query(`ALTER TABLE users ADD COLUMN companyId VARCHAR(64) AFTER status;`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN companyCode VARCHAR(50) AFTER companyId;`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
+    await pool.query(`ALTER TABLE employees ADD COLUMN companyId VARCHAR(64) AFTER employeeCode;`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
+    await pool.query(`ALTER TABLE employees ADD COLUMN companyCode VARCHAR(50) AFTER companyId;`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
     const [rows]: any = await pool.query(`SELECT COUNT(*) as count FROM system_settings`);
     if (rows && rows[0]?.count === 0) {
       await pool.query(
@@ -449,6 +487,29 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
 export async function syncDataToMysql(pool: mysql.Pool, data: any) {
   try {
+    // 0. Companies
+    if (data.companies && data.companies.length > 0) {
+      for (const c of data.companies) {
+        await pool.query(
+          `INSERT INTO companies (id, companyCode, companyName, email, phone, address, status, adminUserId, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE companyCode=VALUES(companyCode), companyName=VALUES(companyName), email=VALUES(email), phone=VALUES(phone), address=VALUES(address), status=VALUES(status), adminUserId=VALUES(adminUserId), updatedAt=VALUES(updatedAt)`,
+          [
+            c.id,
+            c.companyCode,
+            c.companyName || c.name || '',
+            c.email || '',
+            c.phone || '',
+            c.address || '',
+            c.status || 'Active',
+            c.adminUserId || null,
+            c.createdAt || new Date().toISOString(),
+            c.updatedAt || new Date().toISOString(),
+          ],
+        );
+      }
+    }
+
     // 1. Locations
     if (data.locations && data.locations.length > 0) {
       for (const loc of data.locations) {

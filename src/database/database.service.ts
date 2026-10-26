@@ -25,8 +25,11 @@ import {
   Announcement,
   NotificationItem,
   AuditLog,
+  Company,
+  Role,
 } from '../common/types.js';
 import {
+  initialCompanies,
   initialLocations,
   initialDepartments,
   initialDesignations,
@@ -53,6 +56,7 @@ import {
 import { getMysqlPool, initializeMysqlTables, syncDataToMysql } from './mysql-sync.js';
 
 interface DatabaseSchema {
+  companies?: Company[];
   locations: Location[];
   departments: Department[];
   designations: Designation[];
@@ -85,6 +89,7 @@ export class DatabaseService implements OnModuleInit {
   private mysqlPool: mysql.Pool | null = null;
   private isMysqlConnected = false;
 
+  public companies: Company[] = [];
   public locations: Location[] = [];
   public departments: Department[] = [];
   public designations: Designation[] = [];
@@ -122,6 +127,10 @@ export class DatabaseService implements OnModuleInit {
       if (fs.existsSync(this.dbFilePath)) {
         const fileContent = fs.readFileSync(this.dbFilePath, 'utf8');
         const parsed: DatabaseSchema = JSON.parse(fileContent);
+        this.companies =
+          parsed.companies && parsed.companies.length > 0
+            ? parsed.companies
+            : [...initialCompanies];
         this.locations = parsed.locations || initialLocations;
         this.departments = parsed.departments || initialDepartments;
         this.designations = parsed.designations || initialDesignations;
@@ -144,7 +153,25 @@ export class DatabaseService implements OnModuleInit {
         this.notifications = parsed.notifications || initialNotifications;
         this.documents = parsed.documents || initialDocuments;
         this.auditLogs = parsed.auditLogs || initialAuditLogs;
-        this.logger.log('Database loaded successfully from file.');
+
+        // Ensure default company association for existing legacy records
+        const defaultCompany = this.companies[0];
+        if (defaultCompany) {
+          for (const emp of this.employees) {
+            if (!emp.companyId) {
+              emp.companyId = defaultCompany.id;
+              emp.companyCode = defaultCompany.companyCode;
+            }
+          }
+          for (const u of this.users) {
+            if (u.role !== Role.SUPER_ADMIN && !u.companyId) {
+              u.companyId = defaultCompany.id;
+              u.companyCode = defaultCompany.companyCode;
+            }
+          }
+        }
+
+        this.logger.log('Database loaded successfully from file with companies.');
       } else {
         this.seedInitialData();
         this.persist();
@@ -209,6 +236,7 @@ export class DatabaseService implements OnModuleInit {
   }
 
   private seedInitialData() {
+    this.companies = [...initialCompanies];
     this.locations = [...initialLocations];
     this.departments = [...initialDepartments];
     this.designations = [...initialDesignations];
@@ -233,6 +261,21 @@ export class DatabaseService implements OnModuleInit {
     this.auditLogs = [...initialAuditLogs];
   }
 
+  public generateNextCompanyCode(): string {
+    let maxNum = 0;
+    for (const c of this.companies) {
+      if (c.companyCode) {
+        const match = c.companyCode.match(/(\d+)/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxNum) maxNum = num;
+        }
+      }
+    }
+    const nextNum = maxNum + 1;
+    return `CMP-${String(nextNum).padStart(6, '0')}`;
+  }
+
   private persistTimeout: any = null;
   private isPersisting = false;
 
@@ -255,6 +298,7 @@ export class DatabaseService implements OnModuleInit {
     this.isPersisting = true;
     try {
       const data: DatabaseSchema = {
+        companies: this.companies,
         locations: this.locations,
         departments: this.departments,
         designations: this.designations,

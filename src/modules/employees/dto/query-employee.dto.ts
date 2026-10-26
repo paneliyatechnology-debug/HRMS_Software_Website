@@ -21,4 +21,9 @@ export class QueryEmployeeDto {
   @IsString()
   @IsOptional()
   employmentType?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by Company ID (SuperAdmin only)' })
+  @IsString()
+  @IsOptional()
+  companyId?: string;
 }

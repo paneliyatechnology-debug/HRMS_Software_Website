@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { AttendanceRecord, AttendanceStatus } from '../../common/types.js';
+import { AttendanceRecord, AttendanceStatus, Role, User } from '../../common/types.js';
 import { EventsGateway } from '../events/events.gateway.js';
 import { CheckInDto } from './dto/check-in.dto.js';
 import { CheckOutDto } from './dto/check-out.dto.js';
@@ -15,8 +15,18 @@ export class AttendanceService {
     @Optional() private readonly eventsGateway?: EventsGateway,
   ) {}
 
-  findAll(params?: QueryAttendanceDto) {
+  findAll(params?: QueryAttendanceDto, actorUser?: User) {
     let list = [...this.db.attendanceRecords];
+
+    // Company isolation for ADMIN or EMPLOYEE
+    if (actorUser && (actorUser.role === Role.ADMIN || actorUser.role === Role.EMPLOYEE)) {
+      if (actorUser.companyId) {
+        const companyEmpIds = new Set(
+          this.db.employees.filter((e) => e.companyId === actorUser.companyId).map((e) => e.id),
+        );
+        list = list.filter((a) => companyEmpIds.has(a.employeeId));
+      }
+    }
 
     if (params?.employeeId) {
       list = list.filter((a) => a.employeeId === params.employeeId);

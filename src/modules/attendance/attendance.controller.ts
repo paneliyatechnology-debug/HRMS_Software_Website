@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Query, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Query, Param, Req } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { AttendanceService } from './attendance.service.js';
 import { CheckInDto } from './dto/check-in.dto.js';
 import { CheckOutDto } from './dto/check-out.dto.js';
@@ -8,6 +8,7 @@ import { BiometricSyncDto } from './dto/biometric-sync.dto.js';
 import { QueryAttendanceDto } from './dto/query-attendance.dto.js';
 
 @ApiTags('Attendance')
+@ApiBearerAuth()
 @Controller('attendance')
 export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
@@ -18,8 +19,8 @@ export class AttendanceController {
     description: 'Retrieves attendance logs filtered by employee, date, or department.',
   })
   @ApiResponse({ status: 200, description: 'Filtered list of attendance records' })
-  findAll(@Query() query: QueryAttendanceDto) {
-    return this.attendanceService.findAll(query);
+  findAll(@Query() query: QueryAttendanceDto, @Req() req: any) {
+    return this.attendanceService.findAll(query, req.user);
   }
 
   @Get('my-status/:employeeId')

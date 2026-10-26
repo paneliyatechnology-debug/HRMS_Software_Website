@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Put, Body, Param, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Body, Param, Query, Req } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { LeavesService } from './leaves.service.js';
 import { ApplyLeaveDto } from './dto/apply-leave.dto.js';
 import { ApproveLeaveDto } from './dto/approve-leave.dto.js';
@@ -7,6 +7,7 @@ import { RejectLeaveDto } from './dto/reject-leave.dto.js';
 import { QueryLeaveDto } from './dto/query-leave.dto.js';
 
 @ApiTags('Leaves')
+@ApiBearerAuth()
 @Controller('leaves')
 export class LeavesController {
   constructor(private readonly leavesService: LeavesService) {}
@@ -17,8 +18,8 @@ export class LeavesController {
     description: 'Retrieves all leave requests filtered optionally by employee or approval status.',
   })
   @ApiResponse({ status: 200, description: 'Filtered list of leave applications' })
-  findAll(@Query() query: QueryLeaveDto) {
-    return this.leavesService.findAll(query);
+  findAll(@Query() query: QueryLeaveDto, @Req() req: any) {
+    return this.leavesService.findAll(query, req.user);
   }
 
   @Get('balances/:employeeId')

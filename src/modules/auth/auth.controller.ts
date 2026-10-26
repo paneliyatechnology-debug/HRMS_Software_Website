@@ -4,12 +4,14 @@ import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { SwitchRoleDto } from './dto/switch-role.dto.js';
+import { Public } from '../../common/guards/public.decorator.js';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post('register')
   @ApiOperation({
     summary: 'Register new user account',
@@ -22,6 +24,7 @@ export class AuthController {
     return this.authService.register(body);
   }
 
+  @Public()
   @Post('login')
   @ApiOperation({
     summary: 'Login user and receive JWT session',
@@ -60,6 +63,7 @@ export class AuthController {
     return this.authService.getCurrentUser(rawToken);
   }
 
+  @Public()
   @Post('switch-role')
   @ApiOperation({
     summary: 'Instantly switch active session role for testing RBAC perspectives',
@@ -71,6 +75,7 @@ export class AuthController {
     return this.authService.switchRole(body.role);
   }
 
+  @Public()
   @Get('users')
   @ApiOperation({
     summary: 'List all demo users',

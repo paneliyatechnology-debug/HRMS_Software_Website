@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { LeaveRequest, LeaveStatus, LeaveType } from '../../common/types.js';
+import { LeaveRequest, LeaveStatus, LeaveType, Role, User } from '../../common/types.js';
 import { EventsGateway } from '../events/events.gateway.js';
 import { ApplyLeaveDto } from './dto/apply-leave.dto.js';
 import { ApproveLeaveDto } from './dto/approve-leave.dto.js';
@@ -14,8 +14,18 @@ export class LeavesService {
     @Optional() private readonly eventsGateway?: EventsGateway,
   ) {}
 
-  findAll(params?: QueryLeaveDto) {
+  findAll(params?: QueryLeaveDto, actorUser?: User) {
     let list = [...this.db.leaveRequests];
+
+    // Company isolation for ADMIN or EMPLOYEE
+    if (actorUser && (actorUser.role === Role.ADMIN || actorUser.role === Role.EMPLOYEE)) {
+      if (actorUser.companyId) {
+        const companyEmpIds = new Set(
+          this.db.employees.filter((e) => e.companyId === actorUser.companyId).map((e) => e.id),
+        );
+        list = list.filter((l) => companyEmpIds.has(l.employeeId));
+      }
+    }
 
     if (params?.employeeId) {
       list = list.filter((l) => l.employeeId === params.employeeId);

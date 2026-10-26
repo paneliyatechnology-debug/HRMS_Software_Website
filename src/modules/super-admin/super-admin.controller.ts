@@ -29,6 +29,8 @@ import { ResetUserPasswordDto } from './dto/reset-user-password.dto.js';
 import { QuerySuperAdminUsersDto } from './dto/query-super-admin-users.dto.js';
 import { UpdateSystemSettingsDto } from './dto/system-settings.dto.js';
 import { LeaveOverrideDto } from './dto/leave-override.dto.js';
+import { CreateCompanyDto } from './dto/create-company.dto.js';
+import { UpdateCompanyDto } from './dto/update-company.dto.js';
 
 @ApiTags('Super Admin')
 @ApiBearerAuth()
@@ -54,11 +56,90 @@ export class SuperAdminController {
   @Get('database-stats')
   @ApiOperation({
     summary: 'Master Database Collection Counts',
-    description: 'Retrieves item counts for all 22 internal data models and tables in HRMS.',
+    description: 'Retrieves item counts for all internal data models and tables in HRMS.',
   })
   @ApiResponse({ status: 200, description: 'Complete database entity counts' })
   getDatabaseStats() {
     return this.superAdminService.getDatabaseStats();
+  }
+
+  // -------------------------------------------------------------
+  // 1.1 MULTI-COMPANY MANAGEMENT (SUPER_ADMIN ONLY)
+  // -------------------------------------------------------------
+  @Get('companies')
+  @ApiOperation({
+    summary: 'List all registered companies',
+    description: 'Retrieves all registered companies along with employee count and admin details.',
+  })
+  @ApiResponse({ status: 200, description: 'List of companies' })
+  getCompanies() {
+    return this.superAdminService.getCompanies();
+  }
+
+  @Post('companies')
+  @ApiOperation({
+    summary: 'Create and register a new company (auto-generates CMP-000001 code)',
+    description: 'Registers a new enterprise client company with auto-generated unique Company Code.',
+  })
+  @ApiBody({ type: CreateCompanyDto })
+  @ApiResponse({ status: 201, description: 'Company registered successfully' })
+  createCompany(@Body() body: CreateCompanyDto, @Req() req: any) {
+    return this.superAdminService.createCompany(body, req.user);
+  }
+
+  @Get('companies/:id')
+  @ApiOperation({
+    summary: 'Get company details',
+    description: 'Retrieves complete company profile, assigned admin, and employee roster count.',
+  })
+  @ApiParam({ name: 'id', description: 'Company ID or Company Code' })
+  @ApiResponse({ status: 200, description: 'Company dossier' })
+  @ApiResponse({ status: 404, description: 'Company not found' })
+  getCompanyById(@Param('id') id: string) {
+    return this.superAdminService.getCompanyById(id);
+  }
+
+  @Put('companies/:id')
+  @ApiOperation({
+    summary: 'Update company profile or status (Active/Inactive)',
+    description: 'Updates company metadata, assigned administrator, or activates/suspends the company.',
+  })
+  @ApiParam({ name: 'id', description: 'Company ID or Company Code' })
+  @ApiBody({ type: UpdateCompanyDto })
+  @ApiResponse({ status: 200, description: 'Company updated successfully' })
+  updateCompany(
+    @Param('id') id: string,
+    @Body() body: UpdateCompanyDto,
+    @Req() req: any,
+  ) {
+    return this.superAdminService.updateCompany(id, body, req.user);
+  }
+
+  @Get('companies/:id/employees')
+  @ApiOperation({
+    summary: 'View employees of a selected company',
+    description: 'Retrieves all employees belonging to the specified company ID or Company Code.',
+  })
+  @ApiParam({ name: 'id', description: 'Company ID or Company Code' })
+  @ApiResponse({ status: 200, description: 'Company employees list' })
+  getCompanyEmployees(@Param('id') id: string) {
+    return this.superAdminService.getCompanyEmployees(id);
+  }
+
+  @Post('companies/:id/assign-admin')
+  @ApiOperation({
+    summary: 'Assign Admin account to a company',
+    description: 'Associates an existing or newly created user as the designated Administrator for a company.',
+  })
+  @ApiParam({ name: 'id', description: 'Company ID' })
+  @ApiBody({ schema: { properties: { userId: { type: 'string', example: 'user-1793000000000' } } } })
+  @ApiResponse({ status: 200, description: 'Admin assigned to company successfully' })
+  assignCompanyAdmin(
+    @Param('id') id: string,
+    @Body('userId') userId: string,
+    @Req() req: any,
+  ) {
+    return this.superAdminService.assignCompanyAdmin(id, userId, req.user);
   }
 
   // -------------------------------------------------------------
