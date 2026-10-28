@@ -27,6 +27,7 @@ import {
   AuditLog,
   Company,
   Role,
+  WorkSession,
 } from '../common/types.js';
 import {
   initialCompanies,
@@ -54,6 +55,7 @@ import {
   initialAuditLogs,
 } from './seed-data.js';
 import { getMysqlPool, initializeMysqlTables, syncDataToMysql } from './mysql-sync.js';
+import { hashPassword } from '../common/utils/password.util.js';
 
 interface DatabaseSchema {
   companies?: Company[];
@@ -79,6 +81,7 @@ interface DatabaseSchema {
   notifications: NotificationItem[];
   documents: EmployeeDocument[];
   auditLogs: AuditLog[];
+  workSessions?: WorkSession[];
 }
 
 @Injectable()
@@ -99,6 +102,7 @@ export class DatabaseService implements OnModuleInit {
   public leaveBalances: LeaveBalance[] = [];
   public leaveRequests: LeaveRequest[] = [];
   public attendanceRecords: AttendanceRecord[] = [];
+  public workSessions: WorkSession[] = [];
   public payrollRecords: PayrollRecord[] = [];
   public jobs: JobOpening[] = [];
   public candidates: Candidate[] = [];
@@ -153,6 +157,7 @@ export class DatabaseService implements OnModuleInit {
         this.notifications = parsed.notifications || initialNotifications;
         this.documents = parsed.documents || initialDocuments;
         this.auditLogs = parsed.auditLogs || initialAuditLogs;
+        this.workSessions = parsed.workSessions || [];
 
         // Ensure default company association for existing legacy records
         const defaultCompany = this.companies[0];
@@ -169,6 +174,46 @@ export class DatabaseService implements OnModuleInit {
               u.companyCode = defaultCompany.companyCode;
             }
           }
+        }
+
+        // Ensure geofence configuration on locations
+        for (const loc of this.locations) {
+          if (loc.latitude === undefined || loc.longitude === undefined || loc.radiusMeters === undefined) {
+            if (loc.city?.toLowerCase().includes('surat') || loc.address?.toLowerCase().includes('surat')) {
+              loc.latitude = loc.latitude ?? 21.17024;
+              loc.longitude = loc.longitude ?? 72.831061;
+            } else if (loc.city?.toLowerCase().includes('new york')) {
+              loc.latitude = loc.latitude ?? 40.712776;
+              loc.longitude = loc.longitude ?? -74.005974;
+            } else if (loc.city?.toLowerCase().includes('san francisco')) {
+              loc.latitude = loc.latitude ?? 37.774929;
+              loc.longitude = loc.longitude ?? -122.419416;
+            } else {
+              loc.latitude = loc.latitude ?? 21.17024;
+              loc.longitude = loc.longitude ?? 72.831061;
+            }
+            loc.radiusMeters = loc.radiusMeters ?? 200;
+            loc.isActive = loc.isActive ?? true;
+            loc.companyId = loc.companyId || defaultCompany?.id || 'cmp-1';
+          }
+        }
+
+        // Auto-encrypt/hash any plain text passwords
+        let passwordsHashed = false;
+        for (const u of this.users) {
+          if (u.password && !u.password.startsWith('$2a$') && !u.password.startsWith('$2b$')) {
+            u.password = hashPassword(u.password);
+            passwordsHashed = true;
+          }
+        }
+        for (const emp of this.employees) {
+          if (emp.password && !emp.password.startsWith('$2a$') && !emp.password.startsWith('$2b$')) {
+            emp.password = hashPassword(emp.password);
+            passwordsHashed = true;
+          }
+        }
+        if (passwordsHashed) {
+          this.persist();
         }
 
         this.logger.log('Database loaded successfully from file with companies.');
@@ -190,8 +235,32 @@ export class DatabaseService implements OnModuleInit {
       this.isMysqlConnected = true;
       this.logger.log('Connected to XAMPP MySQL database "hrms". All tables verified.');
 
+      // If MySQL already has companies, load them into memory so phpMyAdmin deletions are respected!
+      try {
+        const [mysqlCompanies]: any = await this.mysqlPool.query(`SELECT * FROM companies`);
+        if (mysqlCompanies && Array.isArray(mysqlCompanies) && mysqlCompanies.length > 0) {
+          this.companies = mysqlCompanies.map((c: any) => ({
+            id: c.id,
+            companyCode: c.companyCode,
+            companyName: c.companyName,
+            name: c.companyName,
+            email: c.email || '',
+            phone: c.phone || '',
+            address: c.address || '',
+            status: c.status || 'Active',
+            adminUserId: c.adminUserId || null,
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
+          }));
+          this.logger.log(`Synced ${this.companies.length} companies from live MySQL.`);
+        }
+      } catch (loadErr) {
+        this.logger.warn('Could not read existing companies from MySQL:', loadErr);
+      }
+
       // Push initial data to MySQL so phpMyAdmin shows all records
       await this.syncToMysql({
+        companies: this.companies,
         locations: this.locations,
         departments: this.departments,
         designations: this.designations,
@@ -201,6 +270,7 @@ export class DatabaseService implements OnModuleInit {
         leaveBalances: this.leaveBalances,
         leaveRequests: this.leaveRequests,
         attendanceRecords: this.attendanceRecords,
+        workSessions: this.workSessions,
         payrollRecords: this.payrollRecords,
         jobs: this.jobs,
         candidates: this.candidates,
@@ -225,7 +295,21 @@ export class DatabaseService implements OnModuleInit {
     }
   }
 
+  private isReconnecting = false;
   private async syncToMysql(data: any) {
+    if (!this.mysqlPool || !this.isMysqlConnected) {
+      if (!this.isReconnecting) {
+        this.isReconnecting = true;
+        try {
+          await this.initMysqlSync();
+        } catch {
+          // Fallback
+        } finally {
+          this.isReconnecting = false;
+        }
+      }
+    }
+
     if (this.mysqlPool && this.isMysqlConnected) {
       try {
         await syncDataToMysql(this.mysqlPool, data);
@@ -246,6 +330,7 @@ export class DatabaseService implements OnModuleInit {
     this.leaveBalances = [...initialLeaveBalances];
     this.leaveRequests = [...initialLeaveRequests];
     this.attendanceRecords = [...initialAttendanceRecords];
+    this.workSessions = [];
     this.payrollRecords = [...initialPayrollRecords];
     this.jobs = [...initialJobs];
     this.candidates = [...initialCandidates];
@@ -308,6 +393,7 @@ export class DatabaseService implements OnModuleInit {
         leaveBalances: this.leaveBalances,
         leaveRequests: this.leaveRequests,
         attendanceRecords: this.attendanceRecords,
+        workSessions: this.workSessions,
         payrollRecords: this.payrollRecords,
         jobs: this.jobs,
         candidates: this.candidates,

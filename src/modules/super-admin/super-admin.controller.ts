@@ -142,6 +142,18 @@ export class SuperAdminController {
     return this.superAdminService.assignCompanyAdmin(id, userId, req.user);
   }
 
+  @Delete('companies/:id')
+  @ApiOperation({
+    summary: 'Delete company and cleanup associated data',
+    description: 'Permanently removes a company and cleans up associated users/employees.',
+  })
+  @ApiParam({ name: 'id', description: 'Company ID or Company Code' })
+  @ApiResponse({ status: 200, description: 'Company deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Company not found' })
+  deleteCompany(@Param('id') id: string, @Req() req: any) {
+    return this.superAdminService.deleteCompany(id, req.user);
+  }
+
   // -------------------------------------------------------------
   // 2. USER & RBAC ACCOUNT MANAGEMENT
   // -------------------------------------------------------------

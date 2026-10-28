@@ -63,4 +63,9 @@ export class RegisterDto {
   @IsString()
   @IsOptional()
   designationId?: string;
+
+  @ApiPropertyOptional({ example: 'cmp-1', description: 'Company ID (for ADMIN or EMPLOYEE)' })
+  @IsString()
+  @IsOptional()
+  companyId?: string;
 }

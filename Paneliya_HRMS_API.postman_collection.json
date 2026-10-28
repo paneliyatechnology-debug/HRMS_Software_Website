@@ -886,6 +886,40 @@
           "response": []
         },
         {
+          "name": "Delete company and cleanup associated data",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/companies/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "companies",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Company ID or Company Code"
+                }
+              ]
+            },
+            "description": "Permanently removes a company and cleans up associated users/employees."
+          },
+          "response": []
+        },
+        {
           "name": "View employees of a selected company",
           "request": {
             "method": "GET",

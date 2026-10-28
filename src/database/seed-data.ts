@@ -56,6 +56,11 @@ export const initialLocations: Location[] = [
     country: 'United States',
     address: '100 Silicon Vista Blvd, Suite 800, San Francisco, CA 94105',
     isHeadquarter: true,
+    latitude: 37.774929,
+    longitude: -122.419416,
+    radiusMeters: 200,
+    companyId: 'cmp-1',
+    isActive: true,
   },
   {
     id: 'loc-2',
@@ -64,6 +69,11 @@ export const initialLocations: Location[] = [
     country: 'United States',
     address: '450 Lexington Ave, 14th Floor, New York, NY 10017',
     isHeadquarter: false,
+    latitude: 40.712776,
+    longitude: -74.005974,
+    radiusMeters: 200,
+    companyId: 'cmp-1',
+    isActive: true,
   },
   {
     id: 'loc-3',
@@ -72,6 +82,11 @@ export const initialLocations: Location[] = [
     country: 'Remote',
     address: 'Remote Work Infrastructure',
     isHeadquarter: false,
+    latitude: 0,
+    longitude: 0,
+    radiusMeters: 0,
+    companyId: 'cmp-1',
+    isActive: true,
   },
 ];
 

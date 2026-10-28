@@ -2,6 +2,19 @@ import { Injectable, UnauthorizedException, ConflictException, NotFoundException
 import { DatabaseService } from '../../database/database.service.js';
 import { User, Role, Employee, EmployeeStatus } from '../../common/types.js';
 import { RegisterDto } from './dto/register.dto.js';
+import { hashPassword, comparePassword } from '../../common/utils/password.util.js';
+
+function matchPhone(phoneA?: string, phoneB?: string): boolean {
+  if (!phoneA || !phoneB) return false;
+  const a = phoneA.replace(/\D/g, '');
+  const b = phoneB.replace(/\D/g, '');
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (a.length >= 10 && b.length >= 10) {
+    return a.slice(-10) === b.slice(-10);
+  }
+  return false;
+}
 
 @Injectable()
 export class AuthService {
@@ -26,16 +39,34 @@ export class AuthService {
 
     const isSuperAdmin = role === Role.SUPER_ADMIN;
 
+    // Determine target company:
+    let targetCompany: any;
+    if (data.companyId) {
+      targetCompany = this.db.companies.find(
+        (c) => c.id === data.companyId || c.companyCode === data.companyId,
+      );
+      if (!targetCompany) {
+        throw new NotFoundException(`Company with ID or code "${data.companyId}" not found.`);
+      }
+    } else if (role !== Role.SUPER_ADMIN && this.db.companies.length > 0) {
+      targetCompany = this.db.companies[0];
+    }
+
+    const hashedPassword = hashPassword(data.password);
+
     // Create User record
     const newUser: User = {
       id: userId,
       email: data.email,
-      password: data.password,
+      phone: data.phone || '',
+      password: hashedPassword,
       firstName: data.firstName,
       lastName: data.lastName,
       role,
       isSuperAdmin,
       status: 'Active',
+      companyId: targetCompany?.id || null,
+      companyCode: targetCompany?.companyCode || null,
       employeeId,
       avatarUrl: '',
       createdAt: new Date().toISOString(),
@@ -43,68 +74,83 @@ export class AuthService {
     };
     this.db.users.push(newUser);
 
-    // Create corresponding Employee record with auto-generated employeeCode
-    let maxEmpNum = 0;
-    for (const emp of this.db.employees) {
-      if (emp.employeeCode) {
-        const match = emp.employeeCode.match(/(\d+)/);
-        if (match) {
-          const num = parseInt(match[1], 10);
-          if (!isNaN(num) && num > maxEmpNum) maxEmpNum = num;
+    if (role === Role.ADMIN && targetCompany) {
+      targetCompany.adminUserId = userId;
+      targetCompany.updatedAt = new Date().toISOString();
+    }
+
+    // Create corresponding Employee record with auto-generated employeeCode ONLY for EMPLOYEE role
+    if (role === Role.EMPLOYEE) {
+      let maxEmpNum = 0;
+      const scopedList = targetCompany
+        ? this.db.employees.filter((e) => e.companyId === targetCompany.id)
+        : this.db.employees;
+
+      for (const emp of scopedList) {
+        if (emp.employeeCode) {
+          const match = emp.employeeCode.match(/(\d+)/);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            if (!isNaN(num) && num > maxEmpNum) maxEmpNum = num;
+          }
         }
       }
-    }
-    const autoEmployeeCode = `EMP-${String(maxEmpNum + 1).padStart(3, '0')}`;
+      const autoEmployeeCode = `EMP-${String(maxEmpNum + 1).padStart(6, '0')}`;
 
-    const newEmployee: Employee = {
-      id: employeeId,
-      employeeCode: autoEmployeeCode,
-      userId,
-      password: data.password,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      phone: data.phone || '',
-      avatarUrl: '',
-      gender: 'Other',
-      dateOfBirth: '',
-      address: '',
-      emergencyContact: {} as any,
-      joiningDate: new Date().toISOString().split('T')[0],
-      employmentType: 'Full-time',
-      status: EmployeeStatus.ACTIVE,
-      departmentId: department?.id || data.departmentId || '',
-      departmentName: department?.name || '',
-      designationId: designation?.id || data.designationId || '',
-      designationTitle: designation?.title || '',
-      reportingManagerId: '',
-      reportingManagerName: '',
-      workLocationId: location?.id || '',
-      workLocationName: location?.name || '',
-      shift: '',
-      bankDetails: {} as any,
-      taxInformation: {} as any,
-      education: [],
-      previousExperience: [],
-      skills: [],
-      salary: {} as any,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.db.employees.unshift(newEmployee);
+      const newEmployee: Employee = {
+        id: employeeId,
+        employeeCode: autoEmployeeCode,
+        companyId: targetCompany?.id || '',
+        companyCode: targetCompany?.companyCode || '',
+        userId,
+        password: hashedPassword,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone || '',
+        avatarUrl: '',
+        gender: 'Other',
+        dateOfBirth: '',
+        address: '',
+        emergencyContact: {} as any,
+        joiningDate: new Date().toISOString().split('T')[0],
+        employmentType: 'Full-time',
+        status: EmployeeStatus.ACTIVE,
+        departmentId: department?.id || data.departmentId || '',
+        departmentName: department?.name || '',
+        designationId: designation?.id || data.designationId || '',
+        designationTitle: designation?.title || '',
+        reportingManagerId: '',
+        reportingManagerName: '',
+        workLocationId: location?.id || '',
+        workLocationName: location?.name || '',
+        shift: '',
+        bankDetails: {} as any,
+        taxInformation: {} as any,
+        education: [],
+        previousExperience: [],
+        skills: [],
+        salary: {} as any,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      this.db.employees.unshift(newEmployee);
 
-    // Initial leave balance
-    this.db.leaveBalances.push({
-      id: `bal-${newEmployee.id}`,
-      employeeId: newEmployee.id,
-      year: 2026,
-      casualLeave: { total: 12, used: 0, remaining: 12 },
-      sickLeave: { total: 10, used: 0, remaining: 10 },
-      paidLeave: { total: 15, used: 0, remaining: 15 },
-    });
+      // Initial leave balance
+      this.db.leaveBalances.push({
+        id: `bal-${newEmployee.id}`,
+        employeeId: newEmployee.id,
+        year: 2026,
+        casualLeave: { total: 12, used: 0, remaining: 12 },
+        sickLeave: { total: 10, used: 0, remaining: 10 },
+        paidLeave: { total: 15, used: 0, remaining: 15 },
+      });
 
-    if (department) {
-      department.employeeCount += 1;
+      if (department) {
+        department.employeeCount += 1;
+      }
+    } else {
+      newUser.employeeId = null as any;
     }
 
     this.db.logAudit(
@@ -139,23 +185,105 @@ export class AuthService {
     };
   }
 
-  login(email: string, password?: string) {
-    const user = this.db.users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase(),
-    );
-
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials. Please check email and password.');
+  login(identifier: string, password?: string) {
+    if (!identifier || typeof identifier !== 'string') {
+      throw new UnauthorizedException('Email address or mobile number is required.');
     }
 
-    if (!user.password && password) {
-      user.password = password;
+    const cleanInput = identifier.trim();
+    const isEmailInput = cleanInput.includes('@');
+
+    let user: User | undefined;
+
+    if (isEmailInput) {
+      // 1. Search directly by email
+      user = this.db.users.find(
+        (u) => u.email.toLowerCase() === cleanInput.toLowerCase(),
+      );
+    } else {
+      // 2. Search by mobile/phone number
+      // Collect all candidate users that match the given mobile number
+      const candidateUsers: User[] = [];
+
+      // 2a. Direct user phone
+      for (const u of this.db.users) {
+        if (u.phone && matchPhone(u.phone, cleanInput)) {
+          if (!candidateUsers.some((c) => c.id === u.id)) candidateUsers.push(u);
+        }
+      }
+
+      // 2b. Check linked employee phone
+      for (const emp of this.db.employees) {
+        if (emp.phone && matchPhone(emp.phone, cleanInput)) {
+          const linkedUser = this.db.users.find(
+            (u) =>
+              u.id === emp.userId ||
+              u.employeeId === emp.id ||
+              (u.email && emp.email && u.email.toLowerCase() === emp.email.toLowerCase()),
+          );
+          if (linkedUser && !candidateUsers.some((c) => c.id === linkedUser.id)) {
+            candidateUsers.push(linkedUser);
+          }
+        }
+      }
+
+      // 2c. Check company admin phone
+      for (const comp of this.db.companies) {
+        if (comp.phone && matchPhone(comp.phone, cleanInput) && comp.adminUserId) {
+          const linkedAdmin = this.db.users.find((u) => u.id === comp.adminUserId);
+          if (linkedAdmin && !candidateUsers.some((c) => c.id === linkedAdmin.id)) {
+            candidateUsers.push(linkedAdmin);
+          }
+        }
+      }
+
+      if (candidateUsers.length === 1) {
+        user = candidateUsers[0];
+      } else if (candidateUsers.length > 1) {
+        // If multiple users match this phone number, match the one with valid password
+        if (password) {
+          user = candidateUsers.find((u) => u.password && comparePassword(password, u.password));
+        }
+        if (!user) {
+          user = candidateUsers[0];
+        }
+      }
+
+      // 2d. Fallback: match by email string without @
+      if (!user) {
+        user = this.db.users.find(
+          (u) => u.email.toLowerCase() === cleanInput.toLowerCase(),
+        );
+      }
+    }
+
+    if (!user) {
+      throw new UnauthorizedException(
+        isEmailInput
+          ? 'Invalid credentials. Please check email and password.'
+          : 'Invalid credentials. Please check mobile number and password.',
+      );
+    }
+
+    if (!password) {
+      throw new UnauthorizedException('Password is required.');
+    }
+
+    if (!user.password) {
+      user.password = hashPassword(password);
       user.updatedAt = new Date().toISOString();
       this.db.persist();
-    } else if (user.password && password && user.password !== password) {
-      throw new UnauthorizedException('Invalid credentials. Incorrect password.');
-    } else if (user.password && !password) {
-      throw new UnauthorizedException('Password is required for this account.');
+    } else {
+      const isValid = comparePassword(password, user.password);
+      if (!isValid) {
+        throw new UnauthorizedException('Invalid credentials. Incorrect password.');
+      }
+      // Upgrade plain text to bcrypt hash if not already hashed
+      if (!user.password.startsWith('$2a$') && !user.password.startsWith('$2b$')) {
+        user.password = hashPassword(password);
+        user.updatedAt = new Date().toISOString();
+        this.db.persist();
+      }
     }
 
     if (user.status && user.status.toLowerCase() === 'inactive') {
@@ -176,7 +304,7 @@ export class AuthService {
       user.role,
       'USER_LOGIN',
       'Authentication',
-      `User ${user.email} logged in successfully`,
+      `User ${user.email} logged in successfully via ${isEmailInput ? 'email' : 'mobile number'}`,
       user.id,
     );
 
@@ -185,6 +313,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
+        phone: user.phone || '',
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,

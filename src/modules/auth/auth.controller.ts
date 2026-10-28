@@ -28,13 +28,14 @@ export class AuthController {
   @Post('login')
   @ApiOperation({
     summary: 'Login user and receive JWT session',
-    description: 'Authenticates with email/password and returns a bearer JWT access token with full user details.',
+    description: 'Authenticates with email OR mobile number and password, returning a bearer JWT access token with full user details.',
   })
   @ApiBody({ type: LoginDto })
   @ApiResponse({ status: 200, description: 'Authentication successful with JWT token' })
-  @ApiResponse({ status: 401, description: 'Invalid email or password' })
+  @ApiResponse({ status: 401, description: 'Invalid email/mobile number or password' })
   login(@Body() body: LoginDto) {
-    return this.authService.login(body.email, body.password);
+    const identifier = body.identifier || body.email || body.phone || '';
+    return this.authService.login(identifier, body.password);
   }
 
   @Get('me')

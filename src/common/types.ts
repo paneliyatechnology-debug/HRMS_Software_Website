@@ -93,6 +93,7 @@ export interface Company {
 export interface User {
   id: string;
   email: string;
+  phone?: string;
   password?: string;
   firstName: string;
   lastName: string;
@@ -135,6 +136,11 @@ export interface Location {
   country: string;
   address: string;
   isHeadquarter: boolean;
+  latitude?: number;
+  longitude?: number;
+  radiusMeters?: number;
+  companyId?: string;
+  isActive?: boolean;
 }
 
 export interface Employee {
@@ -220,6 +226,41 @@ export interface AttendanceRecord {
   status: AttendanceStatus;
   remarks?: string;
   createdAt: string;
+}
+
+export enum WorkSessionStatus {
+  ACTIVE = 'ACTIVE',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+}
+
+export interface WorkSession {
+  id: string;
+  employeeId: string;
+  employeeName?: string;
+  companyId: string;
+  companyCode?: string;
+  officeLocationId: string;
+  officeLocationName?: string;
+  status: WorkSessionStatus;
+  startTime: string; // ISO 8601 authoritative server timestamp
+  endTime?: string | null;
+  durationSeconds?: number;
+  durationFormatted?: string;
+  startLatitude: number;
+  startLongitude: number;
+  startAccuracy?: number;
+  startDistanceMeters?: number;
+  startSelfieUrl: string; // Secure stored file reference
+  stopLatitude?: number | null;
+  stopLongitude?: number | null;
+  stopAccuracy?: number | null;
+  stopDistanceMeters?: number | null;
+  stopSelfieUrl?: string | null;
+  deviceInfo?: string;
+  ipAddress?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LeaveRequest {

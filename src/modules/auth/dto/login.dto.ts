@@ -1,17 +1,36 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class LoginDto {
   @ApiProperty({
-    example: 'keyur.sangani1234@gmail.com',
-    description: 'Registered user work email address',
+    example: 'keyur@gmail.com',
+    description: 'Registered user work email address OR mobile/phone number',
+    required: false,
   })
-  @IsEmail()
-  @IsNotEmpty()
-  email: string;
+  @IsString()
+  @IsOptional()
+  email?: string;
 
   @ApiProperty({
-    example: 'Admin@123',
+    example: '+1 (555) 234-5678',
+    description: 'User registered mobile or phone number',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @ApiProperty({
+    example: 'keyur@gmail.com',
+    description: 'Unified login identifier (can be email or mobile number)',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  identifier?: string;
+
+  @ApiProperty({
+    example: 'Keyur@123',
     description: 'User password (optional for demo accounts)',
     required: false,
   })

@@ -9,13 +9,26 @@ import { Employee, EmployeeStatus, Role, User } from '../../common/types.js';
 import { CreateEmployeeDto } from './dto/create-employee.dto.js';
 import { UpdateEmployeeDto } from './dto/update-employee.dto.js';
 import { QueryEmployeeDto } from './dto/query-employee.dto.js';
+import { hashPassword } from '../../common/utils/password.util.js';
 
 @Injectable()
 export class EmployeesService {
   constructor(private readonly db: DatabaseService) {}
 
   findAll(params?: QueryEmployeeDto, actorUser?: User) {
-    let result = [...this.db.employees];
+    let result = [...this.db.employees].filter((emp) => {
+      const linkedUser = this.db.users.find(
+        (u) => u.id === emp.userId || u.employeeId === emp.id || (u.email && emp.email && u.email.toLowerCase() === emp.email.toLowerCase()),
+      );
+      if (linkedUser && (linkedUser.role === Role.SUPER_ADMIN || linkedUser.role === Role.ADMIN || linkedUser.isSuperAdmin)) {
+        return false;
+      }
+      if (emp.isSuperAdmin) return false;
+      const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.toLowerCase();
+      if (fullName.includes('super admin') || fullName.includes('superadmin') || fullName.includes('ravi admin')) return false;
+      if (emp.email?.toLowerCase().includes('superadmin')) return false;
+      return true;
+    });
 
     // Multi-company isolation
     if (actorUser) {
@@ -139,12 +152,19 @@ export class EmployeesService {
     // Determine target company:
     // If companyIdOverride is provided (from Admin token or SuperAdmin explicit selection), use it
     let targetCompanyId = companyIdOverride || data.companyId;
-    if (!targetCompanyId && this.db.companies.length > 0) {
-      targetCompanyId = this.db.companies[0].id;
+    let targetCompany: any;
+    if (targetCompanyId) {
+      targetCompany = this.db.companies.find(
+        (c) => c.id === targetCompanyId || c.companyCode === targetCompanyId,
+      );
+      if (!targetCompany) {
+        throw new NotFoundException(
+          `Company with ID or code "${targetCompanyId}" not found. Please provide an existing company.`,
+        );
+      }
+    } else if (this.db.companies.length > 0) {
+      targetCompany = this.db.companies[0];
     }
-
-    const targetCompany =
-      this.db.companies.find((c) => c.id === targetCompanyId) || this.db.companies[0];
 
     if (!targetCompany) {
       throw new BadRequestException('No valid company found to assign this employee to.');
@@ -190,7 +210,7 @@ export class EmployeesService {
     }
 
     const userId = `user-${Date.now()}`;
-    const userPassword = data.password || '';
+    const userPassword = data.password ? hashPassword(data.password) : '';
     const userRole = data.role || Role.EMPLOYEE;
     const isSuperAdmin = userRole === Role.SUPER_ADMIN;
 
@@ -263,7 +283,7 @@ export class EmployeesService {
       existingUser.companyId = targetCompany.id;
       existingUser.companyCode = targetCompany.companyCode;
       if (data.password) {
-        existingUser.password = data.password;
+        existingUser.password = hashPassword(data.password);
       }
       if (data.role) {
         existingUser.role = data.role;
@@ -345,7 +365,7 @@ export class EmployeesService {
       if (data.email) user.email = data.email;
       if (data.firstName) user.firstName = data.firstName;
       if (data.lastName) user.lastName = data.lastName;
-      if (data.password) user.password = data.password;
+      if (data.password) user.password = hashPassword(data.password);
       if (data.role && actorUser?.role === Role.SUPER_ADMIN) user.role = data.role;
       user.updatedAt = new Date().toISOString();
     }

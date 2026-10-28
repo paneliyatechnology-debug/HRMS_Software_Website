@@ -39,7 +39,12 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
       city VARCHAR(100),
       country VARCHAR(100),
       address TEXT,
-      isHeadquarter BOOLEAN DEFAULT FALSE
+      isHeadquarter BOOLEAN DEFAULT FALSE,
+      latitude DECIMAL(10, 8) DEFAULT 0,
+      longitude DECIMAL(11, 8) DEFAULT 0,
+      radiusMeters INT DEFAULT 200,
+      companyId VARCHAR(64),
+      isActive BOOLEAN DEFAULT TRUE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
     `CREATE TABLE IF NOT EXISTS departments (
@@ -66,12 +71,15 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
     `CREATE TABLE IF NOT EXISTS users (
       id VARCHAR(64) PRIMARY KEY,
       email VARCHAR(255) NOT NULL UNIQUE,
+      phone VARCHAR(50),
       password VARCHAR(255),
       firstName VARCHAR(100),
       lastName VARCHAR(100),
       role ENUM('SUPER_ADMIN', 'ADMIN', 'EMPLOYEE') DEFAULT 'EMPLOYEE',
       isSuperAdmin BOOLEAN DEFAULT FALSE,
       status VARCHAR(50) DEFAULT 'Active',
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       employeeId VARCHAR(64),
       avatarUrl TEXT,
       createdAt VARCHAR(50),
@@ -81,6 +89,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
     `CREATE TABLE IF NOT EXISTS employees (
       id VARCHAR(64) PRIMARY KEY,
       employeeCode VARCHAR(50) NOT NULL UNIQUE,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       firstName VARCHAR(100) NOT NULL,
       lastName VARCHAR(100) NOT NULL,
       email VARCHAR(255) NOT NULL,
@@ -165,6 +175,38 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
       status VARCHAR(50),
       remarks TEXT,
       createdAt VARCHAR(50)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS work_sessions (
+      id VARCHAR(64) PRIMARY KEY,
+      employeeId VARCHAR(64) NOT NULL,
+      employeeName VARCHAR(255),
+      companyId VARCHAR(64) NOT NULL,
+      companyCode VARCHAR(50),
+      officeLocationId VARCHAR(64) NOT NULL,
+      officeLocationName VARCHAR(255),
+      status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
+      startTime VARCHAR(50) NOT NULL,
+      endTime VARCHAR(50),
+      durationSeconds INT DEFAULT 0,
+      durationFormatted VARCHAR(50),
+      startLatitude DECIMAL(10, 8) NOT NULL,
+      startLongitude DECIMAL(11, 8) NOT NULL,
+      startAccuracy DECIMAL(8, 2),
+      startDistanceMeters DECIMAL(10, 2),
+      startSelfieUrl TEXT NOT NULL,
+      stopLatitude DECIMAL(10, 8),
+      stopLongitude DECIMAL(11, 8),
+      stopAccuracy DECIMAL(8, 2),
+      stopDistanceMeters DECIMAL(10, 2),
+      stopSelfieUrl TEXT,
+      deviceInfo TEXT,
+      ipAddress VARCHAR(50),
+      createdAt VARCHAR(50),
+      updatedAt VARCHAR(50),
+      INDEX idx_employee_status (employeeId, status),
+      INDEX idx_company (companyId),
+      INDEX idx_office (officeLocationId)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
     `CREATE TABLE IF NOT EXISTS payroll_records (
@@ -403,6 +445,36 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
   }
 
   try {
+    await pool.query(`ALTER TABLE locations ADD COLUMN latitude DECIMAL(10, 8) DEFAULT 0;`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
+    await pool.query(`ALTER TABLE locations ADD COLUMN longitude DECIMAL(11, 8) DEFAULT 0;`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
+    await pool.query(`ALTER TABLE locations ADD COLUMN radiusMeters INT DEFAULT 200;`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
+    await pool.query(`ALTER TABLE locations ADD COLUMN companyId VARCHAR(64);`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
+    await pool.query(`ALTER TABLE locations ADD COLUMN isActive BOOLEAN DEFAULT TRUE;`);
+  } catch {
+    // Column already exists
+  }
+
+  try {
     await pool.query(`ALTER TABLE users ADD COLUMN password VARCHAR(255) AFTER email;`);
   } catch {
     // Column already exists or table freshly created
@@ -457,6 +529,24 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
   }
 
   try {
+    await pool.query(`ALTER TABLE employees DROP INDEX employeeCode;`);
+  } catch {
+    // Index already dropped or does not exist
+  }
+
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN phone VARCHAR(50) AFTER email;`);
+  } catch {
+    // Column phone already exists
+  }
+
+  try {
+    await pool.query(`ALTER TABLE employees ADD UNIQUE KEY unique_company_emp (companyId, employeeCode);`);
+  } catch {
+    // Composite key already exists
+  }
+
+  try {
     const [rows]: any = await pool.query(`SELECT COUNT(*) as count FROM system_settings`);
     if (rows && rows[0]?.count === 0) {
       await pool.query(
@@ -488,7 +578,14 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 export async function syncDataToMysql(pool: mysql.Pool, data: any) {
   try {
     // 0. Companies
-    if (data.companies && data.companies.length > 0) {
+    if (data.companies !== undefined) {
+      const activeCompIds = (data.companies || []).map((c: any) => c.id);
+      if (activeCompIds.length > 0) {
+        await pool.query(`DELETE FROM companies WHERE id NOT IN (?)`, [activeCompIds]);
+      } else {
+        await pool.query(`DELETE FROM companies`);
+      }
+
       for (const c of data.companies) {
         await pool.query(
           `INSERT INTO companies (id, companyCode, companyName, email, phone, address, status, adminUserId, createdAt, updatedAt)
@@ -514,10 +611,22 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.locations && data.locations.length > 0) {
       for (const loc of data.locations) {
         await pool.query(
-          `INSERT INTO locations (id, name, city, country, address, isHeadquarter)
-           VALUES (?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE name=VALUES(name), city=VALUES(city), country=VALUES(country), address=VALUES(address), isHeadquarter=VALUES(isHeadquarter)`,
-          [loc.id, loc.name, loc.city || '', loc.country || '', loc.address || '', Boolean(loc.isHeadquarter)],
+          `INSERT INTO locations (id, name, city, country, address, isHeadquarter, latitude, longitude, radiusMeters, companyId, isActive)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE name=VALUES(name), city=VALUES(city), country=VALUES(country), address=VALUES(address), isHeadquarter=VALUES(isHeadquarter), latitude=VALUES(latitude), longitude=VALUES(longitude), radiusMeters=VALUES(radiusMeters), companyId=VALUES(companyId), isActive=VALUES(isActive)`,
+          [
+            loc.id,
+            loc.name,
+            loc.city || '',
+            loc.country || '',
+            loc.address || '',
+            Boolean(loc.isHeadquarter),
+            loc.latitude || 0,
+            loc.longitude || 0,
+            loc.radiusMeters || 200,
+            loc.companyId || null,
+            loc.isActive !== undefined ? Boolean(loc.isActive) : true,
+          ],
         );
       }
     }
@@ -546,29 +655,35 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
       }
     }
 
-    // 4. Users
+    // 4. Users (Only ADMIN and SUPER_ADMIN are stored in MySQL users table)
     if (data.users !== undefined) {
-      const activeUserIds = (data.users || []).map((u: any) => u.id);
-      if (activeUserIds.length > 0) {
-        await pool.query(`DELETE FROM users WHERE id NOT IN (?)`, [activeUserIds]);
+      const adminUsers = (data.users || []).filter(
+        (u: any) => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN' || u.isSuperAdmin === true,
+      );
+      const activeAdminUserIds = adminUsers.map((u: any) => u.id);
+      if (activeAdminUserIds.length > 0) {
+        await pool.query(`DELETE FROM users WHERE id NOT IN (?)`, [activeAdminUserIds]);
       } else {
         await pool.query(`DELETE FROM users`);
       }
 
-      for (const u of data.users) {
+      for (const u of adminUsers) {
         await pool.query(
-          `INSERT INTO users (id, email, password, firstName, lastName, role, isSuperAdmin, status, employeeId, avatarUrl, createdAt, updatedAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE email=VALUES(email), password=VALUES(password), firstName=VALUES(firstName), lastName=VALUES(lastName), role=VALUES(role), isSuperAdmin=VALUES(isSuperAdmin), status=VALUES(status), employeeId=VALUES(employeeId), avatarUrl=VALUES(avatarUrl), updatedAt=VALUES(updatedAt)`,
+          `INSERT INTO users (id, email, phone, password, firstName, lastName, role, isSuperAdmin, status, companyId, companyCode, employeeId, avatarUrl, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE email=VALUES(email), phone=VALUES(phone), password=VALUES(password), firstName=VALUES(firstName), lastName=VALUES(lastName), role=VALUES(role), isSuperAdmin=VALUES(isSuperAdmin), status=VALUES(status), companyId=VALUES(companyId), companyCode=VALUES(companyCode), employeeId=VALUES(employeeId), avatarUrl=VALUES(avatarUrl), updatedAt=VALUES(updatedAt)`,
           [
             u.id,
             u.email,
+            u.phone || '',
             u.password || null,
             u.firstName,
             u.lastName,
             u.role,
             u.isSuperAdmin ? 1 : 0,
             u.status || 'Active',
+            u.companyId || null,
+            u.companyCode || null,
             u.employeeId || null,
             u.avatarUrl || '',
             u.createdAt || new Date().toISOString(),
@@ -608,26 +723,46 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
       }
     }
 
-    // 5. Employees
+    // 5. Employees - ONLY real employees (exclude Super Admins and Admins)
     if (data.employees !== undefined) {
-      const activeEmpIds = (data.employees || []).map((e: any) => e.id);
+      const onlyEmployees = (data.employees || []).filter((emp: any) => {
+        const linkedUser = (data.users || []).find(
+          (u: any) => u.id === emp.userId || u.employeeId === emp.id || (u.email && emp.email && u.email.toLowerCase() === emp.email.toLowerCase()),
+        );
+        if (linkedUser) {
+          if (linkedUser.role === 'SUPER_ADMIN' || linkedUser.role === 'ADMIN' || linkedUser.isSuperAdmin) {
+            return false;
+          }
+          if (linkedUser.role === 'EMPLOYEE') {
+            return true;
+          }
+        }
+        if (emp.isSuperAdmin) return false;
+        const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.toLowerCase();
+        if (fullName.includes('super admin') || fullName.includes('superadmin') || fullName.includes('ravi admin')) return false;
+        if (emp.email?.toLowerCase().includes('superadmin')) return false;
+        if (emp.designationTitle?.toLowerCase().includes('super admin')) return false;
+        return true;
+      });
+
+      const activeEmpIds = onlyEmployees.map((e: any) => e.id);
       if (activeEmpIds.length > 0) {
         await pool.query(`DELETE FROM employees WHERE id NOT IN (?)`, [activeEmpIds]);
       } else {
         await pool.query(`DELETE FROM employees`);
       }
 
-      for (const emp of data.employees) {
+      for (const emp of onlyEmployees) {
         await pool.query(
           `INSERT INTO employees (
-            id, employeeCode, firstName, lastName, email, phone, avatarUrl, gender, dateOfBirth, address,
+            id, employeeCode, companyId, companyCode, firstName, lastName, email, phone, avatarUrl, gender, dateOfBirth, address,
             joiningDate, employmentType, status, departmentId, departmentName, designationId, designationTitle,
             reportingManagerId, reportingManagerName, workLocationId, workLocationName, shift,
             emergencyContact, bankDetails, taxInformation, education, previousExperience, skills, salary,
             createdAt, updatedAt
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE
-            employeeCode=VALUES(employeeCode), firstName=VALUES(firstName), lastName=VALUES(lastName), email=VALUES(email),
+            employeeCode=VALUES(employeeCode), companyId=VALUES(companyId), companyCode=VALUES(companyCode), firstName=VALUES(firstName), lastName=VALUES(lastName), email=VALUES(email),
             phone=VALUES(phone), avatarUrl=VALUES(avatarUrl), gender=VALUES(gender), dateOfBirth=VALUES(dateOfBirth),
             address=VALUES(address), joiningDate=VALUES(joiningDate), employmentType=VALUES(employmentType), status=VALUES(status),
             departmentId=VALUES(departmentId), departmentName=VALUES(departmentName), designationId=VALUES(designationId),
@@ -637,7 +772,7 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
             education=VALUES(education), previousExperience=VALUES(previousExperience), skills=VALUES(skills), salary=VALUES(salary),
             updatedAt=VALUES(updatedAt)`,
           [
-            emp.id, emp.employeeCode, emp.firstName, emp.lastName, emp.email, emp.phone || '', emp.avatarUrl || '',
+            emp.id, emp.employeeCode, emp.companyId || null, emp.companyCode || null, emp.firstName, emp.lastName, emp.email, emp.phone || '', emp.avatarUrl || '',
             emp.gender || 'Other', emp.dateOfBirth || '', emp.address || '', emp.joiningDate || '', emp.employmentType || 'Full-time',
             emp.status || 'Active', emp.departmentId || '', emp.departmentName || '', emp.designationId || '', emp.designationTitle || '',
             emp.reportingManagerId || null, emp.reportingManagerName || null, emp.workLocationId || '', emp.workLocationName || '',
@@ -658,6 +793,45 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE checkIn=VALUES(checkIn), checkOut=VALUES(checkOut), breakDurationMinutes=VALUES(breakDurationMinutes), workingHours=VALUES(workingHours), overtimeHours=VALUES(overtimeHours), status=VALUES(status), remarks=VALUES(remarks)`,
           [att.id, att.employeeId, att.employeeName, att.date, att.checkIn || '', att.checkOut || '', att.breakDurationMinutes || 0, att.workingHours || 0, att.overtimeHours || 0, att.status, att.remarks || '', att.createdAt || new Date().toISOString()],
+        );
+      }
+    }
+
+    // 6b. Work Sessions (Geo-fenced Timer)
+    if (data.workSessions && data.workSessions.length > 0) {
+      for (const ws of data.workSessions) {
+        await pool.query(
+          `INSERT INTO work_sessions (id, employeeId, employeeName, companyId, companyCode, officeLocationId, officeLocationName, status, startTime, endTime, durationSeconds, durationFormatted, startLatitude, startLongitude, startAccuracy, startDistanceMeters, startSelfieUrl, stopLatitude, stopLongitude, stopAccuracy, stopDistanceMeters, stopSelfieUrl, deviceInfo, ipAddress, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE status=VALUES(status), endTime=VALUES(endTime), durationSeconds=VALUES(durationSeconds), durationFormatted=VALUES(durationFormatted), stopLatitude=VALUES(stopLatitude), stopLongitude=VALUES(stopLongitude), stopAccuracy=VALUES(stopAccuracy), stopDistanceMeters=VALUES(stopDistanceMeters), stopSelfieUrl=VALUES(stopSelfieUrl), updatedAt=VALUES(updatedAt)`,
+          [
+            ws.id,
+            ws.employeeId,
+            ws.employeeName || '',
+            ws.companyId,
+            ws.companyCode || '',
+            ws.officeLocationId,
+            ws.officeLocationName || '',
+            ws.status,
+            ws.startTime,
+            ws.endTime || null,
+            ws.durationSeconds || 0,
+            ws.durationFormatted || '',
+            ws.startLatitude,
+            ws.startLongitude,
+            ws.startAccuracy || null,
+            ws.startDistanceMeters || null,
+            ws.startSelfieUrl,
+            ws.stopLatitude || null,
+            ws.stopLongitude || null,
+            ws.stopAccuracy || null,
+            ws.stopDistanceMeters || null,
+            ws.stopSelfieUrl || null,
+            ws.deviceInfo || '',
+            ws.ipAddress || '',
+            ws.createdAt,
+            ws.updatedAt,
+          ],
         );
       }
     }

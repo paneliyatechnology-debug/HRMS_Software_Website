@@ -26,6 +26,7 @@ import { UpdateSystemSettingsDto } from './dto/system-settings.dto.js';
 import { LeaveOverrideDto } from './dto/leave-override.dto.js';
 import { CreateCompanyDto } from './dto/create-company.dto.js';
 import { UpdateCompanyDto } from './dto/update-company.dto.js';
+import { hashPassword } from '../../common/utils/password.util.js';
 
 @Injectable()
 export class SuperAdminService {
@@ -259,14 +260,30 @@ export class SuperAdminService {
       targetCompany = this.db.companies.find(
         (c) => c.id === dto.companyId || c.companyCode === dto.companyId,
       );
+      if (!targetCompany) {
+        throw new NotFoundException(
+          `Company with ID or code "${dto.companyId}" not found. Please provide an existing company.`,
+        );
+      }
+    } else if (actingAdmin && actingAdmin.companyId) {
+      targetCompany = this.db.companies.find((c) => c.id === actingAdmin.companyId);
     } else if (role !== Role.SUPER_ADMIN && this.db.companies.length > 0) {
       targetCompany = this.db.companies[0];
     }
 
+    if (role === Role.ADMIN && !targetCompany) {
+      throw new BadRequestException(
+        'A valid company must exist or be provided to create a Company Admin account.',
+      );
+    }
+
+    const hashedPassword = hashPassword(dto.password);
+
     const newUser: User = {
       id: userId,
       email: dto.email,
-      password: dto.password,
+      phone: dto.phone || '',
+      password: hashedPassword,
       firstName: dto.firstName,
       lastName: dto.lastName,
       role,
@@ -286,76 +303,80 @@ export class SuperAdminService {
       targetCompany.updatedAt = new Date().toISOString();
     }
 
-    // Also create matching employee record
-    const department = this.db.departments.find((d) => d.id === dto.departmentId) || this.db.departments[0];
-    const designation = this.db.designations.find((d) => d.id === dto.designationId) || this.db.designations[0];
-    const location = this.db.locations[0];
+    // Also create matching employee record ONLY for EMPLOYEE role
+    if (role === Role.EMPLOYEE) {
+      const department = this.db.departments.find((d) => d.id === dto.departmentId) || this.db.departments[0];
+      const designation = this.db.designations.find((d) => d.id === dto.designationId) || this.db.designations[0];
+      const location = this.db.locations[0];
 
-    // Scoped employee code generation
-    let maxEmpNum = 0;
-    const scopedList = targetCompany
-      ? this.db.employees.filter((e) => e.companyId === targetCompany?.id)
-      : this.db.employees;
+      // Scoped employee code generation
+      let maxEmpNum = 0;
+      const scopedList = targetCompany
+        ? this.db.employees.filter((e) => e.companyId === targetCompany?.id)
+        : this.db.employees;
 
-    for (const emp of scopedList) {
-      if (emp.employeeCode) {
-        const match = emp.employeeCode.match(/(\d+)/);
-        if (match) {
-          const num = parseInt(match[1], 10);
-          if (!isNaN(num) && num > maxEmpNum) maxEmpNum = num;
+      for (const emp of scopedList) {
+        if (emp.employeeCode) {
+          const match = emp.employeeCode.match(/(\d+)/);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            if (!isNaN(num) && num > maxEmpNum) maxEmpNum = num;
+          }
         }
       }
+      const autoEmployeeCode = `EMP-${String(maxEmpNum + 1).padStart(6, '0')}`;
+
+      const newEmployee: Employee = {
+        id: employeeId,
+        employeeCode: autoEmployeeCode,
+        companyId: targetCompany?.id || '',
+        companyCode: targetCompany?.companyCode || '',
+        userId,
+        password: hashedPassword,
+        isSuperAdmin,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        email: dto.email,
+        phone: dto.phone || '',
+        avatarUrl: '',
+        gender: 'Other',
+        dateOfBirth: '',
+        address: '',
+        emergencyContact: {} as any,
+        joiningDate: new Date().toISOString().split('T')[0],
+        employmentType: 'Full-time',
+        status: EmployeeStatus.ACTIVE,
+        departmentId: department?.id || '',
+        departmentName: department?.name || '',
+        designationId: designation?.id || '',
+        designationTitle: designation?.title || '',
+        reportingManagerId: '',
+        reportingManagerName: '',
+        workLocationId: location?.id || '',
+        workLocationName: location?.name || '',
+        shift: 'General Shift (9 AM - 6 PM)',
+        bankDetails: {} as any,
+        taxInformation: {} as any,
+        education: [],
+        previousExperience: [],
+        skills: [],
+        salary: {} as any,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      this.db.employees.unshift(newEmployee);
+
+      this.db.leaveBalances.push({
+        id: `bal-${newEmployee.id}`,
+        employeeId: newEmployee.id,
+        year: 2026,
+        casualLeave: { total: 12, used: 0, remaining: 12 },
+        sickLeave: { total: 10, used: 0, remaining: 10 },
+        paidLeave: { total: 15, used: 0, remaining: 15 },
+      });
+    } else {
+      newUser.employeeId = null as any;
     }
-    const autoEmployeeCode = `EMP-${String(maxEmpNum + 1).padStart(6, '0')}`;
-
-    const newEmployee: Employee = {
-      id: employeeId,
-      employeeCode: autoEmployeeCode,
-      companyId: targetCompany?.id || '',
-      companyCode: targetCompany?.companyCode || '',
-      userId,
-      password: dto.password,
-      isSuperAdmin,
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      email: dto.email,
-      phone: dto.phone || '',
-      avatarUrl: '',
-      gender: 'Other',
-      dateOfBirth: '',
-      address: '',
-      emergencyContact: {} as any,
-      joiningDate: new Date().toISOString().split('T')[0],
-      employmentType: 'Full-time',
-      status: EmployeeStatus.ACTIVE,
-      departmentId: department?.id || '',
-      departmentName: department?.name || '',
-      designationId: designation?.id || '',
-      designationTitle: designation?.title || '',
-      reportingManagerId: '',
-      reportingManagerName: '',
-      workLocationId: location?.id || '',
-      workLocationName: location?.name || '',
-      shift: 'General Shift (9 AM - 6 PM)',
-      bankDetails: {} as any,
-      taxInformation: {} as any,
-      education: [],
-      previousExperience: [],
-      skills: [],
-      salary: {} as any,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.db.employees.unshift(newEmployee);
-
-    this.db.leaveBalances.push({
-      id: `bal-${newEmployee.id}`,
-      employeeId: newEmployee.id,
-      year: 2026,
-      casualLeave: { total: 12, used: 0, remaining: 12 },
-      sickLeave: { total: 10, used: 0, remaining: 10 },
-      paidLeave: { total: 15, used: 0, remaining: 15 },
-    });
 
     this.db.logAudit(
       actingAdmin?.id || 'super-admin',
@@ -549,12 +570,13 @@ export class SuperAdminService {
       throw new NotFoundException(`User with ID "${id}" not found.`);
     }
 
-    user.password = dto.newPassword;
+    const hashedPassword = hashPassword(dto.newPassword);
+    user.password = hashedPassword;
     user.updatedAt = new Date().toISOString();
 
     const employee = this.db.employees.find((e) => e.userId === user.id || e.id === user.employeeId);
     if (employee) {
-      employee.password = dto.newPassword;
+      employee.password = hashedPassword;
       employee.updatedAt = new Date().toISOString();
     }
 
@@ -1071,10 +1093,11 @@ export class SuperAdminService {
 
       const adminUserId = `user-${Date.now()}`;
       const adminEmpId = `emp-${Date.now()}`;
+      const hashedAdminPassword = hashPassword(dto.adminPassword);
       const adminUser: User = {
         id: adminUserId,
         email: dto.adminEmail,
-        password: dto.adminPassword,
+        password: hashedAdminPassword,
         firstName: dto.adminFirstName || 'Company',
         lastName: dto.adminLastName || 'Admin',
         role: Role.ADMIN,
@@ -1095,7 +1118,7 @@ export class SuperAdminService {
         companyId: newCompany.id,
         companyCode: newCompany.companyCode,
         userId: adminUserId,
-        password: dto.adminPassword,
+        password: hashedAdminPassword,
         isSuperAdmin: false,
         firstName: adminUser.firstName,
         lastName: adminUser.lastName,
@@ -1157,6 +1180,7 @@ export class SuperAdminService {
     return {
       message: 'Company registered successfully',
       company: newCompany,
+      ...newCompany,
     };
   }
 
@@ -1265,6 +1289,44 @@ export class SuperAdminService {
         companyId: user.companyId,
         companyCode: user.companyCode,
       },
+    };
+  }
+
+  deleteCompany(id: string, actingAdmin?: User) {
+    const index = this.db.companies.findIndex(
+      (c) =>
+        c.id.toLowerCase() === id.toLowerCase() ||
+        c.companyCode.toLowerCase() === id.toLowerCase(),
+    );
+    if (index === -1) {
+      throw new NotFoundException(`Company with ID or code "${id}" not found.`);
+    }
+
+    const company = this.db.companies[index];
+    this.db.companies.splice(index, 1);
+
+    // Also remove employees belonging to this company
+    this.db.employees = this.db.employees.filter((e) => e.companyId !== company.id);
+
+    // Remove non-super-admin users belonging to this company
+    this.db.users = this.db.users.filter(
+      (u) => u.companyId !== company.id || u.role === Role.SUPER_ADMIN,
+    );
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      actingAdmin?.role || Role.SUPER_ADMIN,
+      'COMPANY_DELETED',
+      'SuperAdmin',
+      `Deleted company "${company.companyName}" (${company.companyCode})`,
+      company.id,
+    );
+
+    this.db.persist();
+    return {
+      message: `Company ${company.companyCode} (${company.companyName}) deleted successfully`,
+      deletedCompanyId: company.id,
     };
   }
 }
