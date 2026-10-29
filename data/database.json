@@ -305,8 +305,9 @@
       "employeeId": "emp-test-company2-worker",
       "status": "Active",
       "createdAt": "2026-10-28T11:11:24.093Z",
-      "updatedAt": "2026-10-28T11:11:24.093Z",
-      "phone": "1234567890"
+      "updatedAt": "2026-10-28T13:20:58.871Z",
+      "phone": "1234567890",
+      "password": "$2b$10$DeGfThWFc9FyKYFvIEk3Xe6qcQNQskJU8Vm9NVNcVSZTGzA5XOIRK"
     },
     {
       "id": "user-test-company2-worker",
@@ -1584,6 +1585,78 @@
   "notifications": [],
   "documents": [],
   "auditLogs": [
+    {
+      "id": "log-1793193688341-338",
+      "userId": "user-1793190447928",
+      "userName": "Ravi Admin",
+      "userRole": "ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793190447928",
+      "details": "User ravik@gmail.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-28T13:21:28.341Z"
+    },
+    {
+      "id": "log-1793193668201-194",
+      "userId": "user-1793009147556",
+      "userName": "keyur sangani",
+      "userRole": "EMPLOYEE",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793009147556",
+      "details": "User keyur@gmail.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-28T13:21:08.201Z"
+    },
+    {
+      "id": "log-1793193658871-526",
+      "userId": "user-test-company2-worker",
+      "userName": "Worker Two",
+      "userRole": "EMPLOYEE",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-test-company2-worker",
+      "details": "User worker2@company2.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-28T13:20:58.871Z"
+    },
+    {
+      "id": "log-1793193658062-119",
+      "userId": "user-1793009147556",
+      "userName": "keyur sangani",
+      "userRole": "EMPLOYEE",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793009147556",
+      "details": "User keyur@gmail.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-28T13:20:58.062Z"
+    },
+    {
+      "id": "log-1793193656926-243",
+      "userId": "user-1793180661413",
+      "userName": "Ravi Admin",
+      "userRole": "ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793180661413",
+      "details": "User ravi@gmail.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-28T13:20:56.926Z"
+    },
+    {
+      "id": "log-1793193656315-220",
+      "userId": "user-1793190447928",
+      "userName": "Ravi Admin",
+      "userRole": "ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793190447928",
+      "details": "User ravik@gmail.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-28T13:20:56.315Z"
+    },
     {
       "id": "log-1793193490338-171",
       "userId": "user-1793193481702",
