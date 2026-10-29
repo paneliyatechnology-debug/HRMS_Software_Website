@@ -17,15 +17,25 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const status =
+    let status =
       exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const message =
+    let message: any =
       exception instanceof HttpException
         ? exception.getResponse()
         : (exception as Error)?.message || 'Internal server error';
+
+    // Handle Multer LIMIT_FILE_SIZE cleanly as 400 Bad Request
+    if ((exception as any)?.code === 'LIMIT_FILE_SIZE') {
+      status = HttpStatus.BAD_REQUEST;
+      message = {
+        statusCode: 400,
+        message: 'File size exceeds maximum allowed limit of 5 MB.',
+        error: 'Bad Request',
+      };
+    }
 
     this.logger.error(
       `[${request.method}] ${request.url} >> Status: ${status} >> Error: ${JSON.stringify(

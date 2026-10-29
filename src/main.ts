@@ -32,18 +32,31 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new LoggingInterceptor());
 
-  // Ensure uploads directory exists
+  // Ensure uploads directories exist
   const uploadsDir = path.join(process.cwd(), 'uploads', 'documents');
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
+  const profilesDir = path.join(process.cwd(), 'uploads', 'profiles');
+  if (!fs.existsSync(profilesDir)) {
+    fs.mkdirSync(profilesDir, { recursive: true });
+  }
 
-  // Serve static files from /uploads
+  // Serve static files from /uploads and /api/uploads
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+  app.use('/api/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   // Redirect root '/' to Swagger Documentation
   app.getHttpAdapter().get('/', (_req: any, res: any) => {
     res.redirect('/api/docs');
+  });
+
+  // Automatically normalize redundant slashes (e.g. /api//auth/login -> /api/auth/login)
+  app.use((req: any, _res: any, next: any) => {
+    if (req.url) {
+      req.url = req.url.replace(/\/{2,}/g, '/');
+    }
+    next();
   });
 
   // Global API Prefix

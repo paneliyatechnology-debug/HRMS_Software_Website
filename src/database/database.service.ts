@@ -212,7 +212,28 @@ export class DatabaseService implements OnModuleInit {
             passwordsHashed = true;
           }
         }
-        if (passwordsHashed) {
+        // Normalize any absolute localhost/IP avatar URLs to clean relative paths
+        let avatarsNormalized = false;
+        for (const u of this.users) {
+          if (u.avatarUrl && u.avatarUrl.includes('/uploads/profiles/') && (u.avatarUrl.startsWith('http://') || u.avatarUrl.startsWith('https://'))) {
+            const match = u.avatarUrl.match(/\/uploads\/profiles\/([^\s?#]+)/i);
+            if (match) {
+              u.avatarUrl = `/uploads/profiles/${match[1]}`;
+              avatarsNormalized = true;
+            }
+          }
+        }
+        for (const emp of this.employees) {
+          if (emp.avatarUrl && emp.avatarUrl.includes('/uploads/profiles/') && (emp.avatarUrl.startsWith('http://') || emp.avatarUrl.startsWith('https://'))) {
+            const match = emp.avatarUrl.match(/\/uploads\/profiles\/([^\s?#]+)/i);
+            if (match) {
+              emp.avatarUrl = `/uploads/profiles/${match[1]}`;
+              avatarsNormalized = true;
+            }
+          }
+        }
+
+        if (passwordsHashed || avatarsNormalized) {
           this.persist();
         }
 
