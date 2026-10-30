@@ -9,6 +9,7 @@
       "phone": "+91 98765 43210",
       "address": "paneliya technology, Surat, Gujarat, India",
       "status": "Active",
+      "adminUserId": null,
       "createdAt": "2024-01-15T09:00:00Z",
       "updatedAt": "2024-01-15T09:00:00Z"
     }
@@ -3898,6 +3899,18 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "log-1793359924823-38",
+      "userId": "user-1793357103660",
+      "userName": "jatinkakadiya234@gmail.com jk@123",
+      "userRole": "EMPLOYEE",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793357103660",
+      "details": "User jatinkakadiya234@gmail.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T11:32:04.823Z"
+    },
     {
       "id": "log-1793357291714-324",
       "userId": "user-1793356918372",
