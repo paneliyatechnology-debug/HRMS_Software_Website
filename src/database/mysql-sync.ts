@@ -5,12 +5,35 @@ import path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 export async function getMysqlPool() {
+  const host = process.env.DATABASE_HOST || 'localhost';
+  const port = Number(process.env.DATABASE_PORT) || 3306;
+  const user = process.env.DATABASE_USER || 'root';
+  const password = process.env.DATABASE_PASSWORD || '';
+  const database = process.env.DATABASE_NAME || 'hrms';
+
+  // Automatically create the database if it doesn't exist yet
+  try {
+    const adminConnection = await mysql.createConnection({
+      host,
+      port,
+      user,
+      password,
+      connectTimeout: 5000,
+    });
+    await adminConnection.query(
+      `CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`,
+    );
+    await adminConnection.end();
+  } catch {
+    // If admin connection fails (e.g. restricted permissions), proceed to let createPool handle it
+  }
+
   return mysql.createPool({
-    host: process.env.DATABASE_HOST || 'localhost',
-    port: Number(process.env.DATABASE_PORT) || 3306,
-    user: process.env.DATABASE_USER || 'root',
-    password: process.env.DATABASE_PASSWORD || '',
-    database: process.env.DATABASE_NAME || 'hrms',
+    host,
+    port,
+    user,
+    password,
+    database,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
