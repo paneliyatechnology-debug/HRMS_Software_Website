@@ -167,9 +167,13 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
     `CREATE TABLE IF NOT EXISTS leave_requests (
       id VARCHAR(64) PRIMARY KEY,
       employeeId VARCHAR(64) NOT NULL,
+      employeeCode VARCHAR(64),
       employeeName VARCHAR(255),
+      employeeEmail VARCHAR(255),
       employeeAvatar TEXT,
       departmentName VARCHAR(255),
+      companyId VARCHAR(64),
+      companyCode VARCHAR(64),
       leaveType VARCHAR(100),
       startDate VARCHAR(30),
       endDate VARCHAR(30),
@@ -863,10 +867,10 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.leaveRequests && data.leaveRequests.length > 0) {
       for (const lr of data.leaveRequests) {
         await pool.query(
-          `INSERT INTO leave_requests (id, employeeId, employeeName, employeeAvatar, departmentName, leaveType, startDate, endDate, daysCount, isHalfDay, reason, status, appliedDate, managerApproverId, managerApproverName, hrApprovedAt, managerApprovedAt, comments)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE status=VALUES(status), comments=VALUES(comments), hrApprovedAt=VALUES(hrApprovedAt), managerApprovedAt=VALUES(managerApprovedAt)`,
-          [lr.id, lr.employeeId, lr.employeeName, lr.employeeAvatar || '', lr.departmentName || '', lr.leaveType, lr.startDate, lr.endDate, lr.daysCount, Boolean(lr.isHalfDay), lr.reason, lr.status, lr.appliedDate, lr.managerApproverId || null, lr.managerApproverName || null, lr.hrApprovedAt || null, lr.managerApprovedAt || null, lr.comments || ''],
+          `INSERT INTO leave_requests (id, employeeId, employeeCode, employeeName, employeeEmail, employeeAvatar, departmentName, companyId, companyCode, leaveType, startDate, endDate, daysCount, isHalfDay, reason, status, appliedDate, managerApproverId, managerApproverName, hrApprovedAt, managerApprovedAt, comments)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE status=VALUES(status), comments=VALUES(comments), hrApprovedAt=VALUES(hrApprovedAt), managerApprovedAt=VALUES(managerApprovedAt), companyId=VALUES(companyId), companyCode=VALUES(companyCode)`,
+          [lr.id, lr.employeeId, lr.employeeCode || '', lr.employeeName, lr.employeeEmail || '', lr.employeeAvatar || '', lr.departmentName || '', lr.companyId || '', lr.companyCode || '', lr.leaveType, lr.startDate, lr.endDate, lr.daysCount, Boolean(lr.isHalfDay), lr.reason, lr.status, lr.appliedDate, lr.managerApproverId || null, lr.managerApproverName || null, lr.hrApprovedAt || null, lr.managerApprovedAt || null, lr.comments || ''],
         );
       }
     }

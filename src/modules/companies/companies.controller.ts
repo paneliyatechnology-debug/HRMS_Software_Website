@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
 import { DatabaseService } from '../../database/database.service.js';
-import { Role } from '../../common/types.js';
+import { Role, isSuperAdminUser } from '../../common/types.js';
 import { UpdateCompanyDto } from '../super-admin/dto/update-company.dto.js';
 
 @ApiTags('Companies')
@@ -31,7 +31,7 @@ export class CompaniesController {
       throw new ForbiddenException('User is not authenticated.');
     }
 
-    if (user.role === Role.SUPER_ADMIN) {
+    if (isSuperAdminUser(user)) {
       return this.db.companies[0] || null;
     }
 
@@ -66,7 +66,7 @@ export class CompaniesController {
       throw new NotFoundException(`Company "${id}" not found.`);
     }
 
-    if (user.role === Role.ADMIN) {
+    if (!isSuperAdminUser(user)) {
       if (user.companyId && company.id !== user.companyId) {
         throw new ForbiddenException('Access denied: You can only view your own company profile.');
       }
@@ -103,7 +103,7 @@ export class CompaniesController {
       throw new NotFoundException(`Company "${id}" not found.`);
     }
 
-    if (user.role === Role.ADMIN) {
+    if (!isSuperAdminUser(user)) {
       if (user.companyId && company.id !== user.companyId) {
         throw new ForbiddenException('Access denied: You cannot modify another company.');
       }
@@ -127,7 +127,7 @@ export class CompaniesController {
     if (dto.email !== undefined) company.email = dto.email;
     if (dto.phone !== undefined) company.phone = dto.phone;
     if (dto.address !== undefined) company.address = dto.address;
-    if (user.role === Role.SUPER_ADMIN) {
+    if (isSuperAdminUser(user)) {
       if (dto.status !== undefined) company.status = dto.status;
       if (dto.adminUserId !== undefined) company.adminUserId = dto.adminUserId;
     }

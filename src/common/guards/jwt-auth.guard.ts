@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { DatabaseService } from '../../database/database.service.js';
 import { IS_PUBLIC_KEY } from './public.decorator.js';
 import { Role } from '../types.js';
+import { verifyAccessToken } from '../utils/jwt.util.js';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -68,24 +69,12 @@ export class JwtAuthGuard implements CanActivate {
       );
     }
 
-    // Extract user identifier from token
-    let identifier = clean;
-    const match = clean.match(/jwt_token_([^_]+)/i);
-    if (match && match[1]) {
-      identifier = match[1];
-    } else if (clean.startsWith('user-')) {
-      identifier = clean.split('_')[0];
+    const payload = verifyAccessToken(clean);
+    if (!payload?.sub) {
+      throw new UnauthorizedException('Invalid or expired session token. Please login again.');
     }
 
-    let user = this.db.users.find(
-      (u) =>
-        u.id.toLowerCase() === identifier.toLowerCase() ||
-        u.email.toLowerCase() === identifier.toLowerCase(),
-    );
-
-    if (!user && (identifier === 'user-1' || identifier.toLowerCase() === 'admin')) {
-      user = this.db.users.find((u) => u.id === 'user-admin-default' || u.role === Role.SUPER_ADMIN);
-    }
+    const user = this.db.users.find((u) => u.id === payload.sub);
 
     if (!user) {
       throw new UnauthorizedException(

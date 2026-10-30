@@ -1,7 +1,18 @@
 export enum Role {
   SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
+  HR_ADMIN = 'HR_ADMIN',
+  HR_EXECUTIVE = 'HR_EXECUTIVE',
+  MANAGER = 'MANAGER',
+  TEAM_LEADER = 'TEAM_LEADER',
+  RECRUITER = 'RECRUITER',
+  FINANCE_ADMIN = 'FINANCE_ADMIN',
   EMPLOYEE = 'EMPLOYEE',
+}
+
+export function isSuperAdminUser(user?: { role?: Role | string; isSuperAdmin?: boolean } | null): boolean {
+  if (!user) return false;
+  return user.role === Role.SUPER_ADMIN || user.isSuperAdmin === true;
 }
 
 export enum EmployeeStatus {
@@ -117,6 +128,7 @@ export interface Department {
   employeeCount: number;
   description?: string;
   createdAt: string;
+  companyId?: string;
 }
 
 export interface Designation {
@@ -127,6 +139,7 @@ export interface Designation {
   minSalary: number;
   maxSalary: number;
   createdAt: string;
+  companyId?: string;
 }
 
 export interface Location {
@@ -266,9 +279,13 @@ export interface WorkSession {
 export interface LeaveRequest {
   id: string;
   employeeId: string;
+  employeeCode?: string;
   employeeName: string;
+  employeeEmail?: string;
   employeeAvatar?: string;
   departmentName: string;
+  companyId?: string;
+  companyCode?: string;
   leaveType: LeaveType;
   startDate: string;
   endDate: string;
@@ -497,6 +514,7 @@ export interface Announcement {
   departmentId?: string;
   priority: 'Low' | 'Medium' | 'High';
   authorName: string;
+  companyId?: string;
 }
 
 export interface NotificationItem {

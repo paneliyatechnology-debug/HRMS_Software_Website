@@ -1,8 +1,11 @@
-import { Injectable, UnauthorizedException, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { User, Role, Employee, EmployeeStatus } from '../../common/types.js';
+import { User, Role, Employee, EmployeeStatus, isSuperAdminUser } from '../../common/types.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { hashPassword, comparePassword } from '../../common/utils/password.util.js';
+import { signAccessToken, verifyAccessToken } from '../../common/utils/jwt.util.js';
+import { SuperAdminService } from '../super-admin/super-admin.service.js';
+import { CreateCompanyDto } from '../super-admin/dto/create-company.dto.js';
 
 function matchPhone(phoneA?: string, phoneB?: string): boolean {
   if (!phoneA || !phoneB) return false;
@@ -18,7 +21,26 @@ function matchPhone(phoneA?: string, phoneB?: string): boolean {
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly superAdminService: SuperAdminService,
+  ) {}
+
+  registerCompany(dto: CreateCompanyDto) {
+    if (!dto.adminEmail || !dto.adminPassword) {
+      throw new BadRequestException('Admin email and password are required.');
+    }
+    return this.superAdminService.createCompany(dto);
+  }
+
+  private withCompanyName(user: User) {
+    const company = user.companyId
+      ? this.db.companies.find((c) => c.id === user.companyId)
+      : undefined;
+    return {
+      companyName: company?.companyName || company?.name || '',
+    };
+  }
 
   register(data: RegisterDto) {
     const existing = this.db.users.find(
@@ -165,7 +187,7 @@ export class AuthService {
 
     this.db.persist();
 
-    const token = `jwt_token_${newUser.id}_${Date.now()}`;
+    const token = signAccessToken(newUser.id);
     return {
       message: 'User registered successfully',
       accessToken: token,
@@ -179,6 +201,7 @@ export class AuthService {
         status: newUser.status || 'Active',
         companyId: newUser.companyId || (this.db.companies[0]?.id || null),
         companyCode: newUser.companyCode || (this.db.companies[0]?.companyCode || null),
+        ...this.withCompanyName(newUser),
         employeeId: newUser.employeeId,
         avatarUrl: newUser.avatarUrl,
       },
@@ -280,16 +303,7 @@ export class AuthService {
       user.updatedAt = new Date().toISOString();
       this.db.persist();
     } else {
-      let isValid = comparePassword(password, user.password);
-      // Fallback for standard demo passwords on Super Admin & Admin accounts
-      if (!isValid && (user.role === Role.SUPER_ADMIN || user.role === Role.ADMIN || user.isSuperAdmin)) {
-        if (password === 'Password123!' || password === 'Admin@123' || password === 'Ravi@123') {
-          isValid = true;
-          user.password = hashPassword(password);
-          user.updatedAt = new Date().toISOString();
-          this.db.persist();
-        }
-      }
+      const isValid = comparePassword(password, user.password);
       if (!isValid) {
         throw new UnauthorizedException('Invalid credentials. Incorrect password.');
       }
@@ -312,7 +326,7 @@ export class AuthService {
       this.db.persist();
     }
 
-    const token = `jwt_token_${user.id}_${Date.now()}`;
+    const token = signAccessToken(user.id);
     this.db.logAudit(
       user.id,
       `${user.firstName} ${user.lastName}`,
@@ -336,6 +350,7 @@ export class AuthService {
         status: user.status || 'Active',
         companyId: user.companyId || null,
         companyCode: user.companyCode || null,
+        ...this.withCompanyName(user),
         employeeId: user.employeeId,
         avatarUrl: user.avatarUrl,
       },
@@ -365,18 +380,11 @@ export class AuthService {
       );
     }
 
-    // 1. Try matching pattern: jwt_token_<userId>_<timestamp>
-    const match = clean.match(/jwt_token_([^_]+)/i);
-    if (match && match[1]) {
-      return match[1];
+    const payload = verifyAccessToken(clean);
+    if (!payload?.sub) {
+      throw new UnauthorizedException('Invalid or expired session token. Please login again.');
     }
-
-    // 2. Direct userId (e.g. user-123...)
-    if (clean.startsWith('user-')) {
-      return clean.split('_')[0];
-    }
-
-    return clean;
+    return payload.sub;
   }
 
   getCurrentUser(rawAuthHeader?: string) {
@@ -387,11 +395,7 @@ export class AuthService {
     const identifier = this.extractUserId(rawAuthHeader);
 
     // Search strictly by user ID or email
-    const user = this.db.users.find(
-      (u) =>
-        u.id.toLowerCase() === identifier.toLowerCase() ||
-        u.email.toLowerCase() === identifier.toLowerCase(),
-    );
+    const user = this.db.users.find((u) => u.id === identifier);
 
     if (!user) {
       throw new UnauthorizedException(
@@ -405,21 +409,26 @@ export class AuthService {
       ...safeUser,
       isSuperAdmin: user.isSuperAdmin ?? (user.role === Role.SUPER_ADMIN),
       status: user.status || 'Active',
+      ...this.withCompanyName(user),
     };
   }
 
-  switchRole(targetRole: Role) {
+  switchRole(targetRole: Role, actor?: User) {
+    if (!isSuperAdminUser(actor)) {
+      throw new ForbiddenException('Only Super Admin can switch roles.');
+    }
     const matchedUser = this.db.users.find((u) => u.role === targetRole);
     if (!matchedUser) {
       throw new NotFoundException(`No user found with role "${targetRole}"`);
     }
     const { password: _, ...safeUser } = matchedUser;
     return {
-      accessToken: `jwt_token_${matchedUser.id}_${Date.now()}`,
+      accessToken: signAccessToken(matchedUser.id),
       user: {
         ...safeUser,
         isSuperAdmin: matchedUser.isSuperAdmin ?? (matchedUser.role === Role.SUPER_ADMIN),
         status: matchedUser.status || 'Active',
+        ...this.withCompanyName(matchedUser),
       },
     };
   }

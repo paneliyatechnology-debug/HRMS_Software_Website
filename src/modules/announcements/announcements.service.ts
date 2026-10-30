@@ -1,6 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { Announcement } from '../../common/types.js';
+import { Announcement, User, isSuperAdminUser } from '../../common/types.js';
 import { EventsGateway } from '../events/events.gateway.js';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto.js';
 
@@ -11,11 +11,15 @@ export class AnnouncementsService {
     @Optional() private readonly eventsGateway?: EventsGateway,
   ) {}
 
-  findAll() {
-    return this.db.announcements;
+  findAll(actor?: User) {
+    if (!actor || isSuperAdminUser(actor)) {
+      return this.db.announcements;
+    }
+    if (!actor.companyId) return [];
+    return this.db.announcements.filter((item) => item.companyId === actor.companyId);
   }
 
-  create(data: CreateAnnouncementDto) {
+  create(data: CreateAnnouncementDto, actor?: User) {
     const authorName = data.authorName || 'HR Director';
     const newAnc: Announcement = {
       id: `anc-${Date.now()}`,
@@ -25,6 +29,7 @@ export class AnnouncementsService {
       targetAudience: data.targetAudience || 'All',
       priority: data.priority || 'Medium',
       authorName: authorName,
+      companyId: actor?.companyId || undefined,
     };
 
     this.db.announcements.unshift(newAnc);

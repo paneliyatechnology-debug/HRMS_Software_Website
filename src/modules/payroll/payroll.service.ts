@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { PayrollRecord, Role, User } from '../../common/types.js';
+import { PayrollRecord, Role, User, isSuperAdminUser } from '../../common/types.js';
 import { EventsGateway } from '../events/events.gateway.js';
 import { GeneratePayrollDto } from './dto/generate-payroll.dto.js';
 import { UpdatePayrollStatusDto } from './dto/update-payroll-status.dto.js';
@@ -17,7 +17,7 @@ export class PayrollService {
     let list = [...this.db.payrollRecords];
 
     // Multi-company isolation
-    if (actorUser && (actorUser.role === Role.ADMIN || actorUser.role === Role.EMPLOYEE)) {
+    if (actorUser && !isSuperAdminUser(actorUser)) {
       if (actorUser.companyId) {
         const companyEmpIds = new Set(
           this.db.employees.filter((e) => e.companyId === actorUser.companyId).map((e) => e.id),

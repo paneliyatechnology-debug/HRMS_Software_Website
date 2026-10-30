@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { Employee, EmployeeStatus, Role, User } from '../../common/types.js';
+import { Employee, EmployeeStatus, Role, User, isSuperAdminUser } from '../../common/types.js';
 import { CreateEmployeeDto } from './dto/create-employee.dto.js';
 import { UpdateEmployeeDto } from './dto/update-employee.dto.js';
 import { QueryEmployeeDto } from './dto/query-employee.dto.js';
@@ -32,7 +32,7 @@ export class EmployeesService {
 
     // Multi-company isolation
     if (actorUser) {
-      if (actorUser.role === Role.ADMIN || actorUser.role === Role.EMPLOYEE) {
+      if (!isSuperAdminUser(actorUser)) {
         if (actorUser.companyId) {
           result = result.filter((e) => e.companyId === actorUser.companyId);
         }

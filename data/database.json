@@ -12,6 +12,19 @@
       "adminUserId": null,
       "createdAt": "2024-01-15T09:00:00Z",
       "updatedAt": "2024-01-15T09:00:00Z"
+    },
+    {
+      "id": "cmp-1793361854015",
+      "companyCode": "CMP-000002",
+      "companyName": "Demo Technologies Pvt Ltd",
+      "name": "Demo Technologies Pvt Ltd",
+      "email": "contact@demotech.com",
+      "phone": "+91 98765 11111",
+      "address": "Surat, Gujarat, India",
+      "status": "Active",
+      "adminUserId": "user-1793361854015",
+      "createdAt": "2026-10-30T12:04:14.015Z",
+      "updatedAt": "2026-10-30T12:04:14.015Z"
     }
   ],
   "locations": [
@@ -62,9 +75,10 @@
       "code": "ENG",
       "headEmployeeId": "emp-4",
       "headName": "Alex Mercer",
-      "employeeCount": 10,
+      "employeeCount": 11,
       "description": "Core software development, infrastructure, devops and platform engineering",
-      "createdAt": "2024-01-15T09:00:00Z"
+      "createdAt": "2024-01-15T09:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "dept-2",
@@ -74,7 +88,8 @@
       "headName": "Priya Sharma",
       "employeeCount": 5,
       "description": "Product strategy, UI/UX research, visual identity and customer experience",
-      "createdAt": "2024-01-15T09:00:00Z"
+      "createdAt": "2024-01-15T09:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "dept-3",
@@ -84,7 +99,8 @@
       "headName": "Sarah Jenkins",
       "employeeCount": 4,
       "description": "Talent acquisition, employee engagement, compensation and people operations",
-      "createdAt": "2024-01-15T09:00:00Z"
+      "createdAt": "2024-01-15T09:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "dept-4",
@@ -94,7 +110,8 @@
       "headName": "David Vance",
       "employeeCount": 4,
       "description": "Brand awareness, digital growth marketing, events and content strategy",
-      "createdAt": "2024-01-15T09:00:00Z"
+      "createdAt": "2024-01-15T09:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "dept-5",
@@ -104,7 +121,8 @@
       "headName": "Blake Mejia",
       "employeeCount": 4,
       "description": "Enterprise client acquisition, account management and revenue operations",
-      "createdAt": "2024-01-15T09:00:00Z"
+      "createdAt": "2024-01-15T09:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "dept-6",
@@ -114,7 +132,8 @@
       "headName": "Rachel Green",
       "employeeCount": 3,
       "description": "Financial planning, payroll compliance, accounting and legal auditing",
-      "createdAt": "2024-01-15T09:00:00Z"
+      "createdAt": "2024-01-15T09:00:00Z",
+      "companyId": "cmp-1"
     }
   ],
   "designations": [
@@ -125,7 +144,8 @@
       "departmentName": "Engineering",
       "minSalary": 160000,
       "maxSalary": 220000,
-      "createdAt": "2024-01-15T00:00:00Z"
+      "createdAt": "2024-01-15T00:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "des-2",
@@ -134,7 +154,8 @@
       "departmentName": "Engineering",
       "minSalary": 130000,
       "maxSalary": 175000,
-      "createdAt": "2024-01-15T00:00:00Z"
+      "createdAt": "2024-01-15T00:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "des-3",
@@ -143,7 +164,8 @@
       "departmentName": "Engineering",
       "minSalary": 110000,
       "maxSalary": 145000,
-      "createdAt": "2024-01-15T00:00:00Z"
+      "createdAt": "2024-01-15T00:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "des-4",
@@ -152,7 +174,8 @@
       "departmentName": "Engineering",
       "minSalary": 80000,
       "maxSalary": 110000,
-      "createdAt": "2024-01-15T00:00:00Z"
+      "createdAt": "2024-01-15T00:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "des-5",
@@ -161,7 +184,8 @@
       "departmentName": "Product Design",
       "minSalary": 140000,
       "maxSalary": 190000,
-      "createdAt": "2024-01-15T00:00:00Z"
+      "createdAt": "2024-01-15T00:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "des-6",
@@ -170,7 +194,8 @@
       "departmentName": "Product Design",
       "minSalary": 95000,
       "maxSalary": 130000,
-      "createdAt": "2024-01-15T00:00:00Z"
+      "createdAt": "2024-01-15T00:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "des-7",
@@ -179,7 +204,8 @@
       "departmentName": "Product Design",
       "minSalary": 75000,
       "maxSalary": 95000,
-      "createdAt": "2024-01-15T00:00:00Z"
+      "createdAt": "2024-01-15T00:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "des-8",
@@ -188,7 +214,8 @@
       "departmentName": "Human Resources",
       "minSalary": 125000,
       "maxSalary": 165000,
-      "createdAt": "2024-01-15T00:00:00Z"
+      "createdAt": "2024-01-15T00:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "des-9",
@@ -197,7 +224,8 @@
       "departmentName": "Human Resources",
       "minSalary": 85000,
       "maxSalary": 115000,
-      "createdAt": "2024-01-15T00:00:00Z"
+      "createdAt": "2024-01-15T00:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "des-10",
@@ -206,7 +234,8 @@
       "departmentName": "Marketing & Growth",
       "minSalary": 105000,
       "maxSalary": 140000,
-      "createdAt": "2024-01-15T00:00:00Z"
+      "createdAt": "2024-01-15T00:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "des-11",
@@ -215,7 +244,8 @@
       "departmentName": "Sales & Business Dev",
       "minSalary": 90000,
       "maxSalary": 135000,
-      "createdAt": "2024-01-15T00:00:00Z"
+      "createdAt": "2024-01-15T00:00:00Z",
+      "companyId": "cmp-1"
     },
     {
       "id": "des-12",
@@ -224,10 +254,27 @@
       "departmentName": "Finance & Operations",
       "minSalary": 115000,
       "maxSalary": 155000,
-      "createdAt": "2024-01-15T00:00:00Z"
+      "createdAt": "2024-01-15T00:00:00Z",
+      "companyId": "cmp-1"
     }
   ],
   "users": [
+    {
+      "id": "user-1793361854015",
+      "email": "admin@demotech.com",
+      "password": "$2b$10$q4OhtIN9of0GA6QDHgemwOCqzr.1e8bV1ZA7eZIcuv8iHHcpw2E3O",
+      "firstName": "Demo",
+      "lastName": "Admin",
+      "role": "ADMIN",
+      "isSuperAdmin": false,
+      "status": "Active",
+      "companyId": "cmp-1793361854015",
+      "companyCode": "CMP-000002",
+      "employeeId": "emp-1793361854015",
+      "avatarUrl": "/uploads/profiles/profile-user-1793361854015-1793364659140-219687878.png",
+      "createdAt": "2026-10-30T12:04:14.103Z",
+      "updatedAt": "2026-10-30T12:50:59.181Z"
+    },
     {
       "id": "user-1",
       "email": "admin@paneliya.com",
@@ -239,7 +286,8 @@
       "employeeId": "emp-1",
       "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
       "createdAt": "2024-01-01T00:00:00Z",
-      "updatedAt": "2026-10-01T00:00:00Z"
+      "updatedAt": "2026-10-30T12:04:00.837Z",
+      "password": "$2b$10$zM7bbJCtwD0i1X2XJiW1vOg2d.jqHpgHFTB9KBBWgDDVhRMCW4RiK"
     },
     {
       "id": "user-2",
@@ -365,9 +413,123 @@
       "avatarUrl": "",
       "createdAt": "2026-10-30T10:45:03.866Z",
       "updatedAt": "2026-10-30T10:45:03.866Z"
+    },
+    {
+      "id": "user-1793364680006",
+      "email": "sacsc@wgmail.com",
+      "password": "$2b$10$bgJSb4v1WdFm1V6Na2T/A./yy7YFp0tX4/JJb7osTb8gydJoSJFim",
+      "firstName": "CSACSA",
+      "lastName": "SCASCSAC",
+      "role": "EMPLOYEE",
+      "isSuperAdmin": false,
+      "status": "Active",
+      "companyId": "cmp-1793361854015",
+      "companyCode": "CMP-000002",
+      "employeeId": "emp-1793364680006",
+      "avatarUrl": "/uploads/profiles/profile-user-1793361854015-1793364659140-219687878.png",
+      "createdAt": "2026-10-30T12:51:20.184Z",
+      "updatedAt": "2026-10-30T12:51:45.296Z"
     }
   ],
   "employees": [
+    {
+      "id": "emp-1793364680006",
+      "employeeCode": "EMP-000002",
+      "companyId": "cmp-1793361854015",
+      "companyCode": "CMP-000002",
+      "userId": "user-1793364680006",
+      "password": "$2b$10$bgJSb4v1WdFm1V6Na2T/A./yy7YFp0tX4/JJb7osTb8gydJoSJFim",
+      "isSuperAdmin": false,
+      "firstName": "CSACSA",
+      "lastName": "SCASCSAC",
+      "email": "sacsc@wgmail.com",
+      "phone": "7524455699",
+      "avatarUrl": "/uploads/profiles/profile-user-1793361854015-1793364659140-219687878.png",
+      "gender": "Male",
+      "dateOfBirth": "1995-05-15",
+      "address": "CSACSASAC",
+      "emergencyContact": {
+        "name": "Emergency Contact",
+        "relationship": "Spouse",
+        "phone": "7524455699"
+      },
+      "joiningDate": "2026-10-30",
+      "employmentType": "Full-time",
+      "status": "Active",
+      "departmentId": "dept-1",
+      "departmentName": "Engineering",
+      "designationId": "des-3",
+      "designationTitle": "Senior Full Stack Engineer",
+      "reportingManagerId": "",
+      "reportingManagerName": "",
+      "workLocationId": "loc-1",
+      "workLocationName": "Corporate Headquarters",
+      "shift": "General Shift (9 AM - 6 PM)",
+      "bankDetails": {
+        "bankName": "Silicon Valley Bank",
+        "accountNumber": "99201948191",
+        "ifscOrRouting": "SVB00129",
+        "accountHolderName": "CSACSA SCASCSAC"
+      },
+      "taxInformation": {},
+      "education": [],
+      "previousExperience": [],
+      "skills": [],
+      "salary": {
+        "basic": 6500,
+        "hra": 2600,
+        "allowances": 1500,
+        "bonus": 800,
+        "pf": 780,
+        "tax": 975,
+        "professionalTax": 200,
+        "gross": 11400,
+        "net": 9445
+      },
+      "createdAt": "2026-10-30T12:51:20.184Z",
+      "updatedAt": "2026-10-30T12:51:45.296Z",
+      "role": "RECRUITER"
+    },
+    {
+      "id": "emp-1793361854015",
+      "employeeCode": "EMP-000001",
+      "companyId": "cmp-1793361854015",
+      "companyCode": "CMP-000002",
+      "userId": "user-1793361854015",
+      "password": "$2b$10$q4OhtIN9of0GA6QDHgemwOCqzr.1e8bV1ZA7eZIcuv8iHHcpw2E3O",
+      "isSuperAdmin": false,
+      "firstName": "Demo",
+      "lastName": "Admin",
+      "email": "admin@demotech.com",
+      "phone": "+91 98765 11111",
+      "avatarUrl": "/uploads/profiles/profile-user-1793361854015-1793364659140-219687878.png",
+      "gender": "Other",
+      "dateOfBirth": "",
+      "address": "Surat, Gujarat, India",
+      "emergencyContact": {},
+      "joiningDate": "2026-10-30",
+      "employmentType": "Full-time",
+      "status": "Active",
+      "departmentId": "dept-1",
+      "departmentName": "Engineering",
+      "designationId": "des-1",
+      "designationTitle": "Administrator",
+      "reportingManagerId": "",
+      "reportingManagerName": "",
+      "workLocationId": "loc-1",
+      "workLocationName": "Corporate Headquarters",
+      "shift": "General Shift (9 AM - 6 PM)",
+      "bankDetails": {},
+      "taxInformation": {},
+      "education": [],
+      "previousExperience": [],
+      "skills": [
+        "Management"
+      ],
+      "salary": {},
+      "createdAt": "2026-10-30T12:04:14.103Z",
+      "updatedAt": "2026-10-30T12:50:59.182Z"
+    },
     {
       "id": "emp-1793357103660",
       "employeeCode": "EMP-000023",
@@ -1888,7 +2050,7 @@
       },
       "joiningDate": "2024-07-15",
       "employmentType": "Full-time",
-      "status": "On Notice",
+      "status": "Resigned",
       "departmentId": "dept-6",
       "departmentName": "Finance & Operations",
       "designationId": "des-12",
@@ -2101,6 +2263,14 @@
       "dayOfWeek": "Friday",
       "type": "Public",
       "description": "Christmas federal holiday"
+    },
+    {
+      "id": "hol-1793364197913",
+      "name": "SACCSDA",
+      "date": "2026-11-19",
+      "dayOfWeek": "Thursday",
+      "type": "Company",
+      "description": "QWQDQE"
     }
   ],
   "leaveBalances": [
@@ -2598,9 +2768,138 @@
         "used": 0,
         "remaining": 15
       }
+    },
+    {
+      "id": "bal-emp-1793361854015",
+      "employeeId": "emp-1793361854015",
+      "year": 2026,
+      "casualLeave": {
+        "total": 12,
+        "used": 2,
+        "remaining": 10
+      },
+      "sickLeave": {
+        "total": 10,
+        "used": 0,
+        "remaining": 10
+      },
+      "paidLeave": {
+        "total": 15,
+        "used": 0,
+        "remaining": 15
+      }
+    },
+    {
+      "id": "bal-emp-1793364680006",
+      "employeeId": "emp-1793364680006",
+      "year": 2026,
+      "casualLeave": {
+        "total": 12,
+        "used": 0,
+        "remaining": 12
+      },
+      "sickLeave": {
+        "total": 10,
+        "used": 0,
+        "remaining": 10
+      },
+      "paidLeave": {
+        "total": 15,
+        "used": 0,
+        "remaining": 15
+      }
     }
   ],
   "leaveRequests": [
+    {
+      "id": "lr-1793365681657",
+      "employeeId": "emp-1793364680006",
+      "employeeCode": "EMP-000002",
+      "employeeName": "CSACSA SCASCSAC",
+      "employeeEmail": "sacsc@wgmail.com",
+      "employeeAvatar": "/uploads/profiles/profile-user-1793361854015-1793364659140-219687878.png",
+      "departmentName": "Engineering",
+      "companyId": "cmp-1793361854015",
+      "companyCode": "CMP-000002",
+      "leaveType": "Casual Leave",
+      "startDate": "2026-11-05",
+      "endDate": "2026-11-06",
+      "daysCount": 2,
+      "isHalfDay": false,
+      "reason": "Family function & festival",
+      "status": "Pending",
+      "appliedDate": "2026-10-30",
+      "managerApproverId": "",
+      "managerApproverName": "Team Manager",
+      "comments": "Pending review"
+    },
+    {
+      "id": "lr-1793364886122",
+      "employeeId": "emp-1793361854015",
+      "employeeName": "Demo Admin",
+      "employeeAvatar": "/uploads/profiles/profile-user-1793361854015-1793364659140-219687878.png",
+      "departmentName": "Engineering",
+      "leaveType": "Casual Leave",
+      "startDate": "2026-11-01",
+      "endDate": "2026-11-02",
+      "daysCount": 2,
+      "isHalfDay": false,
+      "reason": "Testing leave request",
+      "status": "Approved",
+      "appliedDate": "2026-10-30",
+      "managerApproverId": "",
+      "managerApproverName": "Team Manager",
+      "comments": "Approved by HR Administration",
+      "companyId": "cmp-1793361854015",
+      "companyCode": "CMP-000002",
+      "employeeEmail": "admin@demotech.com",
+      "employeeCode": "EMP-000001",
+      "hrApprovedAt": "2026-10-30T13:05:21.107Z"
+    },
+    {
+      "id": "lr-1793364611690",
+      "employeeId": "emp-1793357103660",
+      "employeeName": "jatinkakadiya234@gmail.com jk@123",
+      "employeeAvatar": "",
+      "departmentName": "Engineering",
+      "leaveType": "Comp Off",
+      "startDate": "2026-10-20",
+      "endDate": "2026-10-20",
+      "daysCount": 1,
+      "isHalfDay": false,
+      "reason": "SDSDCS",
+      "status": "Pending",
+      "appliedDate": "2026-10-30",
+      "managerApproverId": "",
+      "managerApproverName": "Team Manager",
+      "comments": "Pending review",
+      "companyId": "cmp-1",
+      "companyCode": "CMP-000001",
+      "employeeEmail": "jatinkakadiya234@gmail.com",
+      "employeeCode": "EMP-000023"
+    },
+    {
+      "id": "lr-1793363414946",
+      "employeeId": "emp-1793357103660",
+      "employeeName": "jatinkakadiya234@gmail.com jk@123",
+      "employeeAvatar": "",
+      "departmentName": "Engineering",
+      "leaveType": "Sick Leave",
+      "startDate": "2026-10-31",
+      "endDate": "2026-11-03",
+      "daysCount": 4,
+      "isHalfDay": false,
+      "reason": "DSDSACAS",
+      "status": "Pending",
+      "appliedDate": "2026-10-30",
+      "managerApproverId": "",
+      "managerApproverName": "Team Manager",
+      "comments": "Pending review",
+      "companyId": "cmp-1",
+      "companyCode": "CMP-000001",
+      "employeeEmail": "jatinkakadiya234@gmail.com",
+      "employeeCode": "EMP-000023"
+    },
     {
       "id": "lr-1793357162262",
       "employeeId": "emp-1793357103660",
@@ -2617,7 +2916,11 @@
       "appliedDate": "2026-10-30",
       "managerApproverId": "",
       "managerApproverName": "Team Manager",
-      "comments": "Pending review"
+      "comments": "Pending review",
+      "companyId": "cmp-1",
+      "companyCode": "CMP-000001",
+      "employeeEmail": "jatinkakadiya234@gmail.com",
+      "employeeCode": "EMP-000023"
     },
     {
       "id": "lr-1",
@@ -2638,7 +2941,11 @@
       "managerApprovedAt": "2026-10-18T14:30:00Z",
       "hrApproverId": "emp-2",
       "hrApprovedAt": "2026-10-19T09:15:00Z",
-      "comments": "Approved by medical certificate verification"
+      "comments": "Approved by medical certificate verification",
+      "companyId": "cmp-1",
+      "companyCode": "CMP-000001",
+      "employeeEmail": "adarson.miller@paneliya.com",
+      "employeeCode": "PAN-015"
     },
     {
       "id": "lr-2",
@@ -2656,7 +2963,11 @@
       "appliedDate": "2026-10-19",
       "managerApproverId": "emp-4",
       "managerApproverName": "Alex Mercer",
-      "comments": "Pending team sprint coverage review"
+      "comments": "Pending team sprint coverage review",
+      "companyId": "cmp-1",
+      "companyCode": "CMP-000001",
+      "employeeEmail": "gregory.patton@paneliya.com",
+      "employeeCode": "PAN-016"
     },
     {
       "id": "lr-3",
@@ -2677,7 +2988,11 @@
       "managerApprovedAt": "2026-10-17T16:00:00Z",
       "hrApproverId": "emp-2",
       "hrApprovedAt": "2026-10-18T10:00:00Z",
-      "comments": "Approved, campaign handover confirmed"
+      "comments": "Approved, campaign handover confirmed",
+      "companyId": "cmp-1",
+      "companyCode": "CMP-000001",
+      "employeeEmail": "kaden.alvarado@paneliya.com",
+      "employeeCode": "PAN-017"
     },
     {
       "id": "lr-4",
@@ -2695,7 +3010,11 @@
       "appliedDate": "2026-10-10",
       "managerApproverId": "emp-1",
       "managerApproverName": "John Deo",
-      "comments": "Clashes with Q4 enterprise client closing period"
+      "comments": "Clashes with Q4 enterprise client closing period",
+      "companyId": "cmp-1",
+      "companyCode": "CMP-000001",
+      "employeeEmail": "blake.mejia@paneliya.com",
+      "employeeCode": "PAN-011"
     },
     {
       "id": "lr-5",
@@ -2713,10 +3032,42 @@
       "appliedDate": "2026-10-19",
       "managerApproverId": "emp-5",
       "managerApproverName": "Priya Sharma",
-      "comments": "Will complete morning design sprint sync before leaving"
+      "comments": "Will complete morning design sprint sync before leaving",
+      "companyId": "cmp-1",
+      "companyCode": "CMP-000001",
+      "employeeEmail": "juan.hogan@paneliya.com",
+      "employeeCode": "PAN-008"
     }
   ],
   "attendanceRecords": [
+    {
+      "id": "att-1793364268578",
+      "employeeId": "emp-1793361854015",
+      "employeeName": "Demo Admin",
+      "date": "2026-10-30",
+      "checkIn": "06:14 PM",
+      "checkOut": "",
+      "breakDurationMinutes": 0,
+      "workingHours": 0,
+      "overtimeHours": 0,
+      "status": "Late",
+      "remarks": "[Late Reason: UKKUY]",
+      "createdAt": "2026-10-30T12:44:28.577Z"
+    },
+    {
+      "id": "att-1793362594840",
+      "employeeId": "emp-1793357103660",
+      "employeeName": "jatinkakadiya234@gmail.com jk@123",
+      "date": "2026-10-30",
+      "checkIn": "05:46 PM",
+      "checkOut": "",
+      "breakDurationMinutes": 0,
+      "workingHours": 0,
+      "overtimeHours": 0,
+      "status": "Late",
+      "remarks": "[Late Reason: CCCCSACC]",
+      "createdAt": "2026-10-30T12:16:34.839Z"
+    },
     {
       "id": "att-1",
       "employeeId": "emp-1",
@@ -3343,6 +3694,57 @@
       "status": "Approved",
       "paymentDate": "2026-10-31",
       "paymentMethod": "Direct Bank Transfer"
+    },
+    {
+      "id": "pr-2026-10-emp-1793361854015",
+      "payrollMonth": "2026-10",
+      "employeeId": "emp-1793361854015",
+      "employeeName": "Demo Admin",
+      "employeeCode": "EMP-000001",
+      "designationTitle": "Administrator",
+      "departmentName": "Engineering",
+      "overtimePay": 0,
+      "grossSalary": null,
+      "otherDeductions": 0,
+      "totalDeductions": null,
+      "netSalary": null,
+      "status": "Approved",
+      "paymentDate": "2026-10-28",
+      "paymentMethod": "Direct Bank Transfer"
+    },
+    {
+      "id": "pr-2026-10-emp-1793357103660",
+      "payrollMonth": "2026-10",
+      "employeeId": "emp-1793357103660",
+      "employeeName": "jatinkakadiya234@gmail.com jk@123",
+      "employeeCode": "EMP-000023",
+      "designationTitle": "",
+      "departmentName": "Engineering",
+      "overtimePay": 0,
+      "grossSalary": null,
+      "otherDeductions": 0,
+      "totalDeductions": null,
+      "netSalary": null,
+      "status": "Approved",
+      "paymentDate": "2026-10-28",
+      "paymentMethod": "Direct Bank Transfer"
+    },
+    {
+      "id": "pr-2026-10-emp-1793356918372",
+      "payrollMonth": "2026-10",
+      "employeeId": "emp-1793356918372",
+      "employeeName": "jatinkakadiya234@gmail.com staf@123",
+      "employeeCode": "EMP-000022",
+      "designationTitle": "",
+      "departmentName": "Engineering",
+      "overtimePay": 0,
+      "grossSalary": null,
+      "otherDeductions": 0,
+      "totalDeductions": null,
+      "netSalary": null,
+      "status": "Approved",
+      "paymentDate": "2026-10-28",
+      "paymentMethod": "Direct Bank Transfer"
     }
   ],
   "jobs": [
@@ -3748,7 +4150,7 @@
       "lastWorkingDay": "2026-11-15",
       "noticePeriodDays": 45,
       "reason": "Relocating to another state for family commitments",
-      "status": "In Clearance",
+      "status": "Completed",
       "managerApproval": {
         "status": "Approved",
         "approvedAt": "2026-10-03T10:00:00Z",
@@ -3756,8 +4158,8 @@
       },
       "clearance": {
         "departmentClearance": true,
-        "assetReturned": false,
-        "financeSettlement": false,
+        "assetReturned": true,
+        "financeSettlement": true,
         "exitInterviewCompleted": true
       },
       "exitFeedback": "Enjoyed working with Paneliya Technology. Great work culture and supportive management."
@@ -3771,7 +4173,8 @@
       "publishDate": "2026-10-15",
       "targetAudience": "All",
       "priority": "High",
-      "authorName": "John Deo (VP of Engineering)"
+      "authorName": "John Deo (VP of Engineering)",
+      "companyId": "cmp-1"
     },
     {
       "id": "anc-2",
@@ -3780,7 +4183,8 @@
       "publishDate": "2026-10-17",
       "targetAudience": "All",
       "priority": "Medium",
-      "authorName": "Sarah Jenkins (HR Director)"
+      "authorName": "Sarah Jenkins (HR Director)",
+      "companyId": "cmp-1"
     },
     {
       "id": "anc-3",
@@ -3789,10 +4193,57 @@
       "publishDate": "2026-10-18",
       "targetAudience": "All",
       "priority": "Low",
-      "authorName": "People Operations"
+      "authorName": "People Operations",
+      "companyId": "cmp-1"
     }
   ],
   "notifications": [
+    {
+      "id": "notif-1793365681661",
+      "title": "New Leave Application",
+      "message": "CSACSA SCASCSAC applied for Casual Leave (2 days).",
+      "type": "leave",
+      "isRead": false,
+      "createdAt": "2026-10-30T13:08:01.661Z",
+      "link": "/leaves",
+      "companyId": "cmp-1793361854015"
+    },
+    {
+      "id": "notif-1793365521117",
+      "title": "Leave Approved",
+      "message": "Your leave request for 2026-11-01 to 2026-11-02 has been approved.",
+      "type": "leave",
+      "isRead": false,
+      "createdAt": "2026-10-30T13:05:21.117Z",
+      "link": "/leaves"
+    },
+    {
+      "id": "notif-1793364886124",
+      "title": "New Leave Application",
+      "message": "Demo Admin applied for Casual Leave (2 days).",
+      "type": "leave",
+      "isRead": false,
+      "createdAt": "2026-10-30T12:54:46.124Z",
+      "link": "/leaves"
+    },
+    {
+      "id": "notif-1793364611697",
+      "title": "New Leave Application",
+      "message": "jatinkakadiya234@gmail.com jk@123 applied for Comp Off (1 days).",
+      "type": "leave",
+      "isRead": false,
+      "createdAt": "2026-10-30T12:50:11.697Z",
+      "link": "/leaves"
+    },
+    {
+      "id": "notif-1793363414955",
+      "title": "New Leave Application",
+      "message": "jatinkakadiya234@gmail.com jk@123 applied for Sick Leave (4 days).",
+      "type": "leave",
+      "isRead": false,
+      "createdAt": "2026-10-30T12:30:14.955Z",
+      "link": "/leaves"
+    },
     {
       "id": "notif-1793357162262",
       "title": "New Leave Application",
@@ -3849,6 +4300,18 @@
   ],
   "documents": [
     {
+      "id": "doc-1793362320831",
+      "employeeId": "emp-1793357103660",
+      "employeeName": "jatinkakadiya234@gmail.com jk@123",
+      "title": "Screenshot 2026-09-07 120627",
+      "category": "Medical",
+      "fileUrl": "http://localhost:4000/uploads/documents/file-1793362320812-693692197.png",
+      "fileSize": "533 KB",
+      "uploadDate": "2026-10-30",
+      "verificationStatus": "Verified",
+      "verifiedBy": "HR Admin"
+    },
+    {
       "id": "doc-1",
       "employeeId": "emp-8",
       "employeeName": "Juan Hogan",
@@ -3899,6 +4362,458 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "log-1793365681657-558",
+      "userId": "emp-1793364680006",
+      "userName": "CSACSA SCASCSAC",
+      "userRole": "EMPLOYEE",
+      "action": "LEAVE_APPLIED",
+      "module": "Leave Management",
+      "recordId": "lr-1793365681657",
+      "details": "Applied for 2 day(s) of Casual Leave (2026-11-05 to 2026-11-06)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T13:08:01.657Z"
+    },
+    {
+      "id": "log-1793365681624-610",
+      "userId": "user-1793361854015",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793361854015",
+      "details": "User admin@demotech.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T13:08:01.624Z"
+    },
+    {
+      "id": "log-1793365521108-573",
+      "userId": "sys",
+      "userName": "Demo Admin",
+      "userRole": "HR_ADMIN",
+      "action": "LEAVE_APPROVED",
+      "module": "Leave Management",
+      "recordId": "lr-1793364886122",
+      "details": "Approved leave request for Demo Admin (2 days)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T13:05:21.108Z"
+    },
+    {
+      "id": "log-1793364886122-102",
+      "userId": "emp-1793361854015",
+      "userName": "Demo Admin",
+      "userRole": "EMPLOYEE",
+      "action": "LEAVE_APPLIED",
+      "module": "Leave Management",
+      "recordId": "lr-1793364886122",
+      "details": "Applied for 2 day(s) of Casual Leave (2026-11-01 to 2026-11-02)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:54:46.122Z"
+    },
+    {
+      "id": "log-1793364886112-501",
+      "userId": "user-1793361854015",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793361854015",
+      "details": "User admin@demotech.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:54:46.112Z"
+    },
+    {
+      "id": "log-1793364869869-672",
+      "userId": "user-1793361854015",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793361854015",
+      "details": "User admin@demotech.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:54:29.869Z"
+    },
+    {
+      "id": "log-1793364705296-505",
+      "userId": "sys",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "EMPLOYEE_UPDATED",
+      "module": "Employee Management",
+      "recordId": "emp-1793364680006",
+      "details": "Updated details for employee CSACSA SCASCSAC (EMP-000002)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:51:45.296Z"
+    },
+    {
+      "id": "log-1793364694407-450",
+      "userId": "sys",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "EMPLOYEE_DEACTIVATED",
+      "module": "Employee Management",
+      "recordId": "emp-1793364680006",
+      "details": "Marked employee CSACSA SCASCSAC as Inactive (EMP-000002)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:51:34.407Z"
+    },
+    {
+      "id": "log-1793364685154-977",
+      "userId": "sys",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "EMPLOYEE_DEACTIVATED",
+      "module": "Employee Management",
+      "recordId": "emp-1793364680006",
+      "details": "Marked employee CSACSA SCASCSAC as Inactive (EMP-000002)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:51:25.154Z"
+    },
+    {
+      "id": "log-1793364680184-344",
+      "userId": "sys",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "EMPLOYEE_CREATED",
+      "module": "Employee Management",
+      "recordId": "emp-1793364680006",
+      "details": "Created new employee CSACSA SCASCSAC (EMP-000002) in company CMP-000002",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:51:20.184Z"
+    },
+    {
+      "id": "log-1793364659182-370",
+      "userId": "user-1793361854015",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "PROFILE_PHOTO_UPDATED",
+      "module": "Users",
+      "recordId": "user-1793361854015",
+      "details": "User admin@demotech.com updated profile photo (profile-user-1793361854015-1793364659140-219687878.png)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:50:59.182Z"
+    },
+    {
+      "id": "log-1793364644856-296",
+      "userId": "user-1793361854015",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793361854015",
+      "details": "User admin@demotech.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:50:44.856Z"
+    },
+    {
+      "id": "log-1793364611690-58",
+      "userId": "emp-1793357103660",
+      "userName": "jatinkakadiya234@gmail.com jk@123",
+      "userRole": "EMPLOYEE",
+      "action": "LEAVE_APPLIED",
+      "module": "Leave Management",
+      "recordId": "lr-1793364611690",
+      "details": "Applied for 1 day(s) of Comp Off (2026-10-20 to 2026-10-20)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:50:11.690Z"
+    },
+    {
+      "id": "log-1793364533594-359",
+      "userId": "emp-1793357103660",
+      "userName": "jatinkakadiya234@gmail.com jk@123",
+      "userRole": "EMPLOYEE",
+      "action": "ATTENDANCE_CHECKIN",
+      "module": "Attendance",
+      "recordId": "att-1793362594840",
+      "details": "Checked in at 06:18 PM (Late)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:48:53.594Z"
+    },
+    {
+      "id": "log-1793364511796-629",
+      "userId": "emp-1793357103660",
+      "userName": "jatinkakadiya234@gmail.com jk@123",
+      "userRole": "EMPLOYEE",
+      "action": "ATTENDANCE_CHECKIN",
+      "module": "Attendance",
+      "recordId": "att-1793362594840",
+      "details": "Checked in at 06:18 PM (Late)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:48:31.796Z"
+    },
+    {
+      "id": "log-1793364268578-874",
+      "userId": "emp-1793361854015",
+      "userName": "Demo Admin",
+      "userRole": "EMPLOYEE",
+      "action": "ATTENDANCE_CHECKIN",
+      "module": "Attendance",
+      "recordId": "att-1793364268578",
+      "details": "Checked in at 06:14 PM (Late)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:44:28.578Z"
+    },
+    {
+      "id": "log-1793364041353-858",
+      "userId": "sys",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "EXIT_CLEARANCE_UPDATED",
+      "module": "Exit Management",
+      "recordId": "res-1",
+      "details": "Updated exit clearance for Sophia Martinez. All clear: true",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:40:41.353Z"
+    },
+    {
+      "id": "log-1793364034954-868",
+      "userId": "sys",
+      "userName": "Finance Admin",
+      "userRole": "FINANCE_ADMIN",
+      "action": "PAYROLL_GENERATED",
+      "module": "Payroll",
+      "details": "Generated payroll run for month 2026-10 (0 records created)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:40:34.954Z"
+    },
+    {
+      "id": "log-1793363483895-318",
+      "userId": "emp-1793357103660",
+      "userName": "jatinkakadiya234@gmail.com jk@123",
+      "userRole": "EMPLOYEE",
+      "action": "ATTENDANCE_CHECKIN",
+      "module": "Attendance",
+      "recordId": "att-1793362594840",
+      "details": "Checked in at 06:01 PM (Late)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:31:23.895Z"
+    },
+    {
+      "id": "log-1793363414947-723",
+      "userId": "emp-1793357103660",
+      "userName": "jatinkakadiya234@gmail.com jk@123",
+      "userRole": "EMPLOYEE",
+      "action": "LEAVE_APPLIED",
+      "module": "Leave Management",
+      "recordId": "lr-1793363414946",
+      "details": "Applied for 4 day(s) of Sick Leave (2026-10-31 to 2026-11-03)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:30:14.947Z"
+    },
+    {
+      "id": "log-1793362775234-533",
+      "userId": "sys",
+      "userName": "Finance Admin",
+      "userRole": "FINANCE_ADMIN",
+      "action": "PAYROLL_GENERATED",
+      "module": "Payroll",
+      "details": "Generated payroll run for month 2026-10 (0 records created)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:19:35.234Z"
+    },
+    {
+      "id": "log-1793362769992-161",
+      "userId": "sys",
+      "userName": "Finance Admin",
+      "userRole": "FINANCE_ADMIN",
+      "action": "PAYROLL_GENERATED",
+      "module": "Payroll",
+      "details": "Generated payroll run for month 2026-10 (0 records created)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:19:29.992Z"
+    },
+    {
+      "id": "log-1793362769418-797",
+      "userId": "sys",
+      "userName": "Finance Admin",
+      "userRole": "FINANCE_ADMIN",
+      "action": "PAYROLL_GENERATED",
+      "module": "Payroll",
+      "details": "Generated payroll run for month 2026-10 (3 records created)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:19:29.418Z"
+    },
+    {
+      "id": "log-1793362602570-17",
+      "userId": "emp-1793357103660",
+      "userName": "jatinkakadiya234@gmail.com jk@123",
+      "userRole": "EMPLOYEE",
+      "action": "ATTENDANCE_CHECKIN",
+      "module": "Attendance",
+      "recordId": "att-1793362594840",
+      "details": "Checked in at 05:46 PM (Late)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:16:42.571Z"
+    },
+    {
+      "id": "log-1793362594840-252",
+      "userId": "emp-1793357103660",
+      "userName": "jatinkakadiya234@gmail.com jk@123",
+      "userRole": "EMPLOYEE",
+      "action": "ATTENDANCE_CHECKIN",
+      "module": "Attendance",
+      "recordId": "att-1793362594840",
+      "details": "Checked in at 05:46 PM (Late)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:16:34.840Z"
+    },
+    {
+      "id": "log-1793362583838-811",
+      "userId": "user-1793361854015",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793361854015",
+      "details": "User admin@demotech.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:16:23.838Z"
+    },
+    {
+      "id": "log-1793362566164-129",
+      "userId": "user-1793361854015",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793361854015",
+      "details": "User admin@demotech.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:16:06.164Z"
+    },
+    {
+      "id": "log-1793362556528-82",
+      "userId": "user-1793357103660",
+      "userName": "jatinkakadiya234@gmail.com jk@123",
+      "userRole": "EMPLOYEE",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793357103660",
+      "details": "User jatinkakadiya234@gmail.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:15:56.528Z"
+    },
+    {
+      "id": "log-1793362487413-617",
+      "userId": "user-1793361854015",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793361854015",
+      "details": "User admin@demotech.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:14:47.413Z"
+    },
+    {
+      "id": "log-1793362398243-814",
+      "userId": "user-1793361854015",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793361854015",
+      "details": "User admin@demotech.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:13:18.243Z"
+    },
+    {
+      "id": "log-1793362341556-366",
+      "userId": "sys",
+      "userName": "HR Admin",
+      "userRole": "ADMIN",
+      "action": "DOCUMENT_VERIFIED",
+      "module": "Document Management",
+      "recordId": "doc-1793362320831",
+      "details": "Document \"Screenshot 2026-09-07 120627\" for jatinkakadiya234@gmail.com jk@123 marked as Verified",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:12:21.556Z"
+    },
+    {
+      "id": "log-1793361964001-884",
+      "userId": "user-1793357103660",
+      "userName": "jatinkakadiya234@gmail.com jk@123",
+      "userRole": "EMPLOYEE",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793357103660",
+      "details": "User jatinkakadiya234@gmail.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:06:04.001Z"
+    },
+    {
+      "id": "log-1793361906941-728",
+      "userId": "user-1793361854015",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793361854015",
+      "details": "User admin@demotech.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:05:06.941Z"
+    },
+    {
+      "id": "log-1793361866240-627",
+      "userId": "user-1793361854015",
+      "userName": "Demo Admin",
+      "userRole": "ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793361854015",
+      "details": "User admin@demotech.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:04:26.240Z"
+    },
+    {
+      "id": "log-1793361854103-847",
+      "userId": "user-1",
+      "userName": "John Deo",
+      "userRole": "SUPER_ADMIN",
+      "action": "COMPANY_CREATED",
+      "module": "SuperAdmin",
+      "recordId": "cmp-1793361854015",
+      "details": "Registered new company \"Demo Technologies Pvt Ltd\" with code CMP-000002",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:04:14.103Z"
+    },
+    {
+      "id": "log-1793361840837-519",
+      "userId": "user-1",
+      "userName": "John Deo",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1",
+      "details": "User admin@paneliya.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T12:04:00.837Z"
+    },
+    {
+      "id": "log-1793361319329-306",
+      "userId": "user-1793357103660",
+      "userName": "jatinkakadiya234@gmail.com jk@123",
+      "userRole": "EMPLOYEE",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793357103660",
+      "details": "User jatinkakadiya234@gmail.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T11:55:19.330Z"
+    },
+    {
+      "id": "log-1793360262483-495",
+      "userId": "user-1793357103660",
+      "userName": "jatinkakadiya234@gmail.com jk@123",
+      "userRole": "EMPLOYEE",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1793357103660",
+      "details": "User jatinkakadiya234@gmail.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-30T11:37:42.483Z"
+    },
     {
       "id": "log-1793359924823-38",
       "userId": "user-1793357103660",
@@ -4019,5 +4934,653 @@
       "ipAddress": "192.168.1.105",
       "createdAt": "2026-10-17T11:00:00Z"
     }
-  ]
+  ],
+  "chatByCompany": {
+    "cmp-1793361854015": {
+      "conversations": [
+        {
+          "id": "conv-company-admin-emp-1793356918372",
+          "type": "direct",
+          "title": "jatinkakadiya234@gmail.com staf@123",
+          "participantIds": [
+            "company-admin",
+            "emp-1793356918372"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-1793356918372": "jatinkakadiya234@gmail.com staf@123"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-1793356918372": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-1793356918372": "EMP-000022"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-1793356918372": "jatinkakadiya01@gmail.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-1793356918372": "Staff Member"
+          },
+          "lastMessage": "Acknowledged 👍",
+          "lastMessageTimestamp": "2026-10-30T13:06:17.662Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {
+            "emp-1793356918372": 3
+          },
+          "updatedAt": "2026-10-30T13:06:17.662Z"
+        },
+        {
+          "id": "conv-general",
+          "type": "broadcast",
+          "participantIds": [
+            "all"
+          ],
+          "participantNames": {
+            "all": "All Staff & Management"
+          },
+          "title": "📢 General Staff Helpdesk & Broadcast",
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "emp-1793357103660",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:27.612Z"
+        },
+        {
+          "id": "conv-company-admin-emp-1793357103660",
+          "type": "direct",
+          "title": "jatinkakadiya234@gmail.com jk@123",
+          "participantIds": [
+            "company-admin",
+            "emp-1793357103660"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-1793357103660": "jatinkakadiya234@gmail.com jk@123"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-1793357103660": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-1793357103660": "EMP-000023"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-1793357103660": "jatinkakadiya234@gmail.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-1793357103660": "Staff Member"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "emp-1793357103660",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:18.971Z"
+        },
+        {
+          "id": "conv-company-admin-emp-6",
+          "type": "direct",
+          "title": "David Vance",
+          "participantIds": [
+            "company-admin",
+            "emp-6"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-6": "David Vance"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-6": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-6": "PAN-006"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-6": "david.manager@paneliya.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-6": "Marketing Lead"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:06.860Z"
+        },
+        {
+          "id": "conv-company-admin-emp-8",
+          "type": "direct",
+          "title": "Juan Hogan",
+          "participantIds": [
+            "company-admin",
+            "emp-8"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-8": "Juan Hogan"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-8": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-8": "PAN-008"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-8": "juan.hogan@paneliya.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-8": "Senior UI/UX Designer"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:06.860Z"
+        },
+        {
+          "id": "conv-company-admin-emp-9",
+          "type": "direct",
+          "title": "Maci Guerra",
+          "participantIds": [
+            "company-admin",
+            "emp-9"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-9": "Maci Guerra"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-9": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-9": "PAN-009"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-9": "maci.guerra@paneliya.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-9": "Senior Full Stack Engineer"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:06.860Z"
+        },
+        {
+          "id": "conv-company-admin-emp-10",
+          "type": "direct",
+          "title": "Wes Carr",
+          "participantIds": [
+            "company-admin",
+            "emp-10"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-10": "Wes Carr"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-10": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-10": "PAN-010"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-10": "wes.carr@paneliya.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-10": "Product Designer"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:06.860Z"
+        },
+        {
+          "id": "conv-company-admin-emp-11",
+          "type": "direct",
+          "title": "Blake Mejia",
+          "participantIds": [
+            "company-admin",
+            "emp-11"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-11": "Blake Mejia"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-11": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-11": "PAN-011"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-11": "blake.mejia@paneliya.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-11": "Enterprise Account Executive"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:06.860Z"
+        },
+        {
+          "id": "conv-company-admin-emp-12",
+          "type": "direct",
+          "title": "Robin Rose",
+          "participantIds": [
+            "company-admin",
+            "emp-12"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-12": "Robin Rose"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-12": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-12": "PAN-012"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-12": "robin.rose@paneliya.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-12": "Senior UI/UX Designer"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:06.860Z"
+        },
+        {
+          "id": "conv-company-admin-emp-13",
+          "type": "direct",
+          "title": "Ford Kemp",
+          "participantIds": [
+            "company-admin",
+            "emp-13"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-13": "Ford Kemp"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-13": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-13": "PAN-013"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-13": "ford.kemp@paneliya.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-13": "Product Designer"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:06.860Z"
+        },
+        {
+          "id": "conv-company-admin-emp-15",
+          "type": "direct",
+          "title": "Adarson Miller",
+          "participantIds": [
+            "company-admin",
+            "emp-15"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-15": "Adarson Miller"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-15": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-15": "PAN-015"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-15": "adarson.miller@paneliya.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-15": "Frontend Developer"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:06.860Z"
+        },
+        {
+          "id": "conv-company-admin-emp-16",
+          "type": "direct",
+          "title": "Gregory Patton",
+          "participantIds": [
+            "company-admin",
+            "emp-16"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-16": "Gregory Patton"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-16": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-16": "PAN-016"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-16": "gregory.patton@paneliya.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-16": "Senior Full Stack Engineer"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:06.860Z"
+        },
+        {
+          "id": "conv-company-admin-emp-17",
+          "type": "direct",
+          "title": "Kaden Alvarado",
+          "participantIds": [
+            "company-admin",
+            "emp-17"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-17": "Kaden Alvarado"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-17": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-17": "PAN-017"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-17": "kaden.alvarado@paneliya.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-17": "Marketing Lead"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:06.860Z"
+        },
+        {
+          "id": "conv-company-admin-emp-18",
+          "type": "direct",
+          "title": "Emma Watson",
+          "participantIds": [
+            "company-admin",
+            "emp-18"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-18": "Emma Watson"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-18": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-18": "PAN-018"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-18": "emma.watson@paneliya.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-18": "Frontend Developer"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:06.860Z"
+        },
+        {
+          "id": "conv-company-admin-emp-19",
+          "type": "direct",
+          "title": "Liam Nguyen",
+          "participantIds": [
+            "company-admin",
+            "emp-19"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-19": "Liam Nguyen"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-19": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-19": "PAN-019"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-19": "liam.nguyen@paneliya.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-19": "Enterprise Account Executive"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:06.860Z"
+        },
+        {
+          "id": "conv-company-admin-emp-20",
+          "type": "direct",
+          "title": "Sophia Martinez",
+          "participantIds": [
+            "company-admin",
+            "emp-20"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-20": "Sophia Martinez"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-20": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-20": "PAN-020"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-20": "sophia.martinez@paneliya.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-20": "Finance Controller"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:06.860Z"
+        },
+        {
+          "id": "conv-company-admin-emp-21",
+          "type": "direct",
+          "title": "Ethan Hunt",
+          "participantIds": [
+            "company-admin",
+            "emp-21"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-21": "Ethan Hunt"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-21": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-21": "PAN-021"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-21": "ethan.hunt@paneliya.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-21": "Senior Full Stack Engineer"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T12:13:39.428Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {},
+          "updatedAt": "2026-10-30T12:11:06.860Z"
+        },
+        {
+          "id": "conv-company-admin-emp-1793364680006",
+          "type": "direct",
+          "title": "CSACSA SCASCSAC",
+          "participantIds": [
+            "company-admin",
+            "emp-1793364680006"
+          ],
+          "participantNames": {
+            "company-admin": "HR Administration",
+            "emp-1793364680006": "CSACSA SCASCSAC"
+          },
+          "participantRoles": {
+            "company-admin": "admin",
+            "emp-1793364680006": "employee"
+          },
+          "participantCodes": {
+            "company-admin": "ADM-01",
+            "emp-1793364680006": "EMP-000002"
+          },
+          "participantEmails": {
+            "company-admin": "hr@paneliya.com",
+            "emp-1793364680006": "sacsc@wgmail.com"
+          },
+          "participantDesignations": {
+            "company-admin": "Company HR & Management",
+            "emp-1793364680006": "Senior Full Stack Engineer"
+          },
+          "lastMessage": "",
+          "lastMessageTimestamp": "2026-10-30T13:06:07.006Z",
+          "lastSenderId": "company-admin",
+          "unreadCount": {
+            "company-admin": 0,
+            "emp-1793364680006": 0
+          },
+          "updatedAt": "2026-10-30T13:06:07.006Z"
+        }
+      ],
+      "messages": {
+        "conv-company-admin-emp-1793356918372": [
+          {
+            "id": "msg-1793365572365-3apm",
+            "conversationId": "conv-company-admin-emp-1793356918372",
+            "senderId": "company-admin",
+            "senderName": "Demo Admin",
+            "senderRole": "admin",
+            "recipientId": "emp-1793356918372",
+            "recipientName": "jatinkakadiya234@gmail.com staf@123",
+            "content": "SCCDC",
+            "timestamp": "2026-10-30T13:06:12.365Z",
+            "status": "delivered"
+          },
+          {
+            "id": "msg-1793365573268-a6ch",
+            "conversationId": "conv-company-admin-emp-1793356918372",
+            "senderId": "company-admin",
+            "senderName": "Demo Admin",
+            "senderRole": "admin",
+            "recipientId": "emp-1793356918372",
+            "recipientName": "jatinkakadiya234@gmail.com staf@123",
+            "content": "Approved, you may proceed.",
+            "timestamp": "2026-10-30T13:06:13.268Z",
+            "status": "delivered"
+          },
+          {
+            "id": "msg-1793365577662-lim0",
+            "conversationId": "conv-company-admin-emp-1793356918372",
+            "senderId": "company-admin",
+            "senderName": "Demo Admin",
+            "senderRole": "admin",
+            "recipientId": "emp-1793356918372",
+            "recipientName": "jatinkakadiya234@gmail.com staf@123",
+            "content": "Acknowledged 👍",
+            "timestamp": "2026-10-30T13:06:17.662Z",
+            "status": "delivered"
+          }
+        ]
+      }
+    }
+  },
+  "companySchedules": {},
+  "companyPlans": {},
+  "systemSettings": null
 }

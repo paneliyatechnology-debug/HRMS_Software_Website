@@ -59,26 +59,58 @@ export class SettingsService {
     },
   };
 
-  getSettings() {
-    return this.settings;
+  getSettings(companyId?: string) {
+    const stored = this.db.systemSettings;
+    const base = stored
+      ? {
+          ...this.settings,
+          ...stored,
+          company: { ...this.settings.company, ...(stored.company || {}) },
+          workSchedule: { ...this.settings.workSchedule, ...(stored.workSchedule || {}) },
+          leavePolicy: { ...this.settings.leavePolicy, ...(stored.leavePolicy || {}) },
+          payrollPolicy: { ...this.settings.payrollPolicy, ...(stored.payrollPolicy || {}) },
+        }
+      : this.settings;
+
+    if (companyId && this.db.companySchedules[companyId]) {
+      return {
+        ...base,
+        workSchedule: {
+          ...base.workSchedule,
+          ...this.db.companySchedules[companyId],
+        },
+      };
+    }
+    return base;
   }
-  updateSettings(data: UpdateSettingsDto, actorName = 'Super Admin') {
-    this.settings = {
-      ...this.settings,
+
+  updateSettings(data: UpdateSettingsDto, actorName = 'Super Admin', companyId?: string) {
+    const current = this.getSettings(companyId);
+    const next = {
+      ...current,
       ...data,
-      company: { ...this.settings.company, ...(data.company || {}) },
-      workSchedule: { ...this.settings.workSchedule, ...(data.workSchedule || {}) },
-      leavePolicy: { ...this.settings.leavePolicy, ...(data.leavePolicy || {}) },
-      payrollPolicy: { ...this.settings.payrollPolicy, ...(data.payrollPolicy || {}) },
+      company: { ...current.company, ...(data.company || {}) },
+      workSchedule: { ...current.workSchedule, ...(data.workSchedule || {}) },
+      leavePolicy: { ...current.leavePolicy, ...(data.leavePolicy || {}) },
+      payrollPolicy: { ...current.payrollPolicy, ...(data.payrollPolicy || {}) },
     } as any;
+
+    this.db.systemSettings = {
+      ...next,
+      workSchedule: this.settings.workSchedule,
+    };
+    if (companyId) {
+      this.db.companySchedules[companyId] = next.workSchedule;
+    }
+    this.db.persist();
     this.db.logAudit(
       'sys',
       actorName,
-      'SUPER_ADMIN',
+      'ADMIN',
       'SETTINGS_UPDATED',
       'Settings',
-      'Updated organization global system policies and settings',
+      'Updated organization policies and shift schedule',
     );
-    return this.settings;
+    return this.getSettings(companyId);
   }
 }

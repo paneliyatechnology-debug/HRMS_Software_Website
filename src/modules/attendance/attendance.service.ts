@@ -15,6 +15,7 @@ import {
   Location,
   Role,
   User,
+  isSuperAdminUser,
   WorkSession,
   WorkSessionStatus,
 } from '../../common/types.js';
@@ -50,7 +51,7 @@ export class AttendanceService {
     let list = [...this.db.attendanceRecords];
 
     // Company isolation for ADMIN or EMPLOYEE
-    if (actorUser && (actorUser.role === Role.ADMIN || actorUser.role === Role.EMPLOYEE)) {
+    if (actorUser && !isSuperAdminUser(actorUser)) {
       if (actorUser.companyId) {
         const companyEmpIds = new Set(
           this.db.employees.filter((e) => e.companyId === actorUser.companyId).map((e) => e.id),

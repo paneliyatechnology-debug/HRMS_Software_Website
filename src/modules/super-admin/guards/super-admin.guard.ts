@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../../database/database.service.js';
 import { Role } from '../../../common/types.js';
+import { verifyAccessToken } from '../../../common/utils/jwt.util.js';
 
 @Injectable()
 export class SuperAdminGuard implements CanActivate {
@@ -30,19 +31,10 @@ export class SuperAdminGuard implements CanActivate {
         }
 
         if (clean && clean !== '{{bearerToken}}' && clean !== '{{token}}') {
-          let identifier = clean;
-          const match = clean.match(/jwt_token_([^_]+)/i);
-          if (match && match[1]) {
-            identifier = match[1];
-          } else if (clean.startsWith('user-')) {
-            identifier = clean.split('_')[0];
+          const payload = verifyAccessToken(clean);
+          if (payload?.sub) {
+            user = this.db.users.find((u) => u.id === payload.sub);
           }
-
-          user = this.db.users.find(
-            (u) =>
-              u.id.toLowerCase() === identifier.toLowerCase() ||
-              u.email.toLowerCase() === identifier.toLowerCase(),
-          );
         }
       }
     }

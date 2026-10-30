@@ -23,6 +23,8 @@ import { SettingsModule } from './modules/settings/settings.module.js';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module.js';
 import { CompaniesModule } from './modules/companies/companies.module.js';
 import { UsersModule } from './modules/users/users.module.js';
+import { ChatModule } from './modules/chat/chat.module.js';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
@@ -52,6 +54,8 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
     ReportsModule,
     SettingsModule,
     UsersModule,
+    ChatModule,
+    SubscriptionsModule,
   ],
   controllers: [AppController],
   providers: [

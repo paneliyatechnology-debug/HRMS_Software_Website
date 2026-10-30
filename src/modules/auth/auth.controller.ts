@@ -1,4 +1,5 @@
 import { Controller, Post, Get, Body, Headers, Query, Req } from '@nestjs/common';
+import { CreateCompanyDto } from '../super-admin/dto/create-company.dto.js';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiHeader, ApiQuery } from '@nestjs/swagger';
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
@@ -22,6 +23,18 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'User with this email already exists' })
   register(@Body() body: RegisterDto) {
     return this.authService.register(body);
+  }
+
+  @Public()
+  @Post('register-company')
+  @ApiOperation({
+    summary: 'Register a company and its first admin',
+    description: 'Public company signup. Creates the company and admin user. No existing token is required.',
+  })
+  @ApiBody({ type: CreateCompanyDto })
+  @ApiResponse({ status: 201, description: 'Company registered successfully' })
+  registerCompany(@Body() body: CreateCompanyDto) {
+    return this.authService.registerCompany(body);
   }
 
   @Public()
@@ -64,7 +77,6 @@ export class AuthController {
     return this.authService.getCurrentUser(rawToken);
   }
 
-  @Public()
   @Post('switch-role')
   @ApiOperation({
     summary: 'Instantly switch active session role for testing RBAC perspectives',
@@ -72,8 +84,8 @@ export class AuthController {
   })
   @ApiBody({ type: SwitchRoleDto })
   @ApiResponse({ status: 200, description: 'Role switched successfully with updated token' })
-  switchRole(@Body() body: SwitchRoleDto) {
-    return this.authService.switchRole(body.role);
+  switchRole(@Body() body: SwitchRoleDto, @Req() req: any) {
+    return this.authService.switchRole(body.role, req.user);
   }
 
   @Public()

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { OrganizationService } from './organization.service.js';
 import { CreateDepartmentDto } from './dto/create-department.dto.js';
@@ -16,8 +16,8 @@ export class OrganizationController {
     description: 'Retrieves all departments along with dynamic headcount aggregates and department heads.',
   })
   @ApiResponse({ status: 200, description: 'List of departments' })
-  getDepartments() {
-    return this.orgService.getDepartments();
+  getDepartments(@Req() req: any) {
+    return this.orgService.getDepartments(req.user);
   }
 
   @Post('departments')
@@ -27,8 +27,8 @@ export class OrganizationController {
   })
   @ApiBody({ type: CreateDepartmentDto })
   @ApiResponse({ status: 201, description: 'Department created successfully' })
-  createDepartment(@Body() body: CreateDepartmentDto) {
-    return this.orgService.createDepartment(body);
+  createDepartment(@Body() body: CreateDepartmentDto, @Req() req: any) {
+    return this.orgService.createDepartment(body, req.user);
   }
 
   @Put('departments/:id')
@@ -50,8 +50,8 @@ export class OrganizationController {
     description: 'Retrieves all organizational roles and job levels.',
   })
   @ApiResponse({ status: 200, description: 'List of designations' })
-  getDesignations() {
-    return this.orgService.getDesignations();
+  getDesignations(@Req() req: any) {
+    return this.orgService.getDesignations(req.user);
   }
 
   @Post('designations')
@@ -61,8 +61,8 @@ export class OrganizationController {
   })
   @ApiBody({ type: CreateDesignationDto })
   @ApiResponse({ status: 201, description: 'Designation created successfully' })
-  createDesignation(@Body() body: CreateDesignationDto) {
-    return this.orgService.createDesignation(body);
+  createDesignation(@Body() body: CreateDesignationDto, @Req() req: any) {
+    return this.orgService.createDesignation(body, req.user);
   }
 
   @Get('locations')
@@ -71,8 +71,8 @@ export class OrganizationController {
     description: 'Lists all branch offices and headquarters locations.',
   })
   @ApiResponse({ status: 200, description: 'List of locations' })
-  getLocations() {
-    return this.orgService.getLocations();
+  getLocations(@Req() req: any) {
+    return this.orgService.getLocations(req.user);
   }
 
   @Get('hierarchy')
@@ -81,7 +81,7 @@ export class OrganizationController {
     description: 'Returns recursive tree data for rendering the enterprise organizational chart.',
   })
   @ApiResponse({ status: 200, description: 'Organization chart hierarchy structure' })
-  getHierarchy() {
-    return this.orgService.getHierarchy();
+  getHierarchy(@Req() req: any) {
+    return this.orgService.getHierarchy(req.user);
   }
 }

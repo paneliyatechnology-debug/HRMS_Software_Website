@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { Department, Designation, Location } from '../../common/types.js';
+import { Department, Designation, Location, User, isSuperAdminUser } from '../../common/types.js';
 import { CreateDepartmentDto } from './dto/create-department.dto.js';
 import { UpdateDepartmentDto } from './dto/update-department.dto.js';
 import { CreateDesignationDto } from './dto/create-designation.dto.js';
@@ -9,14 +9,25 @@ import { CreateDesignationDto } from './dto/create-designation.dto.js';
 export class OrganizationService {
   constructor(private readonly db: DatabaseService) {}
 
-  getDepartments(): Department[] {
-    return this.db.departments.map((dept) => {
-      const count = this.db.employees.filter((e) => e.departmentId === dept.id).length;
+  private companyScope(actor?: User): string | null {
+    if (!actor || isSuperAdminUser(actor)) return null;
+    return actor.companyId || null;
+  }
+
+  getDepartments(actor?: User): Department[] {
+    const companyId = this.companyScope(actor);
+    const source = companyId
+      ? this.db.departments.filter((dept) => dept.companyId === companyId)
+      : this.db.departments;
+    return source.map((dept) => {
+      const count = this.db.employees.filter(
+        (e) => e.departmentId === dept.id && (!companyId || e.companyId === companyId),
+      ).length;
       return { ...dept, employeeCount: count };
     });
   }
 
-  createDepartment(data: CreateDepartmentDto): Department {
+  createDepartment(data: CreateDepartmentDto, actor?: User): Department {
     const newDept: Department = {
       id: `dept-${Date.now()}`,
       name: data.name || 'New Department',
@@ -26,6 +37,7 @@ export class OrganizationService {
       employeeCount: 0,
       description: data.description,
       createdAt: new Date().toISOString(),
+      companyId: actor?.companyId || this.db.companies[0]?.id,
     };
     this.db.departments.push(newDept);
     this.db.persist();
@@ -40,11 +52,13 @@ export class OrganizationService {
     return this.db.departments[idx];
   }
 
-  getDesignations(): Designation[] {
-    return this.db.designations;
+  getDesignations(actor?: User): Designation[] {
+    const companyId = this.companyScope(actor);
+    if (!companyId) return this.db.designations;
+    return this.db.designations.filter((item) => item.companyId === companyId);
   }
 
-  createDesignation(data: CreateDesignationDto): Designation {
+  createDesignation(data: CreateDesignationDto, actor?: User): Designation {
     const dept = this.db.departments.find((d) => d.id === data.departmentId);
     const newDes: Designation = {
       id: `des-${Date.now()}`,
@@ -54,25 +68,35 @@ export class OrganizationService {
       minSalary: data.minSalary || 60000,
       maxSalary: data.maxSalary || 90000,
       createdAt: new Date().toISOString(),
+      companyId: actor?.companyId || this.db.companies[0]?.id,
     };
     this.db.designations.push(newDes);
     this.db.persist();
     return newDes;
   }
 
-  getLocations(): Location[] {
-    return this.db.locations;
+  getLocations(actor?: User): Location[] {
+    const companyId = this.companyScope(actor);
+    if (!companyId) return this.db.locations;
+    return this.db.locations.filter((item) => item.companyId === companyId);
   }
 
-  getHierarchy() {
+  getHierarchy(actor?: User) {
+    const departments = this.getDepartments(actor);
+    const companyId = this.companyScope(actor);
+    const companyRecord = companyId
+      ? this.db.companies.find((c) => c.id === companyId)
+      : this.db.companies[0];
+    const inCompany = (employeeIdCompany?: string) => !companyId || employeeIdCompany === companyId;
     const company = {
-      id: 'org-root',
-      name: 'Paneliya Technology Inc.',
-      title: 'Global Enterprise Organization',
-      head: 'John Deo (VP of Engineering & Interim CEO)',
-      departments: this.db.departments.map((dept) => {
+      id: companyRecord?.id || 'org-root',
+      name: companyRecord?.companyName || 'Organization',
+      title: 'Organization',
+      head: companyRecord?.companyName || 'Company',
+      departments: departments.map((dept) => {
         const managers = this.db.employees.filter(
           (e) =>
+            inCompany(e.companyId) &&
             e.departmentId === dept.id &&
             (e.designationTitle.includes('Head') ||
               e.designationTitle.includes('Director') ||
@@ -80,7 +104,7 @@ export class OrganizationService {
               e.designationTitle.includes('VP') ||
               e.designationTitle.includes('Controller')),
         );
-        const members = this.db.employees.filter((e) => e.departmentId === dept.id);
+        const members = this.db.employees.filter((e) => inCompany(e.companyId) && e.departmentId === dept.id);
         return {
           id: dept.id,
           name: dept.name,

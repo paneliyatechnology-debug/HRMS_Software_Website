@@ -40,8 +40,8 @@ export class LeavesController {
   })
   @ApiBody({ type: ApplyLeaveDto })
   @ApiResponse({ status: 201, description: 'Leave application submitted successfully' })
-  apply(@Body() body: ApplyLeaveDto) {
-    return this.leavesService.apply(body);
+  apply(@Body() body: ApplyLeaveDto, @Req() req: any) {
+    return this.leavesService.apply(body, req.user);
   }
 
   @Put(':id/approve')

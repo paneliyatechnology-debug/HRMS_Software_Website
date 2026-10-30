@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Body } from '@nestjs/common';
+import { Controller, Get, Put, Body, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { SettingsService } from './settings.service.js';
 import { UpdateSettingsDto } from './dto/update-settings.dto.js';
@@ -14,8 +14,8 @@ export class SettingsController {
     description: 'Retrieves global company policies, shifts, leave rules, and RBAC matrix.',
   })
   @ApiResponse({ status: 200, description: 'Organization settings and configuration' })
-  getSettings() {
-    return this.settingsService.getSettings();
+  getSettings(@Req() req: any) {
+    return this.settingsService.getSettings(req.user?.companyId);
   }
 
   @Put()
@@ -25,7 +25,7 @@ export class SettingsController {
   })
   @ApiBody({ type: UpdateSettingsDto })
   @ApiResponse({ status: 200, description: 'Settings updated successfully' })
-  updateSettings(@Body() body: UpdateSettingsDto) {
-    return this.settingsService.updateSettings(body);
+  updateSettings(@Body() body: UpdateSettingsDto, @Req() req: any) {
+    return this.settingsService.updateSettings(body, req.user?.firstName || 'Admin', req.user?.companyId);
   }
 }

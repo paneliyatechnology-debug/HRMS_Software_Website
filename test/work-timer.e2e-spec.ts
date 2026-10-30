@@ -5,6 +5,7 @@ import { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
 import { DatabaseService } from '../src/database/database.service.js';
 import { Role, EmployeeStatus, WorkSessionStatus } from '../src/common/types.js';
+import { signAccessToken } from '../src/common/utils/jwt.util.js';
 
 describe('Geo-Fenced Employee Work Timer (e2e)', () => {
   let app: INestApplication<App>;
@@ -50,7 +51,7 @@ describe('Geo-Fenced Employee Work Timer (e2e)', () => {
     // 1. Employee 1: Keyur in Company 1 (cmp-1)
     const emp1User = db.users.find((u) => u.email === 'keyur@gmail.com') || db.users[0];
     emp1Id = emp1User.employeeId || 'emp-1793009147556';
-    emp1Token = `Bearer jwt_token_${emp1User.id}_${Date.now()}`;
+    emp1Token = `Bearer ${signAccessToken(emp1User.id)}`;
 
     // Ensure emp1 has loc-1 as assigned office with correct coordinates
     const emp1 = db.employees.find((e) => e.id === emp1Id);
@@ -120,11 +121,11 @@ describe('Geo-Fenced Employee Work Timer (e2e)', () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
-    emp2Token = `Bearer jwt_token_${emp2UserId}_${Date.now()}`;
+    emp2Token = `Bearer ${signAccessToken(emp2UserId)}`;
 
     // 3. Admin in Company 2
     const admin2User = db.users.find((u) => u.email === 'ravi@gmail.com') || db.users.find((u) => u.role === Role.ADMIN);
-    admin2Token = `Bearer jwt_token_${admin2User!.id}_${Date.now()}`;
+    admin2Token = `Bearer ${signAccessToken(admin2User!.id)}`;
 
     // Clear any previous work sessions for clean test state
     db.workSessions = [];

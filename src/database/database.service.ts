@@ -82,6 +82,10 @@ interface DatabaseSchema {
   documents: EmployeeDocument[];
   auditLogs: AuditLog[];
   workSessions?: WorkSession[];
+  chatByCompany?: Record<string, { conversations: any[]; messages: Record<string, any[]> }>;
+  companySchedules?: Record<string, any>;
+  companyPlans?: Record<string, any>;
+  systemSettings?: any;
 }
 
 @Injectable()
@@ -116,6 +120,10 @@ export class DatabaseService implements OnModuleInit {
   public notifications: NotificationItem[] = [];
   public documents: EmployeeDocument[] = [];
   public auditLogs: AuditLog[] = [];
+  public chatByCompany: Record<string, { conversations: any[]; messages: Record<string, any[]> }> = {};
+  public companySchedules: Record<string, any> = {};
+  public companyPlans: Record<string, any> = {};
+  public systemSettings: any = null;
 
   async onModuleInit() {
     this.initDatabase();
@@ -158,6 +166,26 @@ export class DatabaseService implements OnModuleInit {
         this.documents = parsed.documents || initialDocuments;
         this.auditLogs = parsed.auditLogs || initialAuditLogs;
         this.workSessions = parsed.workSessions || [];
+        this.chatByCompany = parsed.chatByCompany || {};
+        this.companySchedules = parsed.companySchedules || {};
+        this.companyPlans = parsed.companyPlans || {};
+        this.systemSettings = parsed.systemSettings || null;
+
+        const ownerCompanyId = this.companies[0]?.id;
+        if (ownerCompanyId) {
+          for (const dept of this.departments) {
+            if (!dept.companyId) dept.companyId = ownerCompanyId;
+          }
+          for (const des of this.designations) {
+            if (!des.companyId) des.companyId = ownerCompanyId;
+          }
+          for (const loc of this.locations) {
+            if (!loc.companyId) loc.companyId = ownerCompanyId;
+          }
+          for (const notice of this.announcements) {
+            if (!notice.companyId) notice.companyId = ownerCompanyId;
+          }
+        }
 
         // Ensure default company association for existing legacy records
         const defaultCompany = this.companies[0];
@@ -388,11 +416,9 @@ export class DatabaseService implements OnModuleInit {
   public persist() {
     if (this.persistTimeout) {
       clearTimeout(this.persistTimeout);
+      this.persistTimeout = null;
     }
-
-    this.persistTimeout = setTimeout(() => {
-      this.executeAtomicPersist();
-    }, 40);
+    this.executeAtomicPersist();
   }
 
   private executeAtomicPersist() {
@@ -428,6 +454,10 @@ export class DatabaseService implements OnModuleInit {
         notifications: this.notifications,
         documents: this.documents,
         auditLogs: this.auditLogs,
+        chatByCompany: this.chatByCompany,
+        companySchedules: this.companySchedules,
+        companyPlans: this.companyPlans,
+        systemSettings: this.systemSettings,
       };
 
       const tempPath = `${this.dbFilePath}.tmp-${Date.now()}`;

@@ -8,6 +8,36 @@ export class ApplyLeaveDto {
   @IsNotEmpty()
   employeeId: string;
 
+  @ApiPropertyOptional({ example: 'EMP-000001', description: 'Employee Code' })
+  @IsString()
+  @IsOptional()
+  employeeCode?: string;
+
+  @ApiPropertyOptional({ example: 'John Doe', description: 'Employee Name' })
+  @IsString()
+  @IsOptional()
+  employeeName?: string;
+
+  @ApiPropertyOptional({ example: 'john@example.com', description: 'Employee Email' })
+  @IsString()
+  @IsOptional()
+  employeeEmail?: string;
+
+  @ApiPropertyOptional({ example: 'Engineering', description: 'Department Name' })
+  @IsString()
+  @IsOptional()
+  departmentName?: string;
+
+  @ApiPropertyOptional({ example: 'cmp-1', description: 'Company ID' })
+  @IsString()
+  @IsOptional()
+  companyId?: string;
+
+  @ApiPropertyOptional({ example: 'CMP-000001', description: 'Company Code' })
+  @IsString()
+  @IsOptional()
+  companyCode?: string;
+
   @ApiProperty({ enum: LeaveType, example: LeaveType.CASUAL, description: 'Type of leave applied' })
   @IsEnum(LeaveType)
   @IsNotEmpty()
