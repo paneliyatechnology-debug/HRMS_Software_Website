@@ -110,12 +110,14 @@ export class AttendanceService {
   }
 
   getTodayStatus(employeeId: string) {
-    const user = this.db.users.find(
-      (u) =>
-        u.id === employeeId ||
-        u.employeeId === employeeId ||
-        (u.email && u.email.toLowerCase() === employeeId.toLowerCase()),
-    );
+    const user = this.db.resolveUser
+      ? this.db.resolveUser(employeeId)
+      : this.db.users?.find(
+          (u) =>
+            u.id === employeeId ||
+            u.employeeId === employeeId ||
+            (u.email && u.email.toLowerCase() === employeeId.toLowerCase()),
+        );
     const targetUserId = user ? user.id : employeeId;
     const today = new Date().toISOString().split('T')[0];
     const record = this.db.attendanceRecords.find(
@@ -154,12 +156,16 @@ export class AttendanceService {
     const targetId = (dto as any).userId || dto.employeeId;
     const { remarks } = dto;
     const today = new Date().toISOString().split('T')[0];
-    const user = this.db.users.find(
-      (u) => u.id === targetId || u.employeeId === targetId,
-    );
-    const employee = user || this.db.employees.find((e) => e.id === targetId || e.userId === targetId);
-    if (!employee) throw new NotFoundException('Employee not found');
-    const realUserId = user ? user.id : employee.id;
+    const user = this.db.resolveUser
+      ? this.db.resolveUser(targetId)
+      : this.db.users?.find(
+          (u) =>
+            u.id === targetId ||
+            u.employeeId === targetId ||
+            (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
+        );
+    if (!user) throw new NotFoundException('User record not found');
+    const realUserId = user.id;
 
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -180,7 +186,7 @@ export class AttendanceService {
       record = {
         id: `att-${Date.now()}`,
         employeeId: realUserId,
-        employeeName: `${employee.firstName} ${employee.lastName}`,
+        employeeName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
         date: today,
         checkIn: timeStr,
         checkOut: '',
@@ -195,8 +201,8 @@ export class AttendanceService {
     }
 
     this.db.logAudit(
-      employee.id,
-      `${employee.firstName} ${employee.lastName}`,
+      user.id,
+      `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
       'EMPLOYEE',
       'ATTENDANCE_CHECKIN',
       'Attendance',
@@ -208,8 +214,8 @@ export class AttendanceService {
 
     if (this.eventsGateway) {
       this.eventsGateway.emitAttendancePunch({
-        employeeId: employee.id,
-        employeeName: `${employee.firstName} ${employee.lastName}`,
+        employeeId: user.id,
+        employeeName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
         time: timeStr,
         status: record.status,
       });
@@ -223,11 +229,16 @@ export class AttendanceService {
     const { remarks } = dto;
     const today = new Date().toISOString().split('T')[0];
 
-    const user = this.db.users.find(
-      (u) => u.id === targetId || u.employeeId === targetId,
-    );
-    const employee = user || this.db.employees.find((e) => e.id === targetId || e.userId === targetId);
-    const realUserId = user ? user.id : (employee ? employee.id : targetId);
+    const user = this.db.resolveUser
+      ? this.db.resolveUser(targetId)
+      : this.db.users?.find(
+          (u) =>
+            u.id === targetId ||
+            u.employeeId === targetId ||
+            (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
+        );
+    if (!user) throw new NotFoundException('User record not found');
+    const realUserId = user.id;
 
     let record = this.db.attendanceRecords.find(
       (a) => (a.employeeId === realUserId || a.employeeId === targetId) && a.date === today,
@@ -240,7 +251,7 @@ export class AttendanceService {
       record = {
         id: `att-${Date.now()}`,
         employeeId: realUserId,
-        employeeName: employee ? `${employee.firstName} ${employee.lastName}` : 'Employee',
+        employeeName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
         date: today,
         checkIn: '09:00 AM',
         checkOut: timeStr,
@@ -285,13 +296,22 @@ export class AttendanceService {
   }
 
   manualEntry(data: RegularizeAttendanceDto, actorName = 'HR Admin') {
-    const employee = this.db.employees.find((e) => e.id === data.employeeId);
-    if (!employee) throw new NotFoundException('Employee not found');
+    const targetId = (data as any).userId || data.employeeId;
+    const user = this.db.resolveUser
+      ? this.db.resolveUser(targetId)
+      : this.db.users?.find(
+          (u) =>
+            u.id === targetId ||
+            u.employeeId === targetId ||
+            (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
+        );
+    if (!user) throw new NotFoundException('User record not found');
+    const realUserId = user.id;
 
     const newRecord: AttendanceRecord = {
       id: `att-manual-${Date.now()}`,
-      employeeId: data.employeeId,
-      employeeName: `${employee.firstName} ${employee.lastName}`,
+      employeeId: realUserId,
+      employeeName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
       date: data.date,
       checkIn: data.checkIn,
       checkOut: data.checkOut || '',
@@ -310,7 +330,7 @@ export class AttendanceService {
       'ADMIN',
       'ATTENDANCE_REGULARIZED',
       'Attendance',
-      `Manual attendance entry for ${employee.firstName} ${employee.lastName} on ${data.date}`,
+      `Manual attendance entry for ${user.firstName || ''} ${user.lastName || ''} on ${data.date}`,
       newRecord.id,
     );
 

@@ -25,10 +25,10 @@ export class ResignationsService {
 
   submit(data: SubmitResignationDto) {
     const targetId = (data as any).userId || data.employeeId;
-    const user = this.db.users.find((u) => u.id === targetId || u.employeeId === targetId);
-    const employee = user || this.db.employees.find((e) => e.id === targetId || e.userId === targetId);
-    if (!employee) throw new NotFoundException('Employee not found');
-    const realUserId = user ? user.id : employee.id;
+    const user = this.db.resolveUser(targetId);
+    if (!user) throw new NotFoundException('User not found');
+    const realUserId = user.id;
+    const employee = user;
 
     const noticeDays = data.noticePeriodDays || 30;
     const now = new Date();

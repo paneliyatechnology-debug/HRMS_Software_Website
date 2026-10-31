@@ -12,7 +12,12 @@ export class QueryPayrollDto {
   @IsOptional()
   status?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by employee ID' })
+  @ApiPropertyOptional({ description: 'Filter by user ID', example: 'user-1793009147556' })
+  @IsString()
+  @IsOptional()
+  userId?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by employee ID (legacy alias for userId)' })
   @IsString()
   @IsOptional()
   employeeId?: string;

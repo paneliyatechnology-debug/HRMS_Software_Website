@@ -22,15 +22,15 @@ export class LeavesController {
     return this.leavesService.findAll(query, req.user);
   }
 
-  @Get('balances/:employeeId')
+  @Get('balances/:userId')
   @ApiOperation({
     summary: 'Get employee leave balances',
     description: 'Retrieves annual balances for Casual, Sick, and Paid leave quotas.',
   })
-  @ApiParam({ name: 'employeeId', description: 'Employee ID' })
+  @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Leave balance metrics' })
-  getBalances(@Param('employeeId') employeeId: string) {
-    return this.leavesService.getBalances(employeeId);
+  getBalances(@Param('userId') userId: string) {
+    return this.leavesService.getBalances(userId);
   }
 
   @Post('apply')

@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class EnrollTrainingDto {
   @ApiProperty({ example: 'trn-1', description: 'Training Program ID' })
@@ -7,8 +7,13 @@ export class EnrollTrainingDto {
   @IsNotEmpty()
   trainingId: string;
 
-  @ApiProperty({ example: 'emp-1', description: 'Employee ID' })
+  @ApiProperty({ example: 'user-1793009147556', description: 'User ID (from users table)' })
   @IsString()
-  @IsNotEmpty()
-  employeeId: string;
+  @IsOptional()
+  userId?: string;
+
+  @ApiPropertyOptional({ example: 'user-1793009147556', description: 'User ID (legacy field)' })
+  @IsString()
+  @IsOptional()
+  employeeId?: string;
 }

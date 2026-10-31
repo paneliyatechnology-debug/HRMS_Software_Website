@@ -56,3 +56,4 @@ export function arePhoneNumbersEqual(p1?: string | null, p2?: string | null): bo
  */
 export const PHONE_ALREADY_REGISTERED_MESSAGE =
   'This phone/mobile number is already registered. Please use another phone number.';
+

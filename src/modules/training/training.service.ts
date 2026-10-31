@@ -34,7 +34,7 @@ export class TrainingService {
   getEmployeeTrainings(employeeId?: string) {
     let list = this.db.employeeTrainings;
     if (employeeId) {
-      const user = this.db.users.find((u) => u.id === employeeId || u.employeeId === employeeId);
+      const user = this.db.resolveUser(employeeId);
       const targetId = user ? user.id : employeeId;
       list = list.filter((t) => t.employeeId === targetId || (t as any).userId === targetId || t.employeeId === employeeId);
     }
@@ -56,14 +56,11 @@ export class TrainingService {
     const program = this.db.trainingPrograms.find((p) => p.id === trainingId);
     if (!program) throw new NotFoundException('Training program not found');
 
-    const user = this.db.users.find((u) => u.id === targetId || u.employeeId === targetId);
-    const employee = user || this.db.employees.find((e) => e.id === targetId || e.userId === targetId);
-    if (!employee) throw new NotFoundException('Employee not found');
+    const user = this.db.resolveUser(targetId);
+    if (!user) throw new NotFoundException('User not found');
 
-    const realUserId = user ? user.id : employee.id;
-    const empName = user
-      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-      : `${employee.firstName} ${employee.lastName}`;
+    const realUserId = user.id;
+    const empName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
 
     const existing = this.db.employeeTrainings.find(
       (t) => t.trainingId === trainingId && (t.employeeId === realUserId || (t as any).userId === realUserId || t.employeeId === targetId),

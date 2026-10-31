@@ -601,16 +601,13 @@ export class AdminService {
   manualAttendance(actor: User, dto: AdminManualAttendanceDto) {
     const company = this.resolveTargetCompany(actor);
     const targetId = (dto as any).userId || dto.employeeId;
-    const user = this.db.users.find((u) => u.id === targetId || u.employeeId === targetId);
-    const employee = user || this.db.employees.find(
-      (e) => (e.id === targetId || e.userId === targetId) && e.companyId === company.id,
-    );
+    const user = this.db.resolveUser(targetId);
 
-    if (!employee) {
-      throw new NotFoundException(`Employee "${targetId}" not found in your company.`);
+    if (!user || (user.companyId && user.companyId !== company.id)) {
+      throw new NotFoundException(`User "${targetId}" not found in your company.`);
     }
 
-    const realUserId = user ? user.id : employee.id;
+    const realUserId = user.id;
 
     let record = this.db.attendanceRecords.find(
       (a) => (a.employeeId === realUserId || a.employeeId === targetId) && a.date === dto.date,
@@ -626,7 +623,7 @@ export class AdminService {
       const newRecord: AttendanceRecord = {
         id: `att-${Date.now()}`,
         employeeId: realUserId,
-        employeeName: `${employee.firstName} ${employee.lastName}`,
+        employeeName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
         date: dto.date,
         checkIn: dto.checkIn || '09:00 AM',
         checkOut: dto.checkOut || '06:00 PM',
@@ -647,7 +644,7 @@ export class AdminService {
       actor.role,
       'ADMIN_ATTENDANCE_REGULARIZED',
       'Admin',
-      `Admin regularized attendance for ${employee.employeeCode} on ${dto.date} as ${dto.status}`,
+      `Admin regularized attendance for ${user.employeeCode || user.email} on ${dto.date} as ${dto.status}`,
       record.id,
     );
 

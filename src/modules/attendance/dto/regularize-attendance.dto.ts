@@ -3,10 +3,15 @@ import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { AttendanceStatus } from '../../../common/types.js';
 
 export class RegularizeAttendanceDto {
-  @ApiProperty({ example: 'emp-1', description: 'Employee ID' })
+  @ApiProperty({ example: 'user-1793009147556', description: 'User ID (from users table)' })
   @IsString()
-  @IsNotEmpty()
-  employeeId: string;
+  @IsOptional()
+  userId?: string;
+
+  @ApiPropertyOptional({ example: 'user-1793009147556', description: 'User ID (legacy field)' })
+  @IsString()
+  @IsOptional()
+  employeeId?: string;
 
   @ApiProperty({ example: '2026-10-21', description: 'Date of attendance record (YYYY-MM-DD)' })
   @IsString()

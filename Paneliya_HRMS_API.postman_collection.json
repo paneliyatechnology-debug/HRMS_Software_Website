@@ -368,13 +368,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/employees/emp-1793009147556",
+              "raw": "{{baseUrl}}/employees/user-1793009147556",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "employees",
-                "emp-1793009147556"
+                "user-1793009147556"
               ]
             },
             "description": "Attempts to access an employee record from Company A while authenticated as Admin of Company B. Verified to reject with 403 Forbidden."
@@ -546,7 +546,7 @@
               "query": [],
               "variable": []
             },
-            "description": "Authenticates with email/password and returns a bearer JWT access token with full user details.",
+            "description": "Authenticates with email OR mobile number and password, returning a bearer JWT access token with full user details.",
             "auth": {
               "type": "noauth"
             }
@@ -1000,6 +1000,227 @@
               ]
             },
             "description": "Associates an existing or newly created user as the designated Administrator for a company."
+          },
+          "response": []
+        },
+        {
+          "name": "List all Company Administrators",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/admins",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "admins"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Search string matching firstName, lastName, or email"
+                },
+                {
+                  "key": "companyId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter admins by associated Company ID or Code"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter admins by account status (Active, Inactive, Suspended)"
+                },
+                {
+                  "key": "includeSuperAdmins",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Set to true to also include Super Admin accounts in the list"
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Records per page"
+                }
+              ],
+              "variable": []
+            },
+            "description": "Retrieves all Company Admins with associated company metadata, status, and filtering options."
+          },
+          "response": []
+        },
+        {
+          "name": "Provision new Company Administrator",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/admins",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "admins"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Creates a new Company Administrator, assigns them to a company, and enforces global email uniqueness."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Administrator details by ID or email",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/admins/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "admins",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Admin ID or email"
+                }
+              ]
+            },
+            "description": "Retrieves administrator record with company dossier."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Administrator profile or assigned company",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/admins/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "admins",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Admin ID"
+                }
+              ]
+            },
+            "description": "Updates administrator details, password, status, or reassigns company."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Company Administrator account",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/admins/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "admins",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Admin ID"
+                }
+              ]
+            },
+            "description": "Removes the administrator account."
           },
           "response": []
         },
@@ -2330,10 +2551,16 @@
               ],
               "query": [
                 {
+                  "key": "userId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by User ID"
+                },
+                {
                   "key": "employeeId",
                   "value": "",
                   "disabled": true,
-                  "description": "Filter by employee ID"
+                  "description": "Filter by employee ID (legacy alias for userId)"
                 },
                 {
                   "key": "date",
@@ -2366,21 +2593,21 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/attendance/my-status/{employeeId}",
+              "raw": "{{baseUrl}}/attendance/my-status/{userId}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "attendance",
                 "my-status",
-                "{employeeId}"
+                "{userId}"
               ],
               "query": [],
               "variable": [
                 {
-                  "key": "employeeId",
-                  "value": "emp-1",
-                  "description": "Employee ID"
+                  "key": "userId",
+                  "value": "user-1793009147556",
+                  "description": "User ID"
                 }
               ]
             },
@@ -2406,7 +2633,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"employeeId\": \"emp-1793009147556\",\n  \"remarks\": \"Morning shift clock-in\"\n}",
+              "raw": "{\n  \"userId\": \"user-1793009147556\",\n  \"remarks\": \"Morning shift clock-in\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2447,7 +2674,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"employeeId\": \"emp-1793009147556\",\n  \"remarks\": \"Evening clock-out\"\n}",
+              "raw": "{\n  \"userId\": \"user-1793009147556\",\n  \"remarks\": \"Evening clock-out\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2488,7 +2715,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"employeeId\": \"emp-1793009147556\",\n  \"date\": \"2026-10-26\",\n  \"checkIn\": \"09:00 AM\",\n  \"checkOut\": \"06:00 PM\",\n  \"status\": \"Present\",\n  \"remarks\": \"Manual correction by HR\"\n}",
+              "raw": "{\n  \"userId\": \"user-1793009147556\",\n  \"date\": \"2026-10-26\",\n  \"checkIn\": \"09:00 AM\",\n  \"checkOut\": \"06:00 PM\",\n  \"status\": \"Present\",\n  \"remarks\": \"Manual correction by HR\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2551,6 +2778,242 @@
             "description": "Processes batched hardware reader punch logs and maps them to employee daily records."
           },
           "response": []
+        },
+        {
+          "name": "Get active work timer status for current authenticated employee",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "status"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Returns whether the employee has an active session, elapsed seconds, authoritative server clock, assigned office geofence details, and today’s summary."
+          },
+          "response": []
+        },
+        {
+          "name": "Start geo-fenced employee work timer session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "start"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Validates employee assignment, office geofence radius, GPS accuracy, confirms required selfie upload, and records authoritative server start timestamp."
+          },
+          "response": []
+        },
+        {
+          "name": "Stop active employee work timer session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/stop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "stop"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Validates employee is inside assigned office geofence, verifies fresh stop selfie, computes authoritative duration on server, and marks session completed."
+          },
+          "response": []
+        },
+        {
+          "name": "Get paginated work timer session history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by user ID (Admin / SuperAdmin only)"
+                },
+                {
+                  "key": "employeeId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by employee ID (legacy alias for userId)"
+                },
+                {
+                  "key": "companyId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by company ID (SuperAdmin only)"
+                },
+                {
+                  "key": "date",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by specific date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "startDate",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Start of date range (YYYY-MM-DD)"
+                },
+                {
+                  "key": "endDate",
+                  "value": "",
+                  "disabled": true,
+                  "description": "End of date range (YYYY-MM-DD)"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by work session status"
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Page number for pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Items per page"
+                }
+              ],
+              "variable": []
+            },
+            "description": "Employees view only their own sessions. Admins view sessions within their company. SuperAdmins can query across all companies."
+          },
+          "response": []
+        },
+        {
+          "name": "Securely retrieve start or stop selfie image for a work session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/selfie/{sessionId}/{type}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "selfie",
+                "{sessionId}",
+                "{type}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "sessionId",
+                  "value": "1",
+                  "description": "Work session ID"
+                },
+                {
+                  "key": "type",
+                  "value": "1",
+                  "description": "Selfie capture type"
+                }
+              ]
+            },
+            "description": "Protected endpoint. Employees can view their own selfies; Admins view their company; SuperAdmins view all."
+          },
+          "response": []
         }
       ]
     },
@@ -2578,6 +3041,12 @@
                 "leaves"
               ],
               "query": [
+                {
+                  "key": "userId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter leaves by User ID or Employee ID"
+                },
                 {
                   "key": "employeeId",
                   "value": "",
@@ -2609,21 +3078,21 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/leaves/balances/{employeeId}",
+              "raw": "{{baseUrl}}/leaves/balances/{userId}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "leaves",
                 "balances",
-                "{employeeId}"
+                "{userId}"
               ],
               "query": [],
               "variable": [
                 {
-                  "key": "employeeId",
-                  "value": "emp-1",
-                  "description": "Employee ID"
+                  "key": "userId",
+                  "value": "user-1793009147556",
+                  "description": "User ID"
                 }
               ]
             },
@@ -2649,7 +3118,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"employeeId\": \"emp-1793009147556\",\n  \"leaveType\": \"Casual Leave\",\n  \"startDate\": \"2026-11-01\",\n  \"endDate\": \"2026-11-03\",\n  \"isHalfDay\": false,\n  \"reason\": \"Attending family function\"\n}",
+              "raw": "{\n  \"userId\": \"user-1793009147556\",\n  \"leaveType\": \"Casual Leave\",\n  \"startDate\": \"2026-11-01\",\n  \"endDate\": \"2026-11-03\",\n  \"isHalfDay\": false,\n  \"reason\": \"Attending family function\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2807,10 +3276,16 @@
                   "description": "Filter by payroll status (Draft, Approved, Processed, Paid)"
                 },
                 {
+                  "key": "userId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by user ID"
+                },
+                {
                   "key": "employeeId",
                   "value": "",
                   "disabled": true,
-                  "description": "Filter by employee ID"
+                  "description": "Filter by employee ID (legacy alias for userId)"
                 }
               ],
               "variable": []
@@ -3272,7 +3747,7 @@
           "response": []
         },
         {
-          "name": "List reviews, optionally filtered by employeeId",
+          "name": "List reviews, optionally filtered by userId",
           "request": {
             "method": "GET",
             "header": [
@@ -3293,10 +3768,16 @@
               ],
               "query": [
                 {
+                  "key": "userId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by user ID"
+                },
+                {
                   "key": "employeeId",
                   "value": "",
                   "disabled": true,
-                  "description": "Filter by employee ID"
+                  "description": "Filter by employee ID (legacy alias for userId)"
                 }
               ],
               "variable": []
@@ -3450,10 +3931,16 @@
               ],
               "query": [
                 {
+                  "key": "userId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by user ID"
+                },
+                {
                   "key": "employeeId",
                   "value": "",
                   "disabled": true,
-                  "description": "Filter by employee ID"
+                  "description": "Filter by employee ID (legacy alias for userId)"
                 }
               ],
               "variable": []
@@ -3480,7 +3967,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"trainingId\": \"trn-1\",\n  \"userId\": \"user-1793009147556\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3649,7 +4136,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"userId\": \"user-1793009147556\",\n  \"actorName\": \"IT Admin\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3777,7 +4264,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"userId\": \"user-1793009147556\",\n  \"noticePeriodDays\": 30,\n  \"reason\": \"Relocating for family reasons\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3960,7 +4447,7 @@
       "description": "Employee dossier records, multipart file uploads, compliance verification",
       "item": [
         {
-          "name": "List documents, optionally by employeeId",
+          "name": "List documents, optionally by userId",
           "request": {
             "method": "GET",
             "header": [
@@ -3980,10 +4467,16 @@
               ],
               "query": [
                 {
+                  "key": "userId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by user ID"
+                },
+                {
                   "key": "employeeId",
                   "value": "",
                   "disabled": true,
-                  "description": "Filter by employee ID"
+                  "description": "Filter by employee ID (legacy alias for userId)"
                 }
               ],
               "variable": []
@@ -4495,6 +4988,626 @@
       ]
     },
     {
+      "name": "Admin (Company Level)",
+      "description": "",
+      "item": [
+        {
+          "name": "Company Admin Dashboard Snapshot",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/dashboard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "dashboard"
+              ],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Super Admin company switcher"
+                }
+              ],
+              "variable": []
+            },
+            "description": "Retrieves overview stats, today attendance summary, and pending approval metrics for the admin company."
+          },
+          "response": []
+        },
+        {
+          "name": "Get assigned Company Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/company",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "company"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Retrieves full dossier of the company the logged-in administrator oversees."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Company Profile and Contact Info",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/company",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "company"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Updates corporate phone, address, and legal name."
+          },
+          "response": []
+        },
+        {
+          "name": "List and filter company employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "employees"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Search by first name, last name, code, or email"
+                },
+                {
+                  "key": "departmentId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by Department ID"
+                },
+                {
+                  "key": "designationId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by Designation ID"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter by status (Active, On Leave, Probation, Terminated)"
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Records per page"
+                }
+              ],
+              "variable": []
+            },
+            "description": "Retrieves paginated employee roster of the admin company with filters for department, designation, and status."
+          },
+          "response": []
+        },
+        {
+          "name": "Create and onboard new employee into company",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "employees"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Enforces strict global email uniqueness, provisions both Employee profile and unified User account, and initializes leave balances."
+          },
+          "response": []
+        },
+        {
+          "name": "Get employee details by ID or employeeCode",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/employees/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "employees",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Employee ID or employeeCode"
+                }
+              ]
+            },
+            "description": "Retrieves complete profile, linked login credentials, and leave balance of a company employee."
+          },
+          "response": []
+        },
+        {
+          "name": "Update employee profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/employees/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "employees",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Employee ID"
+                }
+              ]
+            },
+            "description": "Updates employee attributes and synchronizes linked user login credentials."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete employee record from company",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/employees/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "employees",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Employee ID"
+                }
+              ]
+            },
+            "description": "Removes employee from company and deletes associated user credentials."
+          },
+          "response": []
+        },
+        {
+          "name": "Get attendance logs for company employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/attendance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "attendance"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Attendance date"
+                },
+                {
+                  "key": "month",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Month prefix"
+                },
+                {
+                  "key": "userId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Specific user ID"
+                },
+                {
+                  "key": "employeeId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Specific employee ID (legacy alias for userId)"
+                }
+              ],
+              "variable": []
+            },
+            "description": "Returns attendance records filtered by date (YYYY-MM-DD), month (YYYY-MM), or employeeId."
+          },
+          "response": []
+        },
+        {
+          "name": "Regularize or manually insert attendance punch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/attendance/manual",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "attendance",
+                "manual"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Admin override punch for attendance adjustments, late regularizations, or manual check-ins."
+          },
+          "response": []
+        },
+        {
+          "name": "View company payroll disbursement records",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/payroll",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "payroll"
+              ],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Pay period or month"
+                }
+              ],
+              "variable": []
+            },
+            "description": "Retrieves salary slips and payroll calculations for employees in the administrator company."
+          },
+          "response": []
+        },
+        {
+          "name": "List all departments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/departments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "departments"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "List all departments"
+          },
+          "response": []
+        },
+        {
+          "name": "Create a new department",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/departments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "departments"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Create a new department"
+          },
+          "response": []
+        },
+        {
+          "name": "List all designations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/designations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "designations"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "List all designations"
+          },
+          "response": []
+        },
+        {
+          "name": "Create a new designation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/designations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "designations"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Create a new designation"
+          },
+          "response": []
+        },
+        {
+          "name": "Get current logged-in Administrator profile & company linkage",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "profile"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Get current logged-in Administrator profile & company linkage"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Companies",
       "description": "",
       "item": [
@@ -4602,6 +5715,123 @@
               ]
             },
             "description": "Admin can update their own company contact info. Admin cannot modify another company."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "",
+      "item": [
+        {
+          "name": "Get current logged-in user profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "profile"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Retrieves authenticated user profile information."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload user profile picture (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/profile/photo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "profile",
+                "photo"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Uploads a JPEG, PNG, or WebP profile photo (up to 5 MB) for the authenticated user and updates their avatar URL."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload user profile picture (POST alias)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/profile/photo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "profile",
+                "photo"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "POST alias for PATCH /api/users/profile/photo."
           },
           "response": []
         }

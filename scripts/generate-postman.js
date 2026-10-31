@@ -347,9 +347,9 @@ async function generate() {
           method: 'GET',
           header: [{ key: 'Accept', value: 'application/json' }],
           url: {
-            raw: '{{baseUrl}}/employees/emp-1793009147556',
+            raw: '{{baseUrl}}/employees/user-1793009147556',
             host: ['{{baseUrl}}'],
-            path: ['employees', 'emp-1793009147556'],
+            path: ['employees', 'user-1793009147556'],
           },
           description:
             'Attempts to access an employee record from Company A while authenticated as Admin of Company B. Verified to reject with 403 Forbidden.',
@@ -475,15 +475,15 @@ async function generate() {
       maxSalary: 140000,
     },
     'post_/api/attendance/check-in': {
-      employeeId: 'emp-1793009147556',
+      userId: 'user-1793009147556',
       remarks: 'Morning shift clock-in',
     },
     'post_/api/attendance/check-out': {
-      employeeId: 'emp-1793009147556',
+      userId: 'user-1793009147556',
       remarks: 'Evening clock-out',
     },
     'post_/api/attendance/regularize': {
-      employeeId: 'emp-1793009147556',
+      userId: 'user-1793009147556',
       date: '2026-10-26',
       checkIn: '09:00 AM',
       checkOut: '06:00 PM',
@@ -491,12 +491,25 @@ async function generate() {
       remarks: 'Manual correction by HR',
     },
     'post_/api/leaves/apply': {
-      employeeId: 'emp-1793009147556',
+      userId: 'user-1793009147556',
       leaveType: 'Casual Leave',
       startDate: '2026-11-01',
       endDate: '2026-11-03',
       isHalfDay: false,
       reason: 'Attending family function',
+    },
+    'put_/api/assets/{id}/assign': {
+      userId: 'user-1793009147556',
+      actorName: 'IT Admin',
+    },
+    'post_/api/resignations/submit': {
+      userId: 'user-1793009147556',
+      noticePeriodDays: 30,
+      reason: 'Relocating for family reasons',
+    },
+    'post_/api/training/enroll': {
+      trainingId: 'trn-1',
+      userId: 'user-1793009147556',
     },
     'put_/api/leaves/{id}/approve': {
       approverName: 'Admin',
@@ -541,7 +554,7 @@ async function generate() {
           if (p.in === 'path') {
             postmanUrl.variable.push({
               key: p.name,
-              value: p.name === 'id' ? 'cmp-1' : p.name === 'employeeId' ? 'emp-1' : '1',
+              value: p.name === 'id' ? 'cmp-1' : (p.name === 'employeeId' || p.name === 'userId') ? 'user-1793009147556' : '1',
               description: p.description || '',
             });
           } else if (p.in === 'query') {

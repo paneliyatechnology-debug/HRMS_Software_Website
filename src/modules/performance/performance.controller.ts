@@ -20,13 +20,14 @@ export class PerformanceController {
 
   @Get('reviews')
   @ApiOperation({
-    summary: 'List reviews, optionally filtered by employeeId',
+    summary: 'List reviews, optionally filtered by userId',
     description: 'Retrieves appraisal evaluations and KPI ratings.',
   })
-  @ApiQuery({ name: 'employeeId', required: false, description: 'Filter by employee ID' })
+  @ApiQuery({ name: 'userId', required: false, description: 'Filter by user ID' })
+  @ApiQuery({ name: 'employeeId', required: false, description: 'Filter by employee ID (legacy alias for userId)' })
   @ApiResponse({ status: 200, description: 'List of performance reviews' })
-  getReviews(@Query('employeeId') employeeId?: string) {
-    return this.perfService.getReviews(employeeId);
+  getReviews(@Query('userId') userId?: string, @Query('employeeId') employeeId?: string) {
+    return this.perfService.getReviews(userId || employeeId);
   }
 
   @Post('reviews/:id/rate')

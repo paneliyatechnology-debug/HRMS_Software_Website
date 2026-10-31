@@ -629,6 +629,55 @@ export class DatabaseService implements OnModuleInit {
     return log;
   }
 
+  /**
+   * Universally resolves any user identifier (userId, legacy employeeId 'emp-...', employeeCode, or email)
+   * into the active User entity from the unified users table.
+   */
+  public resolveUser(targetId?: string): User | undefined {
+    if (!targetId || typeof targetId !== 'string') return undefined;
+    const clean = targetId.trim();
+    if (!clean) return undefined;
+
+    // 1. Direct match on user.id
+    let user = this.users.find((u) => u.id === clean);
+    if (user) return user;
+
+    // 2. Direct match on user.employeeId
+    user = this.users.find((u) => u.employeeId === clean);
+    if (user) return user;
+
+    // 3. Match on legacy 'emp-' transformed to 'user-'
+    if (clean.startsWith('emp-')) {
+      const mappedId = clean.replace('emp-', 'user-');
+      user = this.users.find((u) => u.id === mappedId || u.employeeId === mappedId);
+      if (user) return user;
+    }
+
+    // 4. Match on email
+    user = this.users.find((u) => u.email && u.email.toLowerCase() === clean.toLowerCase());
+    if (user) return user;
+
+    // 5. Match on employeeCode
+    user = this.users.find(
+      (u) => u.employeeCode && u.employeeCode.toLowerCase() === clean.toLowerCase(),
+    );
+    if (user) return user;
+
+    // 6. Match via employees list
+    const emp = this.employees.find(
+      (e) =>
+        e.id === clean ||
+        e.userId === clean ||
+        (clean.startsWith('emp-') && e.id === clean.replace('emp-', 'user-')),
+    );
+    if (emp) {
+      user = this.users.find((u) => u.id === emp.userId || u.id === emp.id);
+      if (user) return user;
+    }
+
+    return undefined;
+  }
+
   private inFlightEmailLocks = new Set<string>();
 
   /**

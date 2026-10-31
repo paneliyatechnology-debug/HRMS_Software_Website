@@ -36,10 +36,11 @@ export class TrainingController {
     summary: 'List employee training enrollments',
     description: 'Retrieves assigned, ongoing, or completed training registrations.',
   })
-  @ApiQuery({ name: 'employeeId', required: false, description: 'Filter by employee ID' })
+  @ApiQuery({ name: 'userId', required: false, description: 'Filter by user ID' })
+  @ApiQuery({ name: 'employeeId', required: false, description: 'Filter by employee ID (legacy alias for userId)' })
   @ApiResponse({ status: 200, description: 'List of enrollments' })
-  getEmployeeTrainings(@Query('employeeId') employeeId?: string) {
-    return this.trainingService.getEmployeeTrainings(employeeId);
+  getEmployeeTrainings(@Query('userId') userId?: string, @Query('employeeId') employeeId?: string) {
+    return this.trainingService.getEmployeeTrainings(userId || employeeId);
   }
 
   @Post('enroll')

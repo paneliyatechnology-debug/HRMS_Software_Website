@@ -147,15 +147,17 @@ export class AdminController {
   })
   @ApiQuery({ name: 'date', required: false, example: '2026-10-30', description: 'Attendance date' })
   @ApiQuery({ name: 'month', required: false, example: '2026-10', description: 'Month prefix' })
-  @ApiQuery({ name: 'employeeId', required: false, description: 'Specific employee ID' })
+  @ApiQuery({ name: 'userId', required: false, description: 'Specific user ID' })
+  @ApiQuery({ name: 'employeeId', required: false, description: 'Specific employee ID (legacy alias for userId)' })
   @ApiResponse({ status: 200, description: 'Attendance records' })
   getAttendance(
     @Req() req: any,
     @Query('date') date?: string,
     @Query('month') month?: string,
+    @Query('userId') userId?: string,
     @Query('employeeId') employeeId?: string,
   ) {
-    return this.adminService.getAttendance(req.user, { date, month, employeeId });
+    return this.adminService.getAttendance(req.user, { date, month, employeeId: userId || employeeId });
   }
 
   @Post('attendance/manual')

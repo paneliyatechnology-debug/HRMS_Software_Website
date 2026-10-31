@@ -71,12 +71,14 @@ export class LeavesService {
   }
 
   getBalances(employeeId: string) {
-    const user = this.db.users.find(
-      (u) =>
-        u.id === employeeId ||
-        u.employeeId === employeeId ||
-        (u.email && u.email.toLowerCase() === employeeId.toLowerCase()),
-    );
+    const user = this.db.resolveUser
+      ? this.db.resolveUser(employeeId)
+      : this.db.users?.find(
+          (u) =>
+            u.id === employeeId ||
+            u.employeeId === employeeId ||
+            (u.email && u.email.toLowerCase() === employeeId.toLowerCase()),
+        );
     const targetUserId = user ? user.id : employeeId;
 
     let balance = this.db.leaveBalances.find(
@@ -112,28 +114,26 @@ export class LeavesService {
 
     const targetId = data.userId || data.employeeId;
     if (!targetId) {
-      throw new BadRequestException('userId or employeeId is required');
+      throw new BadRequestException('userId is required');
     }
 
-    const user = this.db.users.find(
-      (u) =>
-        u.id === targetId ||
-        u.employeeId === targetId ||
-        (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
-    );
-    const employee = this.db.employees.find((e) => e.id === targetId || e.userId === targetId);
+    const user = this.db.resolveUser
+      ? this.db.resolveUser(targetId)
+      : this.db.users?.find(
+          (u) =>
+            u.id === targetId ||
+            u.employeeId === targetId ||
+            (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
+        );
+    if (!user) throw new NotFoundException('User record not found');
 
-    if (!user && !employee) throw new NotFoundException('Employee or user record not found');
-
-    const realUserId = user ? user.id : employee!.id;
-    const fullName = user
-      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-      : `${employee?.firstName || ''} ${employee?.lastName || ''}`.trim();
-    const avatarUrl = user?.avatarUrl || employee?.avatarUrl || '';
-    const deptName = user?.departmentName || employee?.departmentName || '';
-    const managerId = user?.reportingManagerId || employee?.reportingManagerId || '';
-    const managerName = user?.reportingManagerName || employee?.reportingManagerName || 'Team Manager';
-    const userRole = user?.role || Role.EMPLOYEE;
+    const realUserId = user.id;
+    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+    const avatarUrl = user.avatarUrl || '';
+    const deptName = user.departmentName || '';
+    const managerId = user.reportingManagerId || '';
+    const managerName = user.reportingManagerName || 'Team Manager';
+    const userRole = user.role || Role.EMPLOYEE;
 
     const start = new Date(data.startDate);
     const end = new Date(data.endDate);

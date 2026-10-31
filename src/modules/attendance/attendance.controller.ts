@@ -48,15 +48,15 @@ export class AttendanceController {
     return this.attendanceService.findAll(query, req.user);
   }
 
-  @Get('my-status/:employeeId')
+  @Get('my-status/:userId')
   @ApiOperation({
     summary: 'Get current punch clock state for employee',
     description: 'Returns today’s check-in time, check-out time, current status, and hours logged so far.',
   })
-  @ApiParam({ name: 'employeeId', description: 'Employee ID' })
+  @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Today attendance state' })
-  getMyStatus(@Param('employeeId') employeeId: string) {
-    return this.attendanceService.getTodayStatus(employeeId);
+  getMyStatus(@Param('userId') userId: string) {
+    return this.attendanceService.getTodayStatus(userId);
   }
 
   @Post('check-in')

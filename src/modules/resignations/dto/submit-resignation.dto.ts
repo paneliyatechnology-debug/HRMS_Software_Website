@@ -2,10 +2,15 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class SubmitResignationDto {
-  @ApiProperty({ example: 'emp-1', description: 'Employee ID submitting resignation' })
+  @ApiProperty({ example: 'user-1793009147556', description: 'User ID submitting resignation (from users table)' })
   @IsString()
-  @IsNotEmpty()
-  employeeId: string;
+  @IsOptional()
+  userId?: string;
+
+  @ApiPropertyOptional({ example: 'user-1793009147556', description: 'User ID (legacy field)' })
+  @IsString()
+  @IsOptional()
+  employeeId?: string;
 
   @ApiPropertyOptional({ example: 30, description: 'Agreed notice period days (defaults to 30)' })
   @IsNumber()

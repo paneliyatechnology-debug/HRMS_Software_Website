@@ -10,7 +10,14 @@ export class DocumentsService {
 
   findAll(employeeId?: string) {
     if (employeeId) {
-      const user = this.db.users.find((u) => u.id === employeeId || u.employeeId === employeeId);
+      const user = this.db.resolveUser
+        ? this.db.resolveUser(employeeId)
+        : this.db.users?.find(
+            (u) =>
+              u.id === employeeId ||
+              u.employeeId === employeeId ||
+              (u.email && u.email.toLowerCase() === employeeId.toLowerCase()),
+          );
       const targetId = user ? user.id : employeeId;
       return this.db.documents.filter((d) => d.employeeId === targetId || (d as any).userId === targetId || d.employeeId === employeeId);
     }
@@ -19,12 +26,18 @@ export class DocumentsService {
 
   create(data: Partial<CreateDocumentMetadataDto>): EmployeeDocument {
     const targetId = (data as any).userId || data.employeeId;
-    const user = this.db.users.find((u) => u.id === targetId || u.employeeId === targetId);
-    const employee = user || this.db.employees.find((e) => e.id === targetId || e.userId === targetId);
-    const realUserId = user ? user.id : (employee ? employee.id : (this.db.users[0]?.id || 'user-default'));
+    const user = this.db.resolveUser
+      ? this.db.resolveUser(targetId)
+      : this.db.users?.find(
+          (u) =>
+            u.id === targetId ||
+            u.employeeId === targetId ||
+            (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
+        );
+    const realUserId = user ? user.id : (this.db.users[0]?.id || 'user-default');
     const empName = user
       ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-      : (employee ? `${employee.firstName} ${employee.lastName}` : 'Employee');
+      : 'Employee';
 
     const newDoc: EmployeeDocument = {
       id: `doc-${Date.now()}`,

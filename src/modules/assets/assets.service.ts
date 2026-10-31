@@ -50,14 +50,18 @@ export class AssetsService {
     if (!asset) throw new NotFoundException('Asset not found');
 
     const targetId = (dto as any).userId || dto.employeeId;
-    const user = this.db.users.find((u) => u.id === targetId || u.employeeId === targetId);
-    const employee = user || this.db.employees.find((e) => e.id === targetId || e.userId === targetId);
-    if (!employee) throw new NotFoundException('Employee not found');
+    const user = this.db.resolveUser
+      ? this.db.resolveUser(targetId)
+      : this.db.users?.find(
+          (u) =>
+            u.id === targetId ||
+            u.employeeId === targetId ||
+            (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
+        );
+    if (!user) throw new NotFoundException('User not found');
 
-    const realUserId = user ? user.id : employee.id;
-    const empName = user
-      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-      : `${employee.firstName} ${employee.lastName}`;
+    const realUserId = user.id;
+    const empName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
 
     const actorName = dto.actorName || 'IT Admin';
     asset.assignedToEmployeeId = realUserId;
@@ -72,7 +76,7 @@ export class AssetsService {
       'ADMIN',
       'ASSET_ASSIGNED',
       'Asset Management',
-      `Assigned asset ${asset.name} (${asset.assetCode}) to ${employee.firstName} ${employee.lastName}`,
+      `Assigned asset ${asset.name} (${asset.assetCode}) to ${empName}`,
       asset.id,
     );
 

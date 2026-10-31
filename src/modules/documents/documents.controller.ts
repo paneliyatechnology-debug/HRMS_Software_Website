@@ -28,13 +28,14 @@ export class DocumentsController {
 
   @Get()
   @ApiOperation({
-    summary: 'List documents, optionally by employeeId',
+    summary: 'List documents, optionally by userId',
     description: 'Retrieves verified and pending employee documents.',
   })
-  @ApiQuery({ name: 'employeeId', required: false, description: 'Filter by employee ID' })
+  @ApiQuery({ name: 'userId', required: false, description: 'Filter by user ID' })
+  @ApiQuery({ name: 'employeeId', required: false, description: 'Filter by employee ID (legacy alias for userId)' })
   @ApiResponse({ status: 200, description: 'List of documents' })
-  findAll(@Query('employeeId') employeeId?: string) {
-    return this.documentsService.findAll(employeeId);
+  findAll(@Query('userId') userId?: string, @Query('employeeId') employeeId?: string) {
+    return this.documentsService.findAll(userId || employeeId);
   }
 
   @Post()

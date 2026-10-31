@@ -5,7 +5,12 @@ export class UploadDocumentDto {
   @ApiProperty({ type: 'string', format: 'binary', description: 'Document physical file (PDF, Word, or image)' })
   file: any;
 
-  @ApiPropertyOptional({ example: 'emp-1' })
+  @ApiPropertyOptional({ example: 'user-1793009147556', description: 'User ID (from users table)' })
+  @IsString()
+  @IsOptional()
+  userId?: string;
+
+  @ApiPropertyOptional({ example: 'user-1793009147556', description: 'User ID (legacy field)' })
   @IsString()
   @IsOptional()
   employeeId?: string;

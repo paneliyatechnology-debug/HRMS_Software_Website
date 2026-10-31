@@ -5,8 +5,16 @@ import { WorkSessionStatus } from '../../../common/types.js';
 
 export class QueryWorkHistoryDto {
   @ApiPropertyOptional({
-    description: 'Filter by employee ID (Admin / SuperAdmin only)',
-    example: 'emp-1793009147556',
+    description: 'Filter by user ID (Admin / SuperAdmin only)',
+    example: 'user-1793009147556',
+  })
+  @IsOptional()
+  @IsString()
+  userId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by employee ID (legacy alias for userId)',
+    example: 'user-1793009147556',
   })
   @IsOptional()
   @IsString()
