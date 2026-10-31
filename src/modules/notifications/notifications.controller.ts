@@ -1,8 +1,11 @@
-import { Controller, Get, Put, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Put, Param, Req, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { NotificationsService } from './notifications.service.js';
 
 @ApiTags('Notifications')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notifService: NotificationsService) {}
@@ -13,8 +16,8 @@ export class NotificationsController {
     description: 'Retrieves notification center messages for attendance, leaves, announcements, and payroll.',
   })
   @ApiResponse({ status: 200, description: 'List of notifications' })
-  findAll() {
-    return this.notifService.findAll();
+  findAll(@Req() req: any) {
+    return this.notifService.findAll(req.user);
   }
 
   @Put(':id/read')
@@ -25,8 +28,8 @@ export class NotificationsController {
   @ApiParam({ name: 'id', description: 'Notification ID' })
   @ApiResponse({ status: 200, description: 'Notification marked as read' })
   @ApiResponse({ status: 404, description: 'Notification not found' })
-  markAsRead(@Param('id') id: string) {
-    return this.notifService.markAsRead(id);
+  markAsRead(@Param('id') id: string, @Req() req: any) {
+    return this.notifService.markAsRead(id, req.user);
   }
 
   @Put('mark-all-read')
@@ -35,7 +38,7 @@ export class NotificationsController {
     description: 'Dismisses all unread notification badges.',
   })
   @ApiResponse({ status: 200, description: 'All notifications marked as read' })
-  markAllAsRead() {
-    return this.notifService.markAllAsRead();
+  markAllAsRead(@Req() req: any) {
+    return this.notifService.markAllAsRead(req.user);
   }
 }

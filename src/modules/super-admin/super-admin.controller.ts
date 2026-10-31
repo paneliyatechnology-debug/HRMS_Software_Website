@@ -34,6 +34,7 @@ import { UpdateCompanyDto } from './dto/update-company.dto.js';
 import { CreateAdminDto } from './dto/create-admin.dto.js';
 import { UpdateAdminDto } from './dto/update-admin.dto.js';
 import { QueryAdminsDto } from './dto/query-admins.dto.js';
+import { Public } from '../../common/guards/public.decorator.js';
 
 @ApiTags('Super Admin')
 @ApiBearerAuth()
@@ -79,15 +80,56 @@ export class SuperAdminController {
     return this.superAdminService.getCompanies();
   }
 
+  @Public()
   @Post('companies')
   @ApiOperation({
-    summary: 'Create and register a new company (auto-generates CMP-000001 code)',
-    description: 'Registers a new enterprise client company with auto-generated unique Company Code.',
+    summary: 'Create and register a new company (Public - No Token Required)',
+    description: 'Registers a new enterprise client company without requiring an authentication token.',
   })
   @ApiBody({ type: CreateCompanyDto })
   @ApiResponse({ status: 201, description: 'Company registered successfully' })
   createCompany(@Body() body: CreateCompanyDto, @Req() req: any) {
     return this.superAdminService.createCompany(body, req.user);
+  }
+
+  // -------------------------------------------------------------
+  // COMPANY REGISTRATION APPROVAL REQUESTS
+  // -------------------------------------------------------------
+  @Get('company-requests')
+  @ApiOperation({
+    summary: 'List company registration requests',
+    description: 'Lists all submitted company registration requests (filter by ?status=PENDING/APPROVED/REJECTED).',
+  })
+  @ApiQuery({ name: 'status', required: false, enum: ['PENDING', 'APPROVED', 'REJECTED'] })
+  @ApiResponse({ status: 200, description: 'List of company registration requests' })
+  getCompanyRequests(@Query('status') status?: string) {
+    return this.superAdminService.getCompanyRegistrationRequests(status);
+  }
+
+  @Post('company-requests/:id/approve')
+  @ApiOperation({
+    summary: 'Approve company registration request',
+    description: 'Approves request, officially creates company tenant with CMP code, and provisions Admin user account.',
+  })
+  @ApiParam({ name: 'id', description: 'Registration Request ID' })
+  @ApiResponse({ status: 200, description: 'Company registration request approved and company created' })
+  approveCompanyRequest(@Param('id') id: string, @Req() req: any) {
+    return this.superAdminService.approveCompanyRegistrationRequest(id, req.user);
+  }
+
+  @Post('company-requests/:id/reject')
+  @ApiOperation({
+    summary: 'Reject company registration request',
+    description: 'Rejects request with optional reason. Company is not created.',
+  })
+  @ApiParam({ name: 'id', description: 'Registration Request ID' })
+  @ApiResponse({ status: 200, description: 'Company registration request rejected' })
+  rejectCompanyRequest(
+    @Param('id') id: string,
+    @Body('reason') reason: string,
+    @Req() req: any,
+  ) {
+    return this.superAdminService.rejectCompanyRegistrationRequest(id, reason, req.user);
   }
 
   @Get('companies/:id')
@@ -331,7 +373,7 @@ export class SuperAdminController {
   @Delete('users/all/clear')
   @ApiOperation({
     summary: 'Permanently delete all user entries (Super Admin, Admin, and User)',
-    description: 'Bulk deletes all user entries from both memory, database.json, and MySQL.',
+    description: 'Bulk deletes all user entries from both memory and MySQL.',
   })
   @ApiResponse({ status: 200, description: 'All user entries permanently deleted' })
   clearAllUsers(@Req() req: any) {
@@ -500,9 +542,9 @@ export class SuperAdminController {
   @ApiOperation({
     summary: 'Trigger Full Database Snapshot Backup',
     description:
-      'Creates a complete timestamped JSON snapshot of all 22 database collections in data/backups/ directory.',
+      'Creates a live database snapshot and records it directly in MySQL database with zero disk file writes.',
   })
-  @ApiResponse({ status: 201, description: 'Database backup snapshot generated successfully' })
+  @ApiResponse({ status: 201, description: 'Database backup snapshot recorded in MySQL successfully' })
   createBackup(@Req() req: any) {
     return this.superAdminService.createDatabaseBackup(req.user);
   }

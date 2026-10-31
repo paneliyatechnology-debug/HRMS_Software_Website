@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Optional } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
 import { LeaveRequest, LeaveStatus, LeaveType, Role, User } from '../../common/types.js';
 import { EventsGateway } from '../events/events.gateway.js';
@@ -20,14 +20,14 @@ export class LeavesService {
     // Company isolation for ADMIN or EMPLOYEE
     if (actorUser && (actorUser.role === Role.ADMIN || actorUser.role === Role.EMPLOYEE)) {
       if (actorUser.companyId) {
-        const companyUserIds = new Set(
-          this.db.users.filter((u) => u.companyId === actorUser.companyId).map((u) => u.id),
-        );
         list = list.filter((l) => {
+          if ((l as any).companyId) {
+            return (l as any).companyId === actorUser.companyId;
+          }
           const user = this.db.users.find(
             (u) => u.id === l.employeeId || u.employeeId === l.employeeId || (l as any).userId === u.id,
           );
-          return user ? companyUserIds.has(user.id) : companyUserIds.has(l.employeeId);
+          return user ? user.companyId === actorUser.companyId : false;
         });
       }
     }
@@ -81,7 +81,7 @@ export class LeavesService {
       .sort((a, b) => (b.appliedDate > a.appliedDate ? 1 : -1));
   }
 
-  getBalances(employeeId: string) {
+  getBalances(employeeId: string, actorUser?: User) {
     const user = this.db.resolveUser
       ? this.db.resolveUser(employeeId)
       : this.db.users?.find(
@@ -92,12 +92,24 @@ export class LeavesService {
         );
     const targetUserId = user ? user.id : employeeId;
 
+    if (actorUser && actorUser.role === Role.ADMIN) {
+      if (user && actorUser.companyId && user.companyId && user.companyId !== actorUser.companyId) {
+        throw new ForbiddenException('Cannot view leave balance of employee belonging to another company.');
+      }
+    } else if (actorUser && actorUser.role === Role.EMPLOYEE) {
+      if (targetUserId !== actorUser.id) {
+        throw new ForbiddenException('Employees can only view their own leave balances.');
+      }
+    }
+
     let balance = this.db.leaveBalances.find(
       (b) => b.employeeId === targetUserId || b.employeeId === employeeId,
     );
     if (!balance) {
       balance = {
         id: `bal-${targetUserId}`,
+        companyId: user?.companyId || actorUser?.companyId || null,
+        companyCode: user?.companyCode || actorUser?.companyCode || null,
         employeeId: targetUserId,
         year: 2026,
         casualLeave: { total: 12, used: 0, remaining: 12 },
@@ -123,7 +135,7 @@ export class LeavesService {
     return resObj;
   }
 
-  apply(data: ApplyLeaveDto) {
+  apply(data: ApplyLeaveDto, actorUser?: User) {
     if (!data.startDate || !data.endDate) {
       throw new BadRequestException('Start date and end date are required');
     }
@@ -131,7 +143,12 @@ export class LeavesService {
       throw new BadRequestException('End date cannot be prior to start date');
     }
 
-    const targetId = data.userId || data.employeeId;
+    let targetId = data.userId || data.employeeId;
+    // Prevent spoofing by employee: an employee can only apply for themselves
+    if (actorUser && actorUser.role === Role.EMPLOYEE) {
+      targetId = actorUser.id;
+    }
+
     if (!targetId) {
       throw new BadRequestException('userId is required');
     }
@@ -146,6 +163,12 @@ export class LeavesService {
         );
     if (!user) throw new NotFoundException('User record not found');
 
+    if (actorUser && actorUser.role === Role.ADMIN) {
+      if (actorUser.companyId && user.companyId && user.companyId !== actorUser.companyId) {
+        throw new ForbiddenException('Cannot apply leave for an employee in another company.');
+      }
+    }
+
     const realUserId = user.id;
     const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
     const avatarUrl = user.avatarUrl || '';
@@ -153,6 +176,8 @@ export class LeavesService {
     const managerId = user.reportingManagerId || '';
     const managerName = user.reportingManagerName || 'Team Manager';
     const userRole = user.role || Role.EMPLOYEE;
+    const companyId = user.companyId || actorUser?.companyId || null;
+    const companyCode = user.companyCode || actorUser?.companyCode || null;
 
     const start = new Date(data.startDate);
     const end = new Date(data.endDate);
@@ -179,6 +204,8 @@ export class LeavesService {
     };
     (newRequest as any).userId = realUserId;
     (newRequest as any).role = userRole;
+    (newRequest as any).companyId = companyId;
+    (newRequest as any).companyCode = companyCode;
 
     this.db.leaveRequests.unshift(newRequest);
 
@@ -194,6 +221,8 @@ export class LeavesService {
 
     this.db.notifications.unshift({
       id: `notif-${Date.now()}`,
+      companyId,
+      companyCode,
       title: 'New Leave Application',
       message: `${fullName || 'Employee'} applied for ${data.leaveType} (${diffDays} days).`,
       type: 'leave',
@@ -230,16 +259,27 @@ export class LeavesService {
     return responseObj;
   }
 
-  approve(id: string, dto: ApproveLeaveDto) {
+  approve(id: string, dto: ApproveLeaveDto, actorUser?: User) {
     const request = this.db.leaveRequests.find((l) => l.id === id);
     if (!request) throw new NotFoundException('Leave request not found');
+
+    if (actorUser && actorUser.role === Role.ADMIN) {
+      const reqCompanyId =
+        (request as any).companyId ||
+        this.db.users.find((u) => u.id === request.employeeId)?.companyId;
+      if (actorUser.companyId && reqCompanyId && reqCompanyId !== actorUser.companyId) {
+        throw new ForbiddenException('Cannot approve leave belonging to another company.');
+      }
+    } else if (actorUser && actorUser.role === Role.EMPLOYEE) {
+      throw new ForbiddenException('Employees are not authorized to approve leave requests.');
+    }
 
     if (request.status === LeaveStatus.APPROVED) {
       throw new BadRequestException('Leave request is already approved');
     }
 
-    const approverRole = dto.role || 'ADMIN';
-    const approverName = dto.approverName || 'Approver';
+    const approverRole = dto.role || actorUser?.role || 'ADMIN';
+    const approverName = dto.approverName || (actorUser ? `${actorUser.firstName} ${actorUser.lastName}` : 'Approver');
     const comments = dto.comments || 'Leave application approved';
 
     request.status = LeaveStatus.APPROVED;
@@ -265,7 +305,7 @@ export class LeavesService {
     }
 
     this.db.logAudit(
-      'sys',
+      actorUser?.id || 'sys',
       approverName,
       approverRole,
       'LEAVE_APPROVED',
@@ -276,6 +316,8 @@ export class LeavesService {
 
     this.db.notifications.unshift({
       id: `notif-${Date.now()}`,
+      companyId: (request as any).companyId || null,
+      companyCode: (request as any).companyCode || null,
       title: 'Leave Approved',
       message: `Your leave request for ${request.startDate} to ${request.endDate} has been approved.`,
       type: 'leave',
@@ -314,20 +356,31 @@ export class LeavesService {
     return resObj;
   }
 
-  reject(id: string, dto: RejectLeaveDto) {
+  reject(id: string, dto: RejectLeaveDto, actorUser?: User) {
     const request = this.db.leaveRequests.find((l) => l.id === id);
     if (!request) throw new NotFoundException('Leave request not found');
 
-    const approverName = dto.approverName || 'Approver';
+    if (actorUser && actorUser.role === Role.ADMIN) {
+      const reqCompanyId =
+        (request as any).companyId ||
+        this.db.users.find((u) => u.id === request.employeeId)?.companyId;
+      if (actorUser.companyId && reqCompanyId && reqCompanyId !== actorUser.companyId) {
+        throw new ForbiddenException('Cannot reject leave belonging to another company.');
+      }
+    } else if (actorUser && actorUser.role === Role.EMPLOYEE) {
+      throw new ForbiddenException('Employees are not authorized to reject leave requests.');
+    }
+
+    const approverName = dto.approverName || (actorUser ? `${actorUser.firstName} ${actorUser.lastName}` : 'Approver');
     const reason = dto.reason || 'Leave request rejected by management';
 
     request.status = LeaveStatus.REJECTED;
     request.comments = reason;
 
     this.db.logAudit(
-      'sys',
+      actorUser?.id || 'sys',
       approverName,
-      'MANAGER',
+      actorUser?.role || 'MANAGER',
       'LEAVE_REJECTED',
       'Leave Management',
       `Rejected leave request for ${request.employeeName}. Reason: ${reason}`,

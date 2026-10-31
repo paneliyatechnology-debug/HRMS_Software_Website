@@ -60,10 +60,11 @@
               "script": {
                 "exec": [
                   "var jsonData = pm.response.json();",
-                  "if (jsonData.accessToken) {",
-                  "    pm.collectionVariables.set(\"token\", jsonData.accessToken);",
-                  "    pm.environment.set(\"token\", jsonData.accessToken);",
-                  "    console.log(\"Super Admin Token Saved:\", jsonData.accessToken);",
+                  "var token = jsonData.accessToken || jsonData.token;",
+                  "if (token) {",
+                  "    pm.collectionVariables.set(\"token\", token);",
+                  "    pm.environment.set(\"token\", token);",
+                  "    console.log(\"Super Admin Token Saved:\", token);",
                   "}",
                   "pm.test(\"Status is 200/201\", function () {",
                   "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
@@ -207,11 +208,12 @@
               "script": {
                 "exec": [
                   "var jsonData = pm.response.json();",
-                  "if (jsonData.accessToken) {",
-                  "    pm.collectionVariables.set(\"token\", jsonData.accessToken);",
-                  "    pm.collectionVariables.set(\"adminToken\", jsonData.accessToken);",
-                  "    pm.environment.set(\"token\", jsonData.accessToken);",
-                  "    pm.environment.set(\"adminToken\", jsonData.accessToken);",
+                  "var token = jsonData.accessToken || jsonData.token;",
+                  "if (token) {",
+                  "    pm.collectionVariables.set(\"token\", token);",
+                  "    pm.collectionVariables.set(\"adminToken\", token);",
+                  "    pm.environment.set(\"token\", token);",
+                  "    pm.environment.set(\"adminToken\", token);",
                   "    console.log(\"Logged in as Company Admin:\", jsonData.user.email);",
                   "}",
                   "pm.test(\"Admin Login Successful\", function () {",
@@ -494,10 +496,15 @@
               "script": {
                 "exec": [
                   "var jsonData = pm.response.json();",
-                  "if (jsonData.accessToken) {",
-                  "    pm.collectionVariables.set(\"token\", jsonData.accessToken);",
-                  "    pm.environment.set(\"token\", jsonData.accessToken);",
-                  "    console.log(\"Auth token auto-saved:\", jsonData.accessToken);",
+                  "var token = jsonData.accessToken || jsonData.token;",
+                  "if (token) {",
+                  "    pm.collectionVariables.set(\"token\", token);",
+                  "    pm.environment.set(\"token\", token);",
+                  "    console.log(\"Auth token auto-saved:\", token);",
+                  "}",
+                  "if (jsonData.refreshToken) {",
+                  "    pm.collectionVariables.set(\"refreshToken\", jsonData.refreshToken);",
+                  "    pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
                   "}",
                   "if (jsonData.user && jsonData.user.companyId) {",
                   "    pm.collectionVariables.set(\"companyId\", jsonData.user.companyId);",
@@ -558,10 +565,15 @@
               "script": {
                 "exec": [
                   "var jsonData = pm.response.json();",
-                  "if (jsonData.accessToken) {",
-                  "    pm.collectionVariables.set(\"token\", jsonData.accessToken);",
-                  "    pm.environment.set(\"token\", jsonData.accessToken);",
-                  "    console.log(\"Auth token auto-saved:\", jsonData.accessToken);",
+                  "var token = jsonData.accessToken || jsonData.token;",
+                  "if (token) {",
+                  "    pm.collectionVariables.set(\"token\", token);",
+                  "    pm.environment.set(\"token\", token);",
+                  "    console.log(\"Auth token auto-saved:\", token);",
+                  "}",
+                  "if (jsonData.refreshToken) {",
+                  "    pm.collectionVariables.set(\"refreshToken\", jsonData.refreshToken);",
+                  "    pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
                   "}",
                   "if (jsonData.user && jsonData.user.companyId) {",
                   "    pm.collectionVariables.set(\"companyId\", jsonData.user.companyId);",
@@ -572,6 +584,158 @@
               }
             }
           ]
+        },
+        {
+          "name": "Renew access token using rotating refresh token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Validates refresh token from HttpOnly cookie or body, rotates the refresh token, and returns a new 30-minute access token.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "var token = jsonData.accessToken || jsonData.token;",
+                  "if (token) {",
+                  "    pm.collectionVariables.set(\"token\", token);",
+                  "    pm.environment.set(\"token\", token);",
+                  "    console.log(\"Auth token auto-saved:\", token);",
+                  "}",
+                  "if (jsonData.refreshToken) {",
+                  "    pm.collectionVariables.set(\"refreshToken\", jsonData.refreshToken);",
+                  "    pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
+                  "}",
+                  "if (jsonData.user && jsonData.user.companyId) {",
+                  "    pm.collectionVariables.set(\"companyId\", jsonData.user.companyId);",
+                  "    pm.environment.set(\"companyId\", jsonData.user.companyId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout user and revoke refresh session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Revokes the active refresh token session and clears the HttpOnly cookie."
+          },
+          "response": []
+        },
+        {
+          "name": "Set up employee account password using email invitation token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/employee/set-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "employee",
+                "set-password"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Validates the single-use 30-minute invitation token hash and securely sets the employee password."
+          },
+          "response": []
         },
         {
           "name": "Get current logged-in user profile",
@@ -2279,6 +2443,54 @@
             "description": "**Role Required: ADMIN or SUPER_ADMIN**\n\nMarks employee status as Inactive to preserve audit trails and attendance/payroll history."
           },
           "response": []
+        },
+        {
+          "name": "Resend password setup invitation email [ADMIN / SUPER_ADMIN only]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees/{id}/resend-invitation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{id}",
+                "resend-invitation"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "**Role Required: ADMIN or SUPER_ADMIN**\n\nAdmin resends password setup invitation email to an employee in their company. Revokes previous unused tokens."
+          },
+          "response": []
         }
       ]
     },
@@ -2306,10 +2518,17 @@
                 "organization",
                 "departments"
               ],
-              "query": [],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Optional company filter for Super Admin"
+                }
+              ],
               "variable": []
             },
-            "description": "Retrieves all departments along with dynamic headcount aggregates and department heads."
+            "description": "Retrieves all departments along with dynamic headcount aggregates for authenticated company."
           },
           "response": []
         },
@@ -2350,7 +2569,7 @@
               "query": [],
               "variable": []
             },
-            "description": "Adds a new business division or department."
+            "description": "Adds a new business division or department isolated to authenticated company."
           },
           "response": []
         },
@@ -2422,10 +2641,17 @@
                 "organization",
                 "designations"
               ],
-              "query": [],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Optional company filter for Super Admin"
+                }
+              ],
               "variable": []
             },
-            "description": "Retrieves all organizational roles and job levels."
+            "description": "Retrieves all organizational roles and job levels for authenticated company."
           },
           "response": []
         },
@@ -2490,7 +2716,14 @@
                 "organization",
                 "locations"
               ],
-              "query": [],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Optional company filter for Super Admin"
+                }
+              ],
               "variable": []
             },
             "description": "Lists all branch offices and headquarters locations."
@@ -2520,7 +2753,7 @@
               "query": [],
               "variable": []
             },
-            "description": "Returns recursive tree data for rendering the enterprise organizational chart."
+            "description": "Returns recursive tree data for rendering the enterprise organizational chart for authenticated company."
           },
           "response": []
         }
@@ -4070,11 +4303,17 @@
                   "value": "",
                   "disabled": true,
                   "description": "Category (Laptop, Monitor, etc.)"
+                },
+                {
+                  "key": "companyId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Company filter for Super Admin"
                 }
               ],
               "variable": []
             },
-            "description": "Retrieves company devices, laptops, and hardware inventory filtered by category."
+            "description": "Retrieves company devices, laptops, and hardware inventory filtered by category for authenticated company."
           },
           "response": []
         },
@@ -4114,7 +4353,7 @@
               "query": [],
               "variable": []
             },
-            "description": "Adds physical equipment to inventory registry."
+            "description": "Adds physical equipment to inventory registry isolated to authenticated company."
           },
           "response": []
         },
@@ -4342,7 +4581,7 @@
       "description": "Corporate and national public calendar holidays",
       "item": [
         {
-          "name": "List all calendar holidays",
+          "name": "List calendar holidays",
           "request": {
             "method": "GET",
             "header": [
@@ -4360,10 +4599,17 @@
               "path": [
                 "holidays"
               ],
-              "query": [],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Optional company filter for Super Admin"
+                }
+              ],
               "variable": []
             },
-            "description": "Retrieves corporate and national paid holidays."
+            "description": "Retrieves corporate and national paid holidays for the authenticated user company."
           },
           "response": []
         },
@@ -4403,7 +4649,54 @@
               "query": [],
               "variable": []
             },
-            "description": "Creates a holiday on the enterprise calendar."
+            "description": "Creates a holiday on the enterprise calendar isolated to the authenticated company."
+          },
+          "response": []
+        },
+        {
+          "name": "Update company holiday",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/holidays/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "holidays",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Holiday ID"
+                }
+              ]
+            },
+            "description": "Updates a holiday record on the corporate calendar."
           },
           "response": []
         },
@@ -4477,11 +4770,17 @@
                   "value": "",
                   "disabled": true,
                   "description": "Filter by employee ID (legacy alias for userId)"
+                },
+                {
+                  "key": "companyId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Company filter for Super Admin"
                 }
               ],
               "variable": []
             },
-            "description": "Retrieves verified and pending employee documents."
+            "description": "Retrieves verified and pending employee documents for authenticated company."
           },
           "response": []
         },
@@ -4639,10 +4938,17 @@
               "path": [
                 "announcements"
               ],
-              "query": [],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Optional company filter for Super Admin"
+                }
+              ],
               "variable": []
             },
-            "description": "Retrieves all organization-wide broadcasts, notices, and bulletins."
+            "description": "Retrieves all organization-wide broadcasts, notices, and bulletins for authenticated company."
           },
           "response": []
         },

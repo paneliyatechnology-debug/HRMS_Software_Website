@@ -11,10 +11,14 @@ import { CreateEmployeeDto } from './dto/create-employee.dto.js';
 import { UpdateEmployeeDto } from './dto/update-employee.dto.js';
 import { QueryEmployeeDto } from './dto/query-employee.dto.js';
 import { hashPassword } from '../../common/utils/password.util.js';
+import { EmployeeInvitationService } from './employee-invitation.service.js';
 
 @Injectable()
 export class EmployeesService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly invitationService: EmployeeInvitationService,
+  ) {}
 
   findAll(params?: QueryEmployeeDto, actorUser?: User) {
     let result = [...this.db.employees].filter((emp) => {
@@ -147,41 +151,41 @@ export class EmployeesService {
     return { nextCode, companyCode: company?.companyCode };
   }
 
-  async create(data: CreateEmployeeDto, actorName = 'Admin', companyIdOverride?: string) {
-    const releaseEmailLock = this.db.acquireEmailLock(data.email);
+  async create(data: CreateEmployeeDto, actorName = 'Admin', companyIdOverride?: string, actor?: any) {
+    // Determine target company:
+    // If companyIdOverride is provided (from Admin token or SuperAdmin explicit selection), use it
+    let targetCompanyId = companyIdOverride || data.companyId;
+    let targetCompany: any;
+    if (targetCompanyId) {
+      targetCompany = this.db.companies.find(
+        (c) => c.id === targetCompanyId || c.companyCode === targetCompanyId,
+      );
+      if (!targetCompany) {
+        throw new NotFoundException(
+          `Company with ID or code "${targetCompanyId}" not found. Please provide an existing company.`,
+        );
+      }
+    } else if (this.db.companies.length > 0) {
+      targetCompany = this.db.companies[0];
+    }
+
+    if (!targetCompany) {
+      throw new BadRequestException('No valid company found to assign this employee to.');
+    }
+
+    const releaseEmailLock = this.db.acquireEmailLock(data.email, targetCompany.id);
     let releasePhoneLock = () => {};
     if (data.phone) {
-      releasePhoneLock = this.db.acquirePhoneLock(data.phone);
+      releasePhoneLock = this.db.acquirePhoneLock(data.phone, targetCompany.id);
     }
 
     try {
-      const normalizedEmail = await this.db.assertEmailUnique(data.email, undefined, true);
+      const normalizedEmail = await this.db.assertEmailUnique(data.email, targetCompany.id, undefined, true);
       const normalizedPhone = data.phone
-        ? await this.db.assertPhoneUnique(data.phone, undefined, true)
+        ? await this.db.assertPhoneUnique(data.phone, targetCompany.id, undefined, true)
         : '';
       const userId = `user-${Date.now()}`;
       const newId = userId;
-
-      // Determine target company:
-      // If companyIdOverride is provided (from Admin token or SuperAdmin explicit selection), use it
-      let targetCompanyId = companyIdOverride || data.companyId;
-      let targetCompany: any;
-      if (targetCompanyId) {
-        targetCompany = this.db.companies.find(
-          (c) => c.id === targetCompanyId || c.companyCode === targetCompanyId,
-        );
-        if (!targetCompany) {
-          throw new NotFoundException(
-            `Company with ID or code "${targetCompanyId}" not found. Please provide an existing company.`,
-          );
-        }
-      } else if (this.db.companies.length > 0) {
-        targetCompany = this.db.companies[0];
-      }
-
-      if (!targetCompany) {
-        throw new BadRequestException('No valid company found to assign this employee to.');
-      }
 
       // Scoped automatic generation of sequential employee code (e.g. EMP-000001 per company)
       const employeeCode = this.generateNextEmployeeCode(targetCompany.id);
@@ -333,6 +337,40 @@ export class EmployeesService {
         newEmployee.id,
       );
 
+      // -------------------------------------------------------------
+      // EMAIL INVITATION TRIGGER:
+      // ONLY trigger when an ADMIN creates an EMPLOYEE (Role.ADMIN -> Role.EMPLOYEE)
+      // NEVER trigger when SUPER_ADMIN creates an ADMIN or employee.
+      // -------------------------------------------------------------
+      if (actor?.role === Role.ADMIN && userRole === Role.EMPLOYEE) {
+        try {
+          const invResult = await this.invitationService.createAndSendInvitation({
+            userId: newEmployee.id,
+            email: newEmployee.email,
+            employeeName: `${newEmployee.firstName} ${newEmployee.lastName}`.trim(),
+            companyId: targetCompany.id,
+            companyCode: targetCompany.companyCode,
+            companyName: targetCompany.name || targetCompany.companyName || 'Your Company',
+          });
+          (newEmployee as any).invitation = {
+            id: invResult.invitationId,
+            sent: invResult.sent,
+            error: invResult.error,
+            rawToken: invResult.rawToken,
+          };
+        } catch (invErr: any) {
+          this.db.logAudit(
+            'sys',
+            actorName,
+            'ADMIN',
+            'INVITATION_EMAIL_FAILED',
+            'Employee Management',
+            `Invitation email could not be delivered for employee ${newEmployee.id}: ${invErr.message}`,
+            newEmployee.id,
+          );
+        }
+      }
+
       this.db.persist();
       return newEmployee;
     } finally {
@@ -362,15 +400,15 @@ export class EmployeesService {
       }
     }
 
-    // Global email uniqueness check on update
+    // Company-scoped email uniqueness check on update
     if (data.email) {
-      const normalizedEmail = await this.db.assertEmailUnique(data.email, current.userId || current.id);
+      const normalizedEmail = await this.db.assertEmailUnique(data.email, current.companyId, current.userId || current.id);
       data.email = normalizedEmail;
     }
 
-    // Global phone uniqueness check on update
+    // Company-scoped phone uniqueness check on update
     if (data.phone) {
-      const normalizedPhone = await this.db.assertPhoneUnique(data.phone, current.userId || current.id);
+      const normalizedPhone = await this.db.assertPhoneUnique(data.phone, current.companyId, current.userId || current.id);
       data.phone = normalizedPhone;
     }
 
@@ -425,6 +463,7 @@ export class EmployeesService {
       user.previousExperience = updated.previousExperience;
       user.skills = updated.skills;
       user.salary = updated.salary;
+      if (data.status) user.status = data.status;
       user.updatedAt = new Date().toISOString();
     }
 

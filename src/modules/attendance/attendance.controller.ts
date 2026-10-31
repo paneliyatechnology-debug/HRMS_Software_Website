@@ -55,8 +55,8 @@ export class AttendanceController {
   })
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Today attendance state' })
-  getMyStatus(@Param('userId') userId: string) {
-    return this.attendanceService.getTodayStatus(userId);
+  getMyStatus(@Param('userId') userId: string, @Req() req: any) {
+    return this.attendanceService.getTodayStatus(userId, req.user);
   }
 
   @Post('check-in')
@@ -66,8 +66,8 @@ export class AttendanceController {
   })
   @ApiBody({ type: CheckInDto })
   @ApiResponse({ status: 201, description: 'Check-in recorded successfully' })
-  checkIn(@Body() body: CheckInDto) {
-    return this.attendanceService.checkIn(body);
+  checkIn(@Body() body: CheckInDto, @Req() req: any) {
+    return this.attendanceService.checkIn(body, req.user);
   }
 
   @Post('check-out')
@@ -77,8 +77,8 @@ export class AttendanceController {
   })
   @ApiBody({ type: CheckOutDto })
   @ApiResponse({ status: 201, description: 'Check-out recorded successfully' })
-  checkOut(@Body() body: CheckOutDto) {
-    return this.attendanceService.checkOut(body);
+  checkOut(@Body() body: CheckOutDto, @Req() req: any) {
+    return this.attendanceService.checkOut(body, req.user);
   }
 
   @Post('regularize')
@@ -88,8 +88,8 @@ export class AttendanceController {
   })
   @ApiBody({ type: RegularizeAttendanceDto })
   @ApiResponse({ status: 201, description: 'Attendance regularized successfully' })
-  regularize(@Body() body: RegularizeAttendanceDto) {
-    return this.attendanceService.manualEntry(body);
+  regularize(@Body() body: RegularizeAttendanceDto, @Req() req: any) {
+    return this.attendanceService.manualEntry(body, 'HR Admin', req.user);
   }
 
   @Post('biometric-sync')

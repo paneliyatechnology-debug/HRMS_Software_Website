@@ -1,7 +1,9 @@
 import {
   Controller,
   Get,
+  Post,
   Put,
+  Delete,
   Body,
   Param,
   Req,
@@ -11,13 +13,59 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
 import { DatabaseService } from '../../database/database.service.js';
 import { Role } from '../../common/types.js';
+import { CreateCompanyDto } from '../super-admin/dto/create-company.dto.js';
 import { UpdateCompanyDto } from '../super-admin/dto/update-company.dto.js';
+import { RegisterCompanyRequestDto } from './dto/register-company-request.dto.js';
+import { SuperAdminService } from '../super-admin/super-admin.service.js';
+import { Public } from '../../common/guards/public.decorator.js';
 
 @ApiTags('Companies')
 @ApiBearerAuth()
 @Controller('companies')
 export class CompaniesController {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly superAdminService: SuperAdminService,
+  ) {}
+
+  @Public()
+  @Post()
+  @ApiOperation({
+    summary: 'Register a new company (Public - No Token Required)',
+    description: 'Submits company registration request. Created once Super Admin approves.',
+  })
+  @ApiBody({ type: RegisterCompanyRequestDto })
+  @ApiResponse({ status: 201, description: 'Company registration request submitted successfully' })
+  createCompany(@Body() dto: any) {
+    if (dto.firstName || dto.officialEmail || dto.companyLegalName || dto.password) {
+      return this.superAdminService.createCompanyRegistrationRequest(dto);
+    }
+    return this.superAdminService.createCompany(dto);
+  }
+
+  @Public()
+  @Post('register')
+  @ApiOperation({
+    summary: 'Register a new company (Public - No Token Required, Awaiting Super Admin Approval)',
+    description: 'Submits company information and owner account details. Company is created once Super Admin approves.',
+  })
+  @ApiBody({ type: RegisterCompanyRequestDto })
+  @ApiResponse({ status: 201, description: 'Company registration request submitted successfully (Pending Approval)' })
+  registerCompany(@Body() dto: RegisterCompanyRequestDto) {
+    return this.superAdminService.createCompanyRegistrationRequest(dto);
+  }
+
+  @Public()
+  @Post('registration-request')
+  @ApiOperation({
+    summary: 'Submit company registration request for Super Admin approval',
+    description: 'Submits company information and owner account details. Company is created once Super Admin approves.',
+  })
+  @ApiBody({ type: RegisterCompanyRequestDto })
+  @ApiResponse({ status: 201, description: 'Company registration request submitted successfully (Pending Approval)' })
+  submitCompanyRequest(@Body() dto: RegisterCompanyRequestDto) {
+    return this.superAdminService.createCompanyRegistrationRequest(dto);
+  }
 
   @Get('my-company')
   @ApiOperation({
@@ -83,7 +131,7 @@ export class CompaniesController {
   @ApiParam({ name: 'id', description: 'Company ID or Company Code' })
   @ApiBody({ type: UpdateCompanyDto })
   @ApiResponse({ status: 200, description: 'Company updated successfully' })
-  updateCompany(
+  async updateCompany(
     @Param('id') id: string,
     @Body() dto: UpdateCompanyDto,
     @Req() req: any,
@@ -116,6 +164,15 @@ export class CompaniesController {
       }
     }
 
+    await this.db.assertCompanyUnique(
+      {
+        companyName: dto.companyName || dto.name,
+        email: dto.email,
+        phone: dto.phone,
+      },
+      company.id,
+    );
+
     if (dto.companyName) {
       company.companyName = dto.companyName;
       company.name = dto.companyName;
@@ -145,5 +202,20 @@ export class CompaniesController {
 
     this.db.persist();
     return company;
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Delete company and cascade delete all associated users, employees, and data',
+    description: 'Permanently deletes company and cascades deletion across all tables in MySQL and runtime memory.',
+  })
+  @ApiParam({ name: 'id', description: 'Company ID or Company Code' })
+  @ApiResponse({ status: 200, description: 'Company and all associated data permanently deleted' })
+  deleteCompany(@Param('id') id: string, @Req() req: any) {
+    const user = req.user;
+    if (user.role !== Role.SUPER_ADMIN && !user.isSuperAdmin) {
+      throw new ForbiddenException('Only Super Admin can delete a company.');
+    }
+    return this.superAdminService.deleteCompany(id, user);
   }
 }

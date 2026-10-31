@@ -84,10 +84,11 @@ async function generate() {
             script: {
               exec: [
                 'var jsonData = pm.response.json();',
-                'if (jsonData.accessToken) {',
-                '    pm.collectionVariables.set("token", jsonData.accessToken);',
-                '    pm.environment.set("token", jsonData.accessToken);',
-                '    console.log("Super Admin Token Saved:", jsonData.accessToken);',
+                'var token = jsonData.accessToken || jsonData.token;',
+                'if (token) {',
+                '    pm.collectionVariables.set("token", token);',
+                '    pm.environment.set("token", token);',
+                '    console.log("Super Admin Token Saved:", token);',
                 '}',
                 'pm.test("Status is 200/201", function () {',
                 '    pm.expect(pm.response.code).to.be.oneOf([200, 201]);',
@@ -219,11 +220,12 @@ async function generate() {
             script: {
               exec: [
                 'var jsonData = pm.response.json();',
-                'if (jsonData.accessToken) {',
-                '    pm.collectionVariables.set("token", jsonData.accessToken);',
-                '    pm.collectionVariables.set("adminToken", jsonData.accessToken);',
-                '    pm.environment.set("token", jsonData.accessToken);',
-                '    pm.environment.set("adminToken", jsonData.accessToken);',
+                'var token = jsonData.accessToken || jsonData.token;',
+                'if (token) {',
+                '    pm.collectionVariables.set("token", token);',
+                '    pm.collectionVariables.set("adminToken", token);',
+                '    pm.environment.set("token", token);',
+                '    pm.environment.set("adminToken", token);',
                 '    console.log("Logged in as Company Admin:", jsonData.user.email);',
                 '}',
                 'pm.test("Admin Login Successful", function () {',
@@ -610,8 +612,8 @@ async function generate() {
         response: [],
       };
 
-      // Add auto-save script for login and register endpoints
-      if ((pathStr === '/api/auth/login' || pathStr === '/api/auth/register') && method === 'post') {
+      // Add auto-save script for login, register, and refresh endpoints
+      if ((pathStr === '/api/auth/login' || pathStr === '/api/auth/register' || pathStr === '/api/auth/refresh') && method === 'post') {
         postmanRequest.request.auth = { type: 'noauth' };
         postmanRequest.event = [
           {
@@ -619,10 +621,15 @@ async function generate() {
             script: {
               exec: [
                 'var jsonData = pm.response.json();',
-                'if (jsonData.accessToken) {',
-                '    pm.collectionVariables.set("token", jsonData.accessToken);',
-                '    pm.environment.set("token", jsonData.accessToken);',
-                '    console.log("Auth token auto-saved:", jsonData.accessToken);',
+                'var token = jsonData.accessToken || jsonData.token;',
+                'if (token) {',
+                '    pm.collectionVariables.set("token", token);',
+                '    pm.environment.set("token", token);',
+                '    console.log("Auth token auto-saved:", token);',
+                '}',
+                'if (jsonData.refreshToken) {',
+                '    pm.collectionVariables.set("refreshToken", jsonData.refreshToken);',
+                '    pm.environment.set("refreshToken", jsonData.refreshToken);',
                 '}',
                 'if (jsonData.user && jsonData.user.companyId) {',
                 '    pm.collectionVariables.set("companyId", jsonData.user.companyId);',

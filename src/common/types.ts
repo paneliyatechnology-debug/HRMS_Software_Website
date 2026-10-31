@@ -84,8 +84,37 @@ export interface Company {
   email?: string;
   phone?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  gstin?: string;
+  industrySector?: string;
   status: 'Active' | 'Inactive';
   adminUserId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CompanyRegistrationRequest {
+  id: string;
+  companyLegalName: string;
+  gstin?: string;
+  industrySector?: string;
+  officeAddress?: string;
+  city?: string;
+  state?: string;
+  firstName: string;
+  lastName: string;
+  officialEmail: string;
+  mobileNumber: string;
+  passwordHash: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  rejectionReason?: string;
+  approvedCompanyId?: string;
+  approvedCompanyCode?: string;
+  approvedAdminUserId?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -173,6 +202,8 @@ export interface Department {
   headName?: string;
   employeeCount: number;
   description?: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   createdAt: string;
 }
 
@@ -183,6 +214,8 @@ export interface Designation {
   departmentName?: string;
   minSalary: number;
   maxSalary: number;
+  companyId?: string | null;
+  companyCode?: string | null;
   createdAt: string;
 }
 
@@ -273,6 +306,8 @@ export interface Employee {
 export interface AttendanceRecord {
   id: string;
   employeeId: string;
+  companyId?: string;
+  companyCode?: string;
   employeeName?: string;
   date: string;
   checkIn: string;
@@ -323,6 +358,8 @@ export interface WorkSession {
 export interface LeaveRequest {
   id: string;
   employeeId: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   employeeName: string;
   employeeAvatar?: string;
   departmentName: string;
@@ -345,6 +382,8 @@ export interface LeaveRequest {
 export interface LeaveBalance {
   id: string;
   employeeId: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   year: number;
   casualLeave: { total: number; used: number; remaining: number };
   sickLeave: { total: number; used: number; remaining: number };
@@ -360,10 +399,14 @@ export interface Holiday {
   type: 'Public' | 'Optional' | 'Company';
   description: string;
   locationId?: string;
+  companyId?: string | null;
+  companyCode?: string | null;
 }
 
 export interface PayrollRecord {
   id: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   payrollMonth: string; // e.g. "2026-10"
   employeeId: string;
   employeeName: string;
@@ -389,6 +432,8 @@ export interface PayrollRecord {
 
 export interface EmployeeDocument {
   id: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   employeeId: string;
   employeeName?: string;
   title: string;
@@ -403,6 +448,8 @@ export interface EmployeeDocument {
 
 export interface PerformanceCycle {
   id: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   title: string;
   year: number;
   period: string; // "Q1 2026", "Annual 2026"
@@ -413,6 +460,8 @@ export interface PerformanceCycle {
 
 export interface PerformanceReview {
   id: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   cycleId: string;
   cycleTitle: string;
   employeeId: string;
@@ -437,6 +486,8 @@ export interface PerformanceReview {
 
 export interface TrainingProgram {
   id: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   title: string;
   description: string;
   trainerName: string;
@@ -450,6 +501,8 @@ export interface TrainingProgram {
 
 export interface EmployeeTraining {
   id: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   trainingId: string;
   trainingTitle: string;
   employeeId: string;
@@ -462,6 +515,8 @@ export interface EmployeeTraining {
 
 export interface JobOpening {
   id: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   title: string;
   departmentId: string;
   departmentName: string;
@@ -480,6 +535,8 @@ export interface JobOpening {
 
 export interface Candidate {
   id: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   jobId: string;
   jobTitle: string;
   fullName: string;
@@ -507,6 +564,8 @@ export interface Candidate {
 
 export interface CompanyAsset {
   id: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   assetCode: string;
   name: string;
   category: 'Laptop' | 'Monitor' | 'Mobile' | 'Access Card' | 'Vehicle' | 'Other';
@@ -521,6 +580,8 @@ export interface CompanyAsset {
 
 export interface Resignation {
   id: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   employeeId: string;
   employeeName: string;
   employeeCode: string;
@@ -546,6 +607,8 @@ export interface Resignation {
 
 export interface Announcement {
   id: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   title: string;
   content: string;
   publishDate: string;
@@ -558,6 +621,8 @@ export interface Announcement {
 
 export interface NotificationItem {
   id: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   userId?: string;
   title: string;
   message: string;
@@ -569,6 +634,8 @@ export interface NotificationItem {
 
 export interface AuditLog {
   id: string;
+  companyId?: string | null;
+  companyCode?: string | null;
   userId: string;
   userName: string;
   userRole: string;
@@ -577,5 +644,31 @@ export interface AuditLog {
   recordId?: string;
   details: string;
   ipAddress: string;
+  createdAt: string;
+}
+
+export interface RefreshToken {
+  id: string;
+  userId: string;
+  companyId: string;
+  companyCode: string;
+  tokenHash: string;
+  familyId: string;
+  isRevoked: boolean;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmployeeInvitation {
+  id: string;
+  userId: string;
+  email: string;
+  companyId: string;
+  companyCode: string;
+  tokenHash: string;
+  expiresAt: string;
+  usedAt?: string | null;
+  revokedAt?: string | null;
   createdAt: string;
 }

@@ -50,17 +50,27 @@ export class AttendanceService {
     let list = [...this.db.attendanceRecords];
 
     // Company isolation for ADMIN or EMPLOYEE
-    if (actorUser && (actorUser.role === Role.ADMIN || actorUser.role === Role.EMPLOYEE)) {
-      if (actorUser.companyId) {
-        const companyUserIds = new Set(
-          this.db.users.filter((u) => u.companyId === actorUser.companyId).map((u) => u.id),
+    if (actorUser) {
+      if (actorUser.role === Role.EMPLOYEE) {
+        list = list.filter(
+          (a) =>
+            a.employeeId === actorUser.id ||
+            (a as any).userId === actorUser.id ||
+            (actorUser.employeeId && a.employeeId === actorUser.employeeId),
         );
-        list = list.filter((a) => {
-          const user = this.db.users.find(
-            (u) => u.id === a.employeeId || u.employeeId === a.employeeId || (a as any).userId === u.id,
+      } else if (actorUser.role === Role.ADMIN) {
+        if (actorUser.companyId) {
+          const companyUserIds = new Set(
+            this.db.users.filter((u) => u.companyId === actorUser.companyId).map((u) => u.id),
           );
-          return user ? companyUserIds.has(user.id) : companyUserIds.has(a.employeeId);
-        });
+          list = list.filter((a) => {
+            if (a.companyId) return a.companyId === actorUser.companyId;
+            const user = this.db.users.find(
+              (u) => u.id === a.employeeId || u.employeeId === a.employeeId || (a as any).userId === u.id,
+            );
+            return user ? companyUserIds.has(user.id) : companyUserIds.has(a.employeeId);
+          });
+        }
       }
     }
 
@@ -117,7 +127,7 @@ export class AttendanceService {
       .sort((a, b) => (b.date > a.date ? 1 : -1));
   }
 
-  getTodayStatus(employeeId: string) {
+  getTodayStatus(employeeId: string, actorUser?: User) {
     const user = this.db.resolveUser
       ? this.db.resolveUser(employeeId)
       : this.db.users?.find(
@@ -127,6 +137,24 @@ export class AttendanceService {
             (u.email && u.email.toLowerCase() === employeeId.toLowerCase()),
         );
     const targetUserId = user ? user.id : employeeId;
+
+    if (actorUser) {
+      if (
+        actorUser.role === Role.EMPLOYEE &&
+        actorUser.id !== targetUserId &&
+        actorUser.employeeId !== employeeId
+      ) {
+        throw new ForbiddenException('Employees can only view their own punch clock status');
+      }
+      if (
+        actorUser.role === Role.ADMIN &&
+        user?.companyId &&
+        actorUser.companyId &&
+        user.companyId !== actorUser.companyId
+      ) {
+        throw new ForbiddenException('Cannot access attendance of another company');
+      }
+    }
     const today = new Date().toISOString().split('T')[0];
     const record = this.db.attendanceRecords.find(
       (a) => (a.employeeId === targetUserId || a.employeeId === employeeId) && a.date === today,
@@ -172,8 +200,11 @@ export class AttendanceService {
     return resObj;
   }
 
-  checkIn(dto: CheckInDto) {
-    const targetId = (dto as any).userId || dto.employeeId;
+  checkIn(dto: CheckInDto, actorUser?: User) {
+    let targetId = (dto as any).userId || dto.employeeId;
+    if (actorUser && actorUser.role === Role.EMPLOYEE) {
+      targetId = actorUser.id;
+    }
     const { remarks } = dto;
     const today = new Date().toISOString().split('T')[0];
     const user = this.db.resolveUser
@@ -185,6 +216,13 @@ export class AttendanceService {
             (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
         );
     if (!user) throw new NotFoundException('User record not found');
+
+    if (actorUser && actorUser.role === Role.ADMIN && actorUser.companyId) {
+      if (user.companyId && user.companyId !== actorUser.companyId) {
+        throw new ForbiddenException('Cannot clock in employee of another company');
+      }
+    }
+
     const realUserId = user.id;
 
     const now = new Date();
@@ -198,6 +236,8 @@ export class AttendanceService {
 
     if (record) {
       record.employeeId = realUserId;
+      record.companyId = record.companyId || user.companyId || actorUser?.companyId || '';
+      record.companyCode = record.companyCode || user.companyCode || actorUser?.companyCode || '';
       record.checkIn = record.checkIn || timeStr;
       record.checkOut = '';
       record.status = punchStatus;
@@ -206,6 +246,8 @@ export class AttendanceService {
       record = {
         id: `att-${Date.now()}`,
         employeeId: realUserId,
+        companyId: user.companyId || actorUser?.companyId || '',
+        companyCode: user.companyCode || actorUser?.companyCode || '',
         employeeName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
         date: today,
         checkIn: timeStr,
@@ -256,8 +298,11 @@ export class AttendanceService {
     return resObj;
   }
 
-  checkOut(dto: CheckOutDto) {
-    const targetId = (dto as any).userId || dto.employeeId;
+  checkOut(dto: CheckOutDto, actorUser?: User) {
+    let targetId = (dto as any).userId || dto.employeeId;
+    if (actorUser && actorUser.role === Role.EMPLOYEE) {
+      targetId = actorUser.id;
+    }
     const { remarks } = dto;
     const today = new Date().toISOString().split('T')[0];
 
@@ -270,6 +315,13 @@ export class AttendanceService {
             (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
         );
     if (!user) throw new NotFoundException('User record not found');
+
+    if (actorUser && actorUser.role === Role.ADMIN && actorUser.companyId) {
+      if (user.companyId && user.companyId !== actorUser.companyId) {
+        throw new ForbiddenException('Cannot clock out employee of another company');
+      }
+    }
+
     const realUserId = user.id;
 
     let record = this.db.attendanceRecords.find(
@@ -283,6 +335,8 @@ export class AttendanceService {
       record = {
         id: `att-${Date.now()}`,
         employeeId: realUserId,
+        companyId: user.companyId || actorUser?.companyId || '',
+        companyCode: user.companyCode || actorUser?.companyCode || '',
         employeeName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
         date: today,
         checkIn: '09:00 AM',
@@ -296,6 +350,8 @@ export class AttendanceService {
       };
       this.db.attendanceRecords.unshift(record);
     } else {
+      record.companyId = record.companyId || user.companyId || actorUser?.companyId || '';
+      record.companyCode = record.companyCode || user.companyCode || actorUser?.companyCode || '';
       record.checkOut = timeStr;
       record.workingHours = record.workingHours > 0 ? record.workingHours : 8.5;
       record.overtimeHours =
@@ -339,7 +395,11 @@ export class AttendanceService {
     return resObj;
   }
 
-  manualEntry(data: RegularizeAttendanceDto, actorName = 'HR Admin') {
+  manualEntry(data: RegularizeAttendanceDto, actorName = 'HR Admin', actorUser?: User) {
+    if (actorUser && actorUser.role === Role.EMPLOYEE) {
+      throw new ForbiddenException('Employees cannot regularize attendance');
+    }
+
     const targetId = (data as any).userId || data.employeeId;
     const user = this.db.resolveUser
       ? this.db.resolveUser(targetId)
@@ -350,11 +410,20 @@ export class AttendanceService {
             (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
         );
     if (!user) throw new NotFoundException('User record not found');
+
+    if (actorUser && actorUser.role === Role.ADMIN && actorUser.companyId) {
+      if (user.companyId && user.companyId !== actorUser.companyId) {
+        throw new ForbiddenException('Cannot regularize attendance of employee from another company');
+      }
+    }
+
     const realUserId = user.id;
 
     const newRecord: AttendanceRecord = {
       id: `att-manual-${Date.now()}`,
       employeeId: realUserId,
+      companyId: user.companyId || actorUser?.companyId || '',
+      companyCode: user.companyCode || actorUser?.companyCode || '',
       employeeName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
       date: data.date,
       checkIn: data.checkIn,

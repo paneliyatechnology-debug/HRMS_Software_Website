@@ -137,6 +137,18 @@ export class AdminController {
     return this.adminService.deleteEmployee(req.user, id);
   }
 
+  @Post('employees/:id/resend-invitation')
+  @ApiOperation({
+    summary: 'Resend password setup email invitation to employee',
+    description: 'Generates a new secure 30-minute one-time token, revokes previous invitations, and dispatches email via SMTP.',
+  })
+  @ApiParam({ name: 'id', description: 'Employee ID, code, or registered email' })
+  @ApiResponse({ status: 200, description: 'Invitation email resent successfully' })
+  @ApiResponse({ status: 404, description: 'Employee not found in company' })
+  resendInvitation(@Req() req: any, @Param('id') id: string) {
+    return this.adminService.resendEmployeeInvitation(req.user, id);
+  }
+
   // -------------------------------------------------------------
   // 4. ATTENDANCE MANAGEMENT (COMPANY SCOPED)
   // -------------------------------------------------------------

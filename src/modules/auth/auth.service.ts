@@ -1,7 +1,10 @@
-import { Injectable, UnauthorizedException, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
 import { DatabaseService } from '../../database/database.service.js';
-import { User, Role, Employee, EmployeeStatus } from '../../common/types.js';
+import { User, Role, Employee, EmployeeStatus, RefreshToken } from '../../common/types.js';
 import { RegisterDto } from './dto/register.dto.js';
+import { SetEmployeePasswordDto } from './dto/set-employee-password.dto.js';
 import { hashPassword, comparePassword } from '../../common/utils/password.util.js';
 
 function matchPhone(phoneA?: string, phoneB?: string): boolean {
@@ -20,40 +23,111 @@ function matchPhone(phoneA?: string, phoneB?: string): boolean {
 export class AuthService {
   constructor(private readonly db: DatabaseService) {}
 
+  public generateAccessToken(user: User): string {
+    const payload = {
+      sub: user.id,
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      companyId: user.companyId || 'cmp-1',
+      companyCode: user.companyCode || 'CMP-000001',
+      jti: crypto.randomUUID(),
+    };
+    const secret = process.env.JWT_SECRET || 'enterprise_hrms_jwt_secret_key_2026';
+    const expiresIn = (process.env.JWT_ACCESS_EXPIRES_IN || '30m') as any;
+    return jwt.sign(payload, secret, { expiresIn });
+  }
+
+  public generateToken(user: User): string {
+    return this.generateAccessToken(user);
+  }
+
+  public async createRefreshToken(
+    user: User,
+    existingFamilyId?: string,
+  ): Promise<{ rawToken: string; record: RefreshToken }> {
+    const rawToken = crypto.randomBytes(40).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const familyId = existingFamilyId || `fam-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+    const expiresDays = Number(process.env.REFRESH_TOKEN_EXPIRES_DAYS) || 7;
+    const expiresAt = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000).toISOString();
+    const now = new Date().toISOString();
+
+    const record: RefreshToken = {
+      id: `rt-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+      userId: user.id,
+      companyId: user.companyId || 'cmp-1',
+      companyCode: user.companyCode || 'CMP-000001',
+      tokenHash,
+      familyId,
+      isRevoked: false,
+      expiresAt,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.db.refreshTokens.push(record);
+    this.db.persist();
+    return { rawToken, record };
+  }
+
+  public setRefreshCookie(res: any, refreshToken: string) {
+    if (!res || typeof res.cookie !== 'function') return;
+    const expiresDays = Number(process.env.REFRESH_TOKEN_EXPIRES_DAYS) || 7;
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production' || process.env.COOKIE_SECURE === 'true',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: expiresDays * 24 * 60 * 60 * 1000,
+    });
+  }
+
+  public clearRefreshCookie(res: any) {
+    if (!res || typeof res.clearCookie !== 'function') return;
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production' || process.env.COOKIE_SECURE === 'true',
+      sameSite: 'lax',
+      path: '/',
+    });
+  }
+
   async register(data: RegisterDto) {
-    const releaseEmailLock = this.db.acquireEmailLock(data.email);
+    const role = data.role || Role.EMPLOYEE;
+    const isSuperAdmin = role === Role.SUPER_ADMIN;
+
+    // Determine target company:
+    let targetCompany: any;
+    if (data.companyId) {
+      targetCompany = this.db.companies.find(
+        (c) => c.id === data.companyId || c.companyCode === data.companyId,
+      );
+      if (!targetCompany) {
+        throw new NotFoundException(`Company with ID or code "${data.companyId}" not found.`);
+      }
+    } else if (role !== Role.SUPER_ADMIN && this.db.companies.length > 0) {
+      targetCompany = this.db.companies[0];
+    }
+
+    const companyScopeId = targetCompany ? targetCompany.id : null;
+    const releaseEmailLock = this.db.acquireEmailLock(data.email, companyScopeId);
     let releasePhoneLock = () => {};
     if (data.phone) {
-      releasePhoneLock = this.db.acquirePhoneLock(data.phone);
+      releasePhoneLock = this.db.acquirePhoneLock(data.phone, companyScopeId);
     }
 
     try {
-      const normalizedEmail = await this.db.assertEmailUnique(data.email, undefined, true);
+      const normalizedEmail = await this.db.assertEmailUnique(data.email, companyScopeId, undefined, true);
       const normalizedPhone = data.phone
-        ? await this.db.assertPhoneUnique(data.phone, undefined, true)
+        ? await this.db.assertPhoneUnique(data.phone, companyScopeId, undefined, true)
         : '';
       const userId = `user-${Date.now()}`;
       const employeeId = userId;
-      const role = data.role || Role.EMPLOYEE;
 
       const department = this.db.departments.find((d) => d.id === data.departmentId);
       const designation = this.db.designations.find((d) => d.id === data.designationId);
       const location = this.db.locations[0];
-
-      const isSuperAdmin = role === Role.SUPER_ADMIN;
-
-      // Determine target company:
-      let targetCompany: any;
-      if (data.companyId) {
-        targetCompany = this.db.companies.find(
-          (c) => c.id === data.companyId || c.companyCode === data.companyId,
-        );
-        if (!targetCompany) {
-          throw new NotFoundException(`Company with ID or code "${data.companyId}" not found.`);
-        }
-      } else if (role !== Role.SUPER_ADMIN && this.db.companies.length > 0) {
-        targetCompany = this.db.companies[0];
-      }
 
       const hashedPassword = hashPassword(data.password);
 
@@ -196,12 +270,17 @@ export class AuthService {
 
       this.db.persist();
 
-      const token = `jwt_token_${newUser.id}_${Date.now()}`;
+      const token = this.generateAccessToken(newUser);
+      const { rawToken: refreshToken } = await this.createRefreshToken(newUser);
+
       return {
         message: 'User registered successfully',
+        requestToken: token,
+        refreshToken,
         accessToken: token,
         user: {
           id: newUser.id,
+          userId: newUser.id,
           email: newUser.email,
           firstName: newUser.firstName,
           lastName: newUser.lastName,
@@ -210,7 +289,7 @@ export class AuthService {
           status: newUser.status || 'Active',
           companyId: newUser.companyId || (this.db.companies[0]?.id || null),
           companyCode: newUser.companyCode || (this.db.companies[0]?.companyCode || null),
-          employeeId: newUser.employeeId,
+          employeeId: newUser.id,
           employeeCode: newUser.employeeCode,
           avatarUrl: newUser.avatarUrl,
         },
@@ -221,7 +300,7 @@ export class AuthService {
     }
   }
 
-  login(identifier: string, password?: string) {
+  async login(identifier: string, password?: string, companyCode?: string) {
     if (!identifier || typeof identifier !== 'string') {
       throw new UnauthorizedException('Email address or mobile number is required.');
     }
@@ -229,32 +308,28 @@ export class AuthService {
     const cleanInput = identifier.trim();
     const isEmailInput = cleanInput.includes('@');
 
-    let user: User | undefined;
+    let matchingUsers: User[] = [];
 
     if (isEmailInput) {
-      // 1. Search directly by email
-      user = this.db.users.find(
-        (u) => u.email.toLowerCase() === cleanInput.toLowerCase(),
-      );
+      const lowerEmail = cleanInput.toLowerCase();
+      matchingUsers = this.db.users.filter((u) => u.email.toLowerCase() === lowerEmail);
+
       // Fallback for admin aliases (e.g. admin@paneliya.com -> superadmin@paneliya.com)
-      if (!user && (cleanInput.toLowerCase() === 'admin@paneliya.com' || cleanInput.toLowerCase() === 'admin@gmail.com')) {
-        user = this.db.users.find(
+      if (matchingUsers.length === 0 && (lowerEmail === 'admin@paneliya.com' || lowerEmail === 'admin@gmail.com')) {
+        const superAdmin = this.db.users.find(
           (u) => u.email.toLowerCase() === 'superadmin@paneliya.com' || u.role === Role.SUPER_ADMIN,
         );
+        if (superAdmin) matchingUsers.push(superAdmin);
       }
     } else {
       // 2. Search by mobile/phone number
       // Collect all candidate users that match the given mobile number
-      const candidateUsers: User[] = [];
-
-      // 2a. Direct user phone
       for (const u of this.db.users) {
         if (u.phone && matchPhone(u.phone, cleanInput)) {
-          if (!candidateUsers.some((c) => c.id === u.id)) candidateUsers.push(u);
+          if (!matchingUsers.some((c) => c.id === u.id)) matchingUsers.push(u);
         }
       }
 
-      // 2b. Check linked employee phone
       for (const emp of this.db.employees) {
         if (emp.phone && matchPhone(emp.phone, cleanInput)) {
           const linkedUser = this.db.users.find(
@@ -263,39 +338,142 @@ export class AuthService {
               u.employeeId === emp.id ||
               (u.email && emp.email && u.email.toLowerCase() === emp.email.toLowerCase()),
           );
-          if (linkedUser && !candidateUsers.some((c) => c.id === linkedUser.id)) {
-            candidateUsers.push(linkedUser);
+          if (linkedUser && !matchingUsers.some((c) => c.id === linkedUser.id)) {
+            matchingUsers.push(linkedUser);
           }
         }
       }
 
-      // 2c. Check company admin phone
       for (const comp of this.db.companies) {
         if (comp.phone && matchPhone(comp.phone, cleanInput) && comp.adminUserId) {
           const linkedAdmin = this.db.users.find((u) => u.id === comp.adminUserId);
-          if (linkedAdmin && !candidateUsers.some((c) => c.id === linkedAdmin.id)) {
-            candidateUsers.push(linkedAdmin);
+          if (linkedAdmin && !matchingUsers.some((c) => c.id === linkedAdmin.id)) {
+            matchingUsers.push(linkedAdmin);
           }
         }
       }
 
-      if (candidateUsers.length === 1) {
-        user = candidateUsers[0];
-      } else if (candidateUsers.length > 1) {
-        // If multiple users match this phone number, match the one with valid password
-        if (password) {
-          user = candidateUsers.find((u) => u.password && comparePassword(password, u.password));
-        }
-        if (!user) {
-          user = candidateUsers[0];
-        }
-      }
-
-      // 2d. Fallback: match by email string without @
-      if (!user) {
-        user = this.db.users.find(
+      // Fallback: match by email string without @
+      if (matchingUsers.length === 0) {
+        matchingUsers = this.db.users.filter(
           (u) => u.email.toLowerCase() === cleanInput.toLowerCase(),
         );
+      }
+    }
+
+    if (matchingUsers.length === 0) {
+      // Check if this email or phone belongs to a pending company registration request
+      const cleanPhone = cleanInput.replace(/\D/g, '');
+      let pendingReq = this.db.companyRegistrationRequests.find(
+        (r) =>
+          r.status === 'PENDING' &&
+          (r.officialEmail.toLowerCase() === cleanInput.toLowerCase() ||
+            (cleanPhone && r.mobileNumber && r.mobileNumber.replace(/\D/g, '') === cleanPhone)),
+      );
+
+      if (!pendingReq && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+        try {
+          const pool = this.db.getMysqlPool();
+          if (pool) {
+            const [rows]: any = await pool.query(
+              `SELECT * FROM company_registration_requests 
+               WHERE (LOWER(officialEmail) = ? OR (mobileNumber = ? AND mobileNumber != '')) 
+               AND status = 'PENDING' LIMIT 1`,
+              [cleanInput.toLowerCase(), cleanPhone || '___none___'],
+            );
+            if (rows && rows.length > 0) {
+              pendingReq = rows[0];
+            }
+          }
+        } catch {}
+      }
+
+      if (pendingReq) {
+        throw new UnauthorizedException('Please wait untill Super-admin approve your company request');
+      }
+
+      // Check if rejected
+      let rejectedReq = this.db.companyRegistrationRequests.find(
+        (r) =>
+          r.status === 'REJECTED' &&
+          (r.officialEmail.toLowerCase() === cleanInput.toLowerCase() ||
+            (cleanPhone && r.mobileNumber && r.mobileNumber.replace(/\D/g, '') === cleanPhone)),
+      );
+
+      if (!rejectedReq && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+        try {
+          const pool = this.db.getMysqlPool();
+          if (pool) {
+            const [rows]: any = await pool.query(
+              `SELECT * FROM company_registration_requests 
+               WHERE (LOWER(officialEmail) = ? OR (mobileNumber = ? AND mobileNumber != '')) 
+               AND status = 'REJECTED' LIMIT 1`,
+              [cleanInput.toLowerCase(), cleanPhone || '___none___'],
+            );
+            if (rows && rows.length > 0) {
+              rejectedReq = rows[0];
+            }
+          }
+        } catch {}
+      }
+
+      if (rejectedReq) {
+        throw new UnauthorizedException(
+          `Your company registration request was rejected: ${rejectedReq.rejectionReason || 'Please contact Super Admin.'}`,
+        );
+      }
+
+      throw new UnauthorizedException(
+        isEmailInput
+          ? 'Invalid credentials. Please check email and password.'
+          : 'Invalid credentials. Please check mobile number and password.',
+      );
+    }
+
+    let user: User | undefined;
+
+    // Disambiguation when multiple matching accounts exist across companies
+    if (matchingUsers.length > 1) {
+      if (companyCode) {
+        const cleanCode = companyCode.trim().toLowerCase();
+        user = matchingUsers.find(
+          (u) =>
+            u.companyCode?.toLowerCase() === cleanCode ||
+            u.companyId?.toLowerCase() === cleanCode,
+        );
+        if (!user) {
+          throw new UnauthorizedException(
+            `No account found matching this identifier for company "${companyCode}".`,
+          );
+        }
+      } else {
+        throw new ConflictException({
+          statusCode: 409,
+          message:
+            'Multiple accounts found across companies for this login identifier. Please provide companyCode to select your company account.',
+          companies: matchingUsers.map((u) => {
+            const comp = this.db.companies.find((c) => c.id === u.companyId);
+            return {
+              companyId: u.companyId,
+              companyCode: u.companyCode || comp?.companyCode || null,
+              companyName: comp?.companyName || u.companyCode || 'Company Account',
+              role: u.role,
+            };
+          }),
+        });
+      }
+    } else {
+      user = matchingUsers[0];
+      if (companyCode) {
+        const cleanCode = companyCode.trim().toLowerCase();
+        const matchesCode =
+          user.companyCode?.toLowerCase() === cleanCode ||
+          user.companyId?.toLowerCase() === cleanCode;
+        if (!matchesCode && user.role !== Role.SUPER_ADMIN) {
+          throw new UnauthorizedException(
+            `Account does not belong to specified company "${companyCode}".`,
+          );
+        }
       }
     }
 
@@ -305,6 +483,68 @@ export class AuthService {
           ? 'Invalid credentials. Please check email and password.'
           : 'Invalid credentials. Please check mobile number and password.',
       );
+    }
+
+    // Live MySQL Verification:
+    // If deleted directly in phpMyAdmin or database, verify user still exists in live MySQL
+    if (this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+      try {
+        const [liveUserRows]: any = await this.db.getMysqlPool()!.query(
+          `SELECT id FROM users WHERE id = ? LIMIT 1`,
+          [user.id],
+        );
+        if (!liveUserRows || liveUserRows.length === 0) {
+          // User was deleted directly in phpMyAdmin/MySQL!
+          this.db.users = this.db.users.filter((u) => u.id !== user!.id);
+          this.db.employees = this.db.employees.filter(
+            (e) => e.userId !== user!.id && e.id !== user!.employeeId,
+          );
+          throw new UnauthorizedException(
+            isEmailInput
+              ? 'Invalid credentials. Please check email and password.'
+              : 'Invalid credentials. Please check mobile number and password.',
+          );
+        }
+      } catch (checkErr: any) {
+        if (checkErr instanceof UnauthorizedException) throw checkErr;
+      }
+    }
+
+    // Strict Company Existence Verification:
+    // If the user is NOT a Super Admin, their company MUST exist in live MySQL.
+    // If their company was deleted (via API or phpMyAdmin), deny login immediately and purge memory!
+    const isSuper = user.role === Role.SUPER_ADMIN || user.isSuperAdmin === true;
+    if (!isSuper) {
+      const compId = (user.companyId || '').trim();
+      const compCode = (user.companyCode || '').trim();
+
+      let companyExistsInDb = false;
+      if (this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+        try {
+          const [compRows]: any = await this.db.getMysqlPool()!.query(
+            `SELECT id FROM companies WHERE id = ? OR companyCode = ? LIMIT 1`,
+            [compId || '___none___', compCode || '___none___'],
+          );
+          companyExistsInDb = compRows && compRows.length > 0;
+        } catch {
+          companyExistsInDb = false;
+        }
+      } else {
+        companyExistsInDb = this.db.companies.some(
+          (c) =>
+            (compId && c.id.toLowerCase() === compId.toLowerCase()) ||
+            (compCode && c.companyCode?.toLowerCase() === compCode.toLowerCase()),
+        );
+      }
+
+      if (!companyExistsInDb) {
+        // The company was deleted from backend or phpMyAdmin!
+        // Immediately purge the company data completely from DB & memory
+        await this.db.purgeCompanyCompletely(compId, compCode);
+        throw new UnauthorizedException(
+          'Your company account no longer exists or has been deleted. Access denied.',
+        );
+      }
     }
 
     if (!password) {
@@ -348,7 +588,9 @@ export class AuthService {
       this.db.persist();
     }
 
-    const token = `jwt_token_${user.id}_${Date.now()}`;
+    const token = this.generateAccessToken(user);
+    const { rawToken: refreshToken } = await this.createRefreshToken(user);
+
     this.db.logAudit(
       user.id,
       `${user.firstName} ${user.lastName}`,
@@ -360,9 +602,12 @@ export class AuthService {
     );
 
     return {
+      requestToken: token,
+      refreshToken,
       accessToken: token,
       user: {
         id: user.id,
+        userId: user.id,
         email: user.email,
         phone: user.phone || '',
         firstName: user.firstName,
@@ -372,7 +617,7 @@ export class AuthService {
         status: user.status || 'Active',
         companyId: user.companyId || null,
         companyCode: user.companyCode || null,
-        employeeId: user.employeeId,
+        employeeId: user.id,
         employeeCode: user.employeeCode,
         avatarUrl: user.avatarUrl,
       },
@@ -402,13 +647,26 @@ export class AuthService {
       );
     }
 
-    // 1. Try matching pattern: jwt_token_<userId>_<timestamp>
+    // 1. Try decoding as standard signed JWT
+    try {
+      const secret = process.env.JWT_SECRET || 'enterprise_hrms_jwt_secret_key_2026';
+      const decoded = jwt.verify(clean, secret) as any;
+      if (decoded && (decoded.sub || decoded.userId || decoded.id || decoded.email)) {
+        return decoded.sub || decoded.userId || decoded.id || decoded.email;
+      }
+    } catch (jwtErr: any) {
+      if (jwtErr?.name === 'TokenExpiredError') {
+        throw new UnauthorizedException('Authentication token has expired. Please login again.');
+      }
+    }
+
+    // 2. Legacy token fallback (e.g. jwt_token_<userId>_<timestamp>)
     const match = clean.match(/jwt_token_([^_]+)/i);
     if (match && match[1]) {
       return match[1];
     }
 
-    // 2. Direct userId (e.g. user-123...)
+    // 3. Direct userId (e.g. user-123...)
     if (clean.startsWith('user-')) {
       return clean.split('_')[0];
     }
@@ -440,28 +698,241 @@ export class AuthService {
     const { password: _, ...safeUser } = user;
     return {
       ...safeUser,
+      id: user.id,
+      userId: user.id,
+      employeeId: user.id,
       isSuperAdmin: user.isSuperAdmin ?? (user.role === Role.SUPER_ADMIN),
       status: user.status || 'Active',
     };
   }
 
-  switchRole(targetRole: Role) {
+  async switchRole(targetRole: Role) {
     const matchedUser = this.db.users.find((u) => u.role === targetRole);
     if (!matchedUser) {
       throw new NotFoundException(`No user found with role "${targetRole}"`);
     }
     const { password: _, ...safeUser } = matchedUser;
+    const token = this.generateAccessToken(matchedUser);
+    const { rawToken: refreshToken } = await this.createRefreshToken(matchedUser);
     return {
-      accessToken: `jwt_token_${matchedUser.id}_${Date.now()}`,
+      requestToken: token,
+      refreshToken,
+      accessToken: token,
       user: {
         ...safeUser,
+        id: matchedUser.id,
+        userId: matchedUser.id,
+        employeeId: matchedUser.id,
         isSuperAdmin: matchedUser.isSuperAdmin ?? (matchedUser.role === Role.SUPER_ADMIN),
         status: matchedUser.status || 'Active',
       },
     };
   }
 
+  async refresh(rawRefreshToken?: string) {
+    if (!rawRefreshToken || typeof rawRefreshToken !== 'string') {
+      throw new UnauthorizedException('Refresh token is required');
+    }
+    const cleanToken = rawRefreshToken.trim();
+    const tokenHash = crypto.createHash('sha256').update(cleanToken).digest('hex');
+
+    const matched = this.db.refreshTokens.find((rt) => rt.tokenHash === tokenHash);
+    if (!matched) {
+      throw new UnauthorizedException('Invalid or unknown refresh token');
+    }
+
+    // Reuse detection: If token was already revoked, revoke the ENTIRE family!
+    if (matched.isRevoked) {
+      for (const rt of this.db.refreshTokens) {
+        if (rt.familyId === matched.familyId) {
+          rt.isRevoked = true;
+          rt.updatedAt = new Date().toISOString();
+        }
+      }
+      this.db.persist();
+      throw new UnauthorizedException('Refresh token reuse detected. All sessions in this family have been revoked.');
+    }
+
+    // Check expiration
+    if (new Date(matched.expiresAt).getTime() <= Date.now()) {
+      matched.isRevoked = true;
+      matched.updatedAt = new Date().toISOString();
+      this.db.persist();
+      throw new UnauthorizedException('Refresh token has expired. Please login again.');
+    }
+
+    // Find associated user
+    const user = this.db.users.find((u) => u.id === matched.userId);
+    if (!user || (user.status && user.status.toLowerCase() !== 'active')) {
+      matched.isRevoked = true;
+      matched.updatedAt = new Date().toISOString();
+      this.db.persist();
+      throw new UnauthorizedException('User account is inactive, suspended, or terminated.');
+    }
+
+    // Verify company context matches
+    if (matched.companyId && user.companyId && matched.companyId !== user.companyId) {
+      throw new UnauthorizedException('Company context mismatch during token renewal.');
+    }
+
+    // Verify company still exists (for non-SuperAdmin users)
+    const isSuperUser = user.role === Role.SUPER_ADMIN || user.isSuperAdmin === true;
+    if (!isSuperUser) {
+      const compId = (user.companyId || '').trim();
+      const compCode = (user.companyCode || '').trim();
+      const companyExists = this.db.companies.some(
+        (c) =>
+          (compId && c.id.toLowerCase() === compId.toLowerCase()) ||
+          (compCode && c.companyCode?.toLowerCase() === compCode.toLowerCase()),
+      );
+      if (!companyExists) {
+        matched.isRevoked = true;
+        matched.updatedAt = new Date().toISOString();
+        this.db.persist();
+        throw new UnauthorizedException(
+          'Your company account no longer exists or has been deleted. Access denied.',
+        );
+      }
+    }
+
+    // Rotate: Revoke the current token
+    matched.isRevoked = true;
+    matched.updatedAt = new Date().toISOString();
+
+    // Issue a new refresh token within the same token family
+    const { rawToken: newRefreshToken } = await this.createRefreshToken(user, matched.familyId);
+    const newAccessToken = this.generateAccessToken(user);
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      user: {
+        id: user.id,
+        userId: user.id,
+        email: user.email,
+        phone: user.phone || '',
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isSuperAdmin: user.isSuperAdmin ?? (user.role === Role.SUPER_ADMIN),
+        status: user.status || 'Active',
+        companyId: user.companyId || null,
+        companyCode: user.companyCode || null,
+        employeeId: user.id,
+        employeeCode: user.employeeCode,
+        avatarUrl: user.avatarUrl,
+      },
+    };
+  }
+
+  async logout(rawRefreshToken?: string, userId?: string) {
+    if (rawRefreshToken && typeof rawRefreshToken === 'string') {
+      const clean = rawRefreshToken.trim();
+      const tokenHash = crypto.createHash('sha256').update(clean).digest('hex');
+      const matched = this.db.refreshTokens.find((rt) => rt.tokenHash === tokenHash);
+      if (matched) {
+        matched.isRevoked = true;
+        matched.updatedAt = new Date().toISOString();
+        for (const rt of this.db.refreshTokens) {
+          if (rt.familyId === matched.familyId) {
+            rt.isRevoked = true;
+            rt.updatedAt = new Date().toISOString();
+          }
+        }
+      }
+    }
+    if (userId) {
+      for (const rt of this.db.refreshTokens) {
+        if (rt.userId === userId) {
+          rt.isRevoked = true;
+          rt.updatedAt = new Date().toISOString();
+        }
+      }
+    }
+    this.db.persist();
+    return { message: 'Successfully logged out' };
+  }
+
   getAllUsers(): User[] {
     return this.db.users.map(({ password: _, ...rest }) => rest as User);
+  }
+
+  public async setEmployeePassword(data: SetEmployeePasswordDto) {
+    if (!data.token || typeof data.token !== 'string') {
+      throw new BadRequestException('Setup token is required.');
+    }
+    const cleanToken = data.token.trim();
+    if (!cleanToken) {
+      throw new BadRequestException('Setup token cannot be empty.');
+    }
+    if (!data.password || data.password.length < 8) {
+      throw new BadRequestException('Password must be at least 8 characters long.');
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(cleanToken).digest('hex');
+    const matchedInv = this.db.employeeInvitations.find((inv) => inv.tokenHash === tokenHash);
+
+    if (!matchedInv) {
+      throw new BadRequestException('Invalid or unknown password setup token.');
+    }
+
+    if (matchedInv.usedAt) {
+      throw new BadRequestException(
+        'This password setup link has already been used. Please log in or contact your administrator.',
+      );
+    }
+
+    if (matchedInv.revokedAt) {
+      throw new BadRequestException(
+        'This password setup link has been revoked or replaced by a newer invitation.',
+      );
+    }
+
+    if (new Date(matchedInv.expiresAt).getTime() <= Date.now()) {
+      throw new BadRequestException(
+        'This password setup link has expired (30-minute limit exceeded). Please contact your company administrator to issue a new invitation.',
+      );
+    }
+
+    // Atomic one-time use check: mark used immediately
+    matchedInv.usedAt = new Date().toISOString();
+
+    // Verify employee user account exists and is Active
+    const user = this.db.users.find((u) => u.id === matchedInv.userId);
+    if (!user || (user.status && user.status.toLowerCase() !== 'active')) {
+      throw new BadRequestException('Employee account is inactive or not found.');
+    }
+
+    // Hash the new password securely
+    const hashedPassword = hashPassword(data.password);
+    user.password = hashedPassword;
+    user.updatedAt = new Date().toISOString();
+
+    // Also update password on employee record if exists
+    const employee = this.db.employees.find(
+      (e) => e.id === matchedInv.userId || e.userId === matchedInv.userId,
+    );
+    if (employee) {
+      employee.password = hashedPassword;
+      employee.updatedAt = new Date().toISOString();
+    }
+
+    this.db.persist();
+
+    this.db.logAudit(
+      user.id,
+      `${user.firstName} ${user.lastName}`,
+      user.role,
+      'PASSWORD_SETUP',
+      'Authentication',
+      `Employee ${user.email} (${user.employeeCode || user.id}) successfully created account password via email invitation`,
+      user.id,
+    );
+
+    return {
+      message: 'Password created successfully! You can now log in with your email and password.',
+      userId: user.id,
+      email: user.email,
+    };
   }
 }

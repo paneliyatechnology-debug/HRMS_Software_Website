@@ -74,23 +74,23 @@ describe('AuthService - Unified Users Architecture', () => {
     authService = new AuthService(mockDb as any);
   });
 
-  it('should authenticate SUPER_ADMIN from unified users table', () => {
-    const res = authService.login('super@paneliya.com', 'SuperPass123!');
+  it('should authenticate SUPER_ADMIN from unified users table', async () => {
+    const res = await authService.login('super@paneliya.com', 'SuperPass123!');
     expect(res).toBeDefined();
     expect(res.user.role).toBe(Role.SUPER_ADMIN);
     expect(res.user.isSuperAdmin).toBe(true);
     expect(res.user.companyId).toBeNull();
   });
 
-  it('should authenticate ADMIN from unified users table with company isolation', () => {
-    const res = authService.login('admin@paneliya.com', 'AdminPass123!');
+  it('should authenticate ADMIN from unified users table with company isolation', async () => {
+    const res = await authService.login('admin@paneliya.com', 'AdminPass123!');
     expect(res).toBeDefined();
     expect(res.user.role).toBe(Role.ADMIN);
     expect(res.user.companyId).toBe('cmp-1');
   });
 
-  it('should authenticate EMPLOYEE from unified users table with employee linkage', () => {
-    const res = authService.login('worker@paneliya.com', 'WorkerPass123!');
+  it('should authenticate EMPLOYEE from unified users table with employee linkage', async () => {
+    const res = await authService.login('worker@paneliya.com', 'WorkerPass123!');
     expect(res).toBeDefined();
     expect(res.user.role).toBe(Role.EMPLOYEE);
     expect(res.user.companyId).toBe('cmp-1');
@@ -98,8 +98,8 @@ describe('AuthService - Unified Users Architecture', () => {
     expect(res.user.employeeCode).toBe('EMP-000001');
   });
 
-  it('should reject invalid password for any user', () => {
-    expect(() => authService.login('worker@paneliya.com', 'WrongPassword!')).toThrow();
+  it('should reject invalid password for any user', async () => {
+    await expect(authService.login('worker@paneliya.com', 'WrongPassword!')).rejects.toThrow();
   });
 });
 

@@ -1,18 +1,51 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { AttendanceStatus, LeaveStatus } from '../../common/types.js';
+import { AttendanceStatus, LeaveStatus, Role, User } from '../../common/types.js';
 
 @Injectable()
 export class ReportsService {
   constructor(private readonly db: DatabaseService) {}
 
-  getDashboardStats() {
-    const totalEmployees = this.db.employees.length;
-    const activeEmployees = this.db.employees.filter((e) => e.status === 'Active').length;
+  getDashboardStats(actorUser?: User) {
+    let employees = this.db.employees;
+    let attendanceRecords = this.db.attendanceRecords;
+    let leaveRequests = this.db.leaveRequests;
+    let payrollRecords = this.db.payrollRecords;
+    let departments = this.db.departments;
+
+    if (actorUser && actorUser.role !== Role.SUPER_ADMIN && actorUser.companyId) {
+      const companyId = actorUser.companyId;
+      employees = employees.filter((e) => e.companyId === companyId);
+      attendanceRecords = attendanceRecords.filter((a) => {
+        if (a.companyId) return a.companyId === companyId;
+        const u = this.db.users.find(
+          (usr) => usr.id === a.employeeId || usr.employeeId === a.employeeId || (a as any).userId === usr.id,
+        );
+        return u?.companyId === companyId;
+      });
+      leaveRequests = leaveRequests.filter((l) => {
+        if (l.companyId) return l.companyId === companyId;
+        const u = this.db.users.find(
+          (usr) => usr.id === l.employeeId || usr.employeeId === l.employeeId || (l as any).userId === usr.id,
+        );
+        return u?.companyId === companyId;
+      });
+      payrollRecords = payrollRecords.filter((p) => {
+        if (p.companyId) return p.companyId === companyId;
+        const u = this.db.users.find(
+          (usr) => usr.id === p.employeeId || usr.employeeId === p.employeeId || (p as any).userId === usr.id,
+        );
+        return u?.companyId === companyId;
+      });
+      departments = departments.filter((d) => !d.companyId || d.companyId === companyId);
+    }
+
+    const totalEmployees = employees.length;
+    const activeEmployees = employees.filter((e) => e.status === 'Active').length;
 
     // Attendance stats
     const today = new Date().toISOString().split('T')[0];
-    const todayRecords = this.db.attendanceRecords.filter((a) => a.date === today);
+    const todayRecords = attendanceRecords.filter((a) => a.date === today);
     const presentToday = todayRecords.filter(
       (a) => a.status === AttendanceStatus.PRESENT || a.status === AttendanceStatus.LATE,
     ).length;
@@ -21,22 +54,20 @@ export class ReportsService {
       totalEmployees > 0 ? Math.round((presentToday / totalEmployees) * 100) : 86;
 
     // Leave stats
-    const pendingLeaves = this.db.leaveRequests.filter(
+    const pendingLeaves = leaveRequests.filter(
       (l) => l.status === LeaveStatus.PENDING,
     ).length;
-    const recentLeaves = this.db.leaveRequests.slice(0, 5);
+    const recentLeaves = leaveRequests.slice(0, 5);
 
     // Payroll stats
-    const totalPayrollsSum = this.db.payrollRecords.reduce((acc, curr) => acc + curr.netSalary, 0);
+    const totalPayrollsSum = payrollRecords.reduce((acc, curr) => acc + curr.netSalary, 0);
 
-    // Employment type breakdown matching mockup
-    const fullTimeCount = this.db.employees.filter((e) => e.employmentType === 'Full-time').length;
-    const remoteCount = this.db.employees.filter((e) => e.employmentType === 'Remote').length;
-    const partTimeCount = this.db.employees.filter((e) => e.employmentType === 'Part-time').length;
-    const contractualCount = this.db.employees.filter(
-      (e) => e.employmentType === 'Contractual',
-    ).length;
-    const hourlyCount = this.db.employees.filter((e) => e.employmentType === 'Hourly').length;
+    // Employment type breakdown
+    const fullTimeCount = employees.filter((e) => e.employmentType === 'Full-time').length;
+    const remoteCount = employees.filter((e) => e.employmentType === 'Remote').length;
+    const partTimeCount = employees.filter((e) => e.employmentType === 'Part-time').length;
+    const contractualCount = employees.filter((e) => e.employmentType === 'Contractual').length;
+    const hourlyCount = employees.filter((e) => e.employmentType === 'Hourly').length;
 
     const employmentBreakdown = [
       { label: 'Full-time', count: fullTimeCount, percent: 50, color: '#3b82f6' },
@@ -63,9 +94,9 @@ export class ReportsService {
     ];
 
     // Department Headcounts
-    const departmentStats = this.db.departments.map((dept) => ({
+    const departmentStats = departments.map((dept) => ({
       name: dept.name,
-      count: this.db.employees.filter((e) => e.departmentId === dept.id).length,
+      count: employees.filter((e) => e.departmentId === dept.id).length,
     }));
 
     return {
@@ -98,21 +129,35 @@ export class ReportsService {
       activeEmployees,
       absentToday,
       pendingLeaves,
-      totalCandidates: this.db.candidates.length,
-      openJobs: this.db.jobs.filter((j) => j.status === 'Published').length,
     };
   }
 
-  getExportData(type: string) {
-    if (type === 'attendance') {
-      return this.db.attendanceRecords;
+  getExportData(type: string, actorUser?: User) {
+    if (actorUser && actorUser.role === Role.EMPLOYEE) {
+      throw new ForbiddenException('Employees cannot export aggregate report datasets');
     }
-    if (type === 'leaves') {
-      return this.db.leaveRequests;
+
+    const companyId = actorUser?.companyId;
+
+    switch (type.toLowerCase()) {
+      case 'employees':
+        return actorUser && actorUser.role === Role.ADMIN && companyId
+          ? this.db.employees.filter((e) => e.companyId === companyId)
+          : this.db.employees;
+      case 'attendance':
+        return actorUser && actorUser.role === Role.ADMIN && companyId
+          ? this.db.attendanceRecords.filter((a) => a.companyId === companyId)
+          : this.db.attendanceRecords;
+      case 'leaves':
+        return actorUser && actorUser.role === Role.ADMIN && companyId
+          ? this.db.leaveRequests.filter((l) => l.companyId === companyId)
+          : this.db.leaveRequests;
+      case 'payroll':
+        return actorUser && actorUser.role === Role.ADMIN && companyId
+          ? this.db.payrollRecords.filter((p) => p.companyId === companyId)
+          : this.db.payrollRecords;
+      default:
+        return this.db.employees;
     }
-    if (type === 'payroll') {
-      return this.db.payrollRecords;
-    }
-    return this.db.employees;
   }
 }

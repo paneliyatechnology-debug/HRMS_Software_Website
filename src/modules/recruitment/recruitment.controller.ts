@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Put, Body, Param, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { RecruitmentService } from './recruitment.service.js';
 import { CreateJobOpeningDto } from './dto/create-job.dto.js';
 import { CreateCandidateDto } from './dto/create-candidate.dto.js';
@@ -8,6 +9,8 @@ import { ScheduleInterviewDto } from './dto/schedule-interview.dto.js';
 import { ConvertCandidateDto } from './dto/convert-candidate.dto.js';
 
 @ApiTags('Recruitment')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('recruitment')
 export class RecruitmentController {
   constructor(private readonly recService: RecruitmentService) {}
@@ -18,8 +21,8 @@ export class RecruitmentController {
     description: 'Retrieves all open requisitions with active applicant count metrics.',
   })
   @ApiResponse({ status: 200, description: 'List of job openings' })
-  getJobs() {
-    return this.recService.getJobs();
+  getJobs(@Req() req: any) {
+    return this.recService.getJobs(req.user);
   }
 
   @Post('jobs')
@@ -29,8 +32,8 @@ export class RecruitmentController {
   })
   @ApiBody({ type: CreateJobOpeningDto })
   @ApiResponse({ status: 201, description: 'Job opening created' })
-  createJob(@Body() body: CreateJobOpeningDto) {
-    return this.recService.createJob(body);
+  createJob(@Body() body: CreateJobOpeningDto, @Req() req: any) {
+    return this.recService.createJob(body, req.user);
   }
 
   @Get('candidates')
@@ -40,8 +43,8 @@ export class RecruitmentController {
   })
   @ApiQuery({ name: 'jobId', required: false, description: 'Filter by specific Job Requisition ID' })
   @ApiResponse({ status: 200, description: 'List of candidates' })
-  getCandidates(@Query('jobId') jobId?: string) {
-    return this.recService.getCandidates(jobId);
+  getCandidates(@Query('jobId') jobId?: string, @Req() req?: any) {
+    return this.recService.getCandidates(jobId, req?.user);
   }
 
   @Post('candidates')
@@ -51,8 +54,8 @@ export class RecruitmentController {
   })
   @ApiBody({ type: CreateCandidateDto })
   @ApiResponse({ status: 201, description: 'Candidate created' })
-  createCandidate(@Body() body: CreateCandidateDto) {
-    return this.recService.createCandidate(body);
+  createCandidate(@Body() body: CreateCandidateDto, @Req() req: any) {
+    return this.recService.createCandidate(body, req.user);
   }
 
   @Put('candidates/:id/status')
@@ -63,8 +66,8 @@ export class RecruitmentController {
   @ApiParam({ name: 'id', description: 'Candidate ID' })
   @ApiBody({ type: UpdateCandidateStatusDto })
   @ApiResponse({ status: 200, description: 'Candidate stage updated' })
-  updateCandidateStatus(@Param('id') id: string, @Body() body: UpdateCandidateStatusDto) {
-    return this.recService.updateCandidateStatus(id, body);
+  updateCandidateStatus(@Param('id') id: string, @Body() body: UpdateCandidateStatusDto, @Req() req: any) {
+    return this.recService.updateCandidateStatus(id, body, req.user);
   }
 
   @Post('candidates/:id/schedule-interview')
@@ -75,8 +78,8 @@ export class RecruitmentController {
   @ApiParam({ name: 'id', description: 'Candidate ID' })
   @ApiBody({ type: ScheduleInterviewDto })
   @ApiResponse({ status: 201, description: 'Interview scheduled' })
-  scheduleInterview(@Param('id') id: string, @Body() body: ScheduleInterviewDto) {
-    return this.recService.scheduleInterview(id, body);
+  scheduleInterview(@Param('id') id: string, @Body() body: ScheduleInterviewDto, @Req() req: any) {
+    return this.recService.scheduleInterview(id, body, req.user);
   }
 
   @Post('candidates/:id/convert')
@@ -87,7 +90,7 @@ export class RecruitmentController {
   @ApiParam({ name: 'id', description: 'Candidate ID' })
   @ApiBody({ type: ConvertCandidateDto, required: false })
   @ApiResponse({ status: 200, description: 'Candidate converted to employee successfully' })
-  convertToEmployee(@Param('id') id: string, @Body() body?: ConvertCandidateDto) {
-    return this.recService.convertToEmployee(id, body);
+  convertToEmployee(@Param('id') id: string, @Body() body?: ConvertCandidateDto, @Req() req?: any) {
+    return this.recService.convertToEmployee(id, body, req?.user);
   }
 }

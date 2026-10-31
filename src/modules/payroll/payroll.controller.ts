@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Put, Body, Param, Query, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { PayrollService } from './payroll.service.js';
 import { GeneratePayrollDto } from './dto/generate-payroll.dto.js';
 import { UpdatePayrollStatusDto } from './dto/update-payroll-status.dto.js';
@@ -7,6 +8,7 @@ import { QueryPayrollDto } from './dto/query-payroll.dto.js';
 
 @ApiTags('Payroll')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('payroll')
 export class PayrollController {
   constructor(private readonly payrollService: PayrollService) {}
@@ -29,8 +31,8 @@ export class PayrollController {
   @ApiParam({ name: 'id', description: 'Payroll Record ID' })
   @ApiResponse({ status: 200, description: 'Formatted payslip details' })
   @ApiResponse({ status: 404, description: 'Payslip record not found' })
-  getPayslip(@Param('id') id: string) {
-    return this.payrollService.getPayslip(id);
+  getPayslip(@Param('id') id: string, @Req() req: any) {
+    return this.payrollService.getPayslip(id, req.user);
   }
 
   @Post('generate')
@@ -40,8 +42,8 @@ export class PayrollController {
   })
   @ApiBody({ type: GeneratePayrollDto })
   @ApiResponse({ status: 201, description: 'Batch payroll generated successfully' })
-  generateBatch(@Body() body: GeneratePayrollDto) {
-    return this.payrollService.generateBatch(body);
+  generateBatch(@Body() body: GeneratePayrollDto, @Req() req: any) {
+    return this.payrollService.generateBatch(body, req.user);
   }
 
   @Put(':id/status')
@@ -53,7 +55,7 @@ export class PayrollController {
   @ApiBody({ type: UpdatePayrollStatusDto })
   @ApiResponse({ status: 200, description: 'Payroll record status updated' })
   @ApiResponse({ status: 404, description: 'Payroll record not found' })
-  updateStatus(@Param('id') id: string, @Body() body: UpdatePayrollStatusDto) {
-    return this.payrollService.updateStatus(id, body);
+  updateStatus(@Param('id') id: string, @Body() body: UpdatePayrollStatusDto, @Req() req: any) {
+    return this.payrollService.updateStatus(id, body, req.user);
   }
 }

@@ -1,11 +1,14 @@
-import { Controller, Get, Post, Put, Body, Param, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { TrainingService } from './training.service.js';
 import { CreateTrainingProgramDto } from './dto/create-program.dto.js';
 import { EnrollTrainingDto } from './dto/enroll-training.dto.js';
 import { UpdateTrainingProgressDto } from './dto/update-progress.dto.js';
 
 @ApiTags('Training')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('training')
 export class TrainingController {
   constructor(private readonly trainingService: TrainingService) {}
@@ -16,8 +19,8 @@ export class TrainingController {
     description: 'Retrieves all professional upskilling programs, cohorts, and curricula.',
   })
   @ApiResponse({ status: 200, description: 'List of training courses' })
-  getPrograms() {
-    return this.trainingService.getPrograms();
+  getPrograms(@Req() req: any) {
+    return this.trainingService.getPrograms(req.user);
   }
 
   @Post('programs')
@@ -27,8 +30,8 @@ export class TrainingController {
   })
   @ApiBody({ type: CreateTrainingProgramDto })
   @ApiResponse({ status: 201, description: 'Training program created' })
-  createProgram(@Body() body: CreateTrainingProgramDto) {
-    return this.trainingService.createProgram(body);
+  createProgram(@Body() body: CreateTrainingProgramDto, @Req() req: any) {
+    return this.trainingService.createProgram(body, req.user);
   }
 
   @Get('enrollments')
@@ -39,8 +42,8 @@ export class TrainingController {
   @ApiQuery({ name: 'userId', required: false, description: 'Filter by user ID' })
   @ApiQuery({ name: 'employeeId', required: false, description: 'Filter by employee ID (legacy alias for userId)' })
   @ApiResponse({ status: 200, description: 'List of enrollments' })
-  getEmployeeTrainings(@Query('userId') userId?: string, @Query('employeeId') employeeId?: string) {
-    return this.trainingService.getEmployeeTrainings(userId || employeeId);
+  getEmployeeTrainings(@Query('userId') userId?: string, @Query('employeeId') employeeId?: string, @Req() req?: any) {
+    return this.trainingService.getEmployeeTrainings(userId || employeeId, req?.user);
   }
 
   @Post('enroll')
@@ -50,8 +53,8 @@ export class TrainingController {
   })
   @ApiBody({ type: EnrollTrainingDto })
   @ApiResponse({ status: 201, description: 'Enrolled successfully' })
-  enroll(@Body() body: EnrollTrainingDto) {
-    return this.trainingService.enroll(body);
+  enroll(@Body() body: EnrollTrainingDto, @Req() req: any) {
+    return this.trainingService.enroll(body, req.user);
   }
 
   @Put('enrollments/:id/progress')
@@ -62,7 +65,7 @@ export class TrainingController {
   @ApiParam({ name: 'id', description: 'Enrollment ID' })
   @ApiBody({ type: UpdateTrainingProgressDto })
   @ApiResponse({ status: 200, description: 'Training progress updated' })
-  updateProgress(@Param('id') id: string, @Body() body: UpdateTrainingProgressDto) {
-    return this.trainingService.updateProgress(id, body);
+  updateProgress(@Param('id') id: string, @Body() body: UpdateTrainingProgressDto, @Req() req: any) {
+    return this.trainingService.updateProgress(id, body, req.user);
   }
 }

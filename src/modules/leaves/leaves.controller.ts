@@ -40,8 +40,8 @@ export class LeavesController {
   })
   @ApiBody({ type: ApplyLeaveDto })
   @ApiResponse({ status: 201, description: 'Leave application submitted successfully' })
-  apply(@Body() body: ApplyLeaveDto) {
-    return this.leavesService.apply(body);
+  apply(@Body() body: ApplyLeaveDto, @Req() req: any) {
+    return this.leavesService.apply(body, req?.user);
   }
 
   @Put(':id/approve')
@@ -52,9 +52,10 @@ export class LeavesController {
   @ApiParam({ name: 'id', description: 'Leave Request ID' })
   @ApiBody({ type: ApproveLeaveDto })
   @ApiResponse({ status: 200, description: 'Leave request approved successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Leave request not found' })
-  approve(@Param('id') id: string, @Body() body: ApproveLeaveDto) {
-    return this.leavesService.approve(id, body);
+  approve(@Param('id') id: string, @Body() body: ApproveLeaveDto, @Req() req: any) {
+    return this.leavesService.approve(id, body, req?.user);
   }
 
   @Put(':id/reject')
@@ -65,8 +66,9 @@ export class LeavesController {
   @ApiParam({ name: 'id', description: 'Leave Request ID' })
   @ApiBody({ type: RejectLeaveDto })
   @ApiResponse({ status: 200, description: 'Leave request rejected' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Leave request not found' })
-  reject(@Param('id') id: string, @Body() body: RejectLeaveDto) {
-    return this.leavesService.reject(id, body);
+  reject(@Param('id') id: string, @Body() body: RejectLeaveDto, @Req() req: any) {
+    return this.leavesService.reject(id, body, req?.user);
   }
 }

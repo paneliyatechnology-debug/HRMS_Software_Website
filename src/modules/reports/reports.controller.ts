@@ -1,8 +1,11 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { ReportsService } from './reports.service.js';
 
 @ApiTags('Reports & Analytics')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
@@ -13,8 +16,8 @@ export class ReportsController {
     description: 'Returns KPI metrics, attendance percentages, monthly revenue/expense overview, and department headcounts.',
   })
   @ApiResponse({ status: 200, description: 'Executive dashboard analytics overview' })
-  getDashboardStats() {
-    return this.reportsService.getDashboardStats();
+  getDashboardStats(@Req() req: any) {
+    return this.reportsService.getDashboardStats(req.user);
   }
 
   @Get('export')
@@ -29,7 +32,7 @@ export class ReportsController {
     description: 'Dataset domain type to export',
   })
   @ApiResponse({ status: 200, description: 'Exportable JSON dataset' })
-  getExportData(@Query('type') type: string) {
-    return this.reportsService.getExportData(type || 'employees');
+  getExportData(@Query('type') type: string, @Req() req: any) {
+    return this.reportsService.getExportData(type || 'employees', req.user);
   }
 }

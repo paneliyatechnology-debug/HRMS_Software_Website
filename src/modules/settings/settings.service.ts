@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
+import { Role, User } from '../../common/types.js';
 import { UpdateSettingsDto } from './dto/update-settings.dto.js';
 
 @Injectable()
@@ -59,10 +60,32 @@ export class SettingsService {
     },
   };
 
-  getSettings() {
+  getSettings(actorUser?: User) {
+    if (actorUser && actorUser.companyId) {
+      const cmp = this.db.companies.find((c) => c.id === actorUser.companyId);
+      if (cmp) {
+        return {
+          ...this.settings,
+          company: {
+            ...this.settings.company,
+            name: cmp.companyName,
+            supportEmail: cmp.email,
+            phone: cmp.phone,
+            taxId: cmp.companyCode,
+            address: cmp.city || this.settings.company.address,
+          },
+        };
+      }
+    }
     return this.settings;
   }
-  updateSettings(data: UpdateSettingsDto, actorName = 'Super Admin') {
+
+  updateSettings(data: UpdateSettingsDto, actorUser?: User) {
+    if (actorUser && actorUser.role !== Role.SUPER_ADMIN) {
+      throw new ForbiddenException('Only SUPER_ADMIN can modify enterprise system policies');
+    }
+
+    const actorName = actorUser?.email || 'Super Admin';
     this.settings = {
       ...this.settings,
       ...data,
@@ -71,14 +94,16 @@ export class SettingsService {
       leavePolicy: { ...this.settings.leavePolicy, ...(data.leavePolicy || {}) },
       payrollPolicy: { ...this.settings.payrollPolicy, ...(data.payrollPolicy || {}) },
     } as any;
+
     this.db.logAudit(
-      'sys',
+      actorUser?.id || 'sys',
       actorName,
       'SUPER_ADMIN',
       'SETTINGS_UPDATED',
       'Settings',
       'Updated organization global system policies and settings',
     );
+
     return this.settings;
   }
 }

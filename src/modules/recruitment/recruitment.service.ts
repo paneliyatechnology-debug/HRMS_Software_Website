@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { JobOpening, Candidate, CandidateStatus, EmployeeStatus, Role } from '../../common/types.js';
+import { JobOpening, Candidate, CandidateStatus, EmployeeStatus, Role, User } from '../../common/types.js';
 import { CreateJobOpeningDto } from './dto/create-job.dto.js';
 import { CreateCandidateDto } from './dto/create-candidate.dto.js';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto.js';
@@ -11,16 +11,28 @@ import { ConvertCandidateDto } from './dto/convert-candidate.dto.js';
 export class RecruitmentService {
   constructor(private readonly db: DatabaseService) {}
 
-  getJobs() {
-    return this.db.jobs.map((job) => {
+  getJobs(actorUser?: User) {
+    let list = this.db.jobs;
+    if (actorUser && actorUser.role !== Role.SUPER_ADMIN && actorUser.companyId) {
+      list = list.filter((j) => j.companyId === actorUser.companyId);
+    }
+    return list.map((job) => {
       const applicantCount = this.db.candidates.filter((c) => c.jobId === job.id).length;
       return { ...job, applicantCount };
     });
   }
 
-  createJob(data: CreateJobOpeningDto): JobOpening {
+  createJob(data: CreateJobOpeningDto, actorUser?: User): JobOpening {
+    const targetCompanyId = actorUser?.companyId || this.db.companies[0]?.id || 'cmp-1';
+    const targetCompanyCode =
+      actorUser?.companyCode ||
+      this.db.companies.find((c) => c.id === targetCompanyId)?.companyCode ||
+      '';
+
     const newJob: JobOpening = {
       id: `job-${Date.now()}`,
+      companyId: targetCompanyId,
+      companyCode: targetCompanyCode,
       title: data.title || 'Untitled Role',
       departmentId: data.departmentId || 'dept-1',
       departmentName: data.departmentName || 'Engineering',
@@ -42,18 +54,40 @@ export class RecruitmentService {
     return newJob;
   }
 
-  getCandidates(jobId?: string) {
-    if (jobId && jobId !== 'ALL') {
-      return this.db.candidates.filter((c) => c.jobId === jobId);
+  getCandidates(jobId?: string, actorUser?: User) {
+    let list = this.db.candidates;
+
+    if (actorUser && actorUser.role !== Role.SUPER_ADMIN && actorUser.companyId) {
+      const companyJobIds = new Set(
+        this.db.jobs.filter((j) => j.companyId === actorUser.companyId).map((j) => j.id),
+      );
+      list = list.filter(
+        (c) =>
+          c.companyId === actorUser.companyId || (c.jobId && companyJobIds.has(c.jobId)),
+      );
     }
-    return this.db.candidates;
+
+    if (jobId && jobId !== 'ALL') {
+      list = list.filter((c) => c.jobId === jobId);
+    }
+    return list;
   }
 
-  createCandidate(data: CreateCandidateDto): Candidate {
+  createCandidate(data: CreateCandidateDto, actorUser?: User): Candidate {
     const job = this.db.jobs.find((j) => j.id === data.jobId);
+    const targetCompanyId =
+      job?.companyId || actorUser?.companyId || this.db.companies[0]?.id || 'cmp-1';
+    const targetCompanyCode =
+      job?.companyCode ||
+      actorUser?.companyCode ||
+      this.db.companies.find((c) => c.id === targetCompanyId)?.companyCode ||
+      '';
+
     const newCandidate: Candidate = {
       id: `cand-${Date.now()}`,
-      jobId: data.jobId || 'job-1',
+      companyId: targetCompanyId,
+      companyCode: targetCompanyCode,
+      jobId: data.jobId || (job ? job.id : 'job-1'),
       jobTitle: job?.title || data.jobTitle || 'Senior Full Stack Engineer',
       fullName: data.fullName || 'Candidate Name',
       email: data.email || 'candidate@example.com',
@@ -75,18 +109,24 @@ export class RecruitmentService {
     return newCandidate;
   }
 
-  updateCandidateStatus(id: string, dto: UpdateCandidateStatusDto) {
+  updateCandidateStatus(id: string, dto: UpdateCandidateStatusDto, actorUser?: User) {
     const candidate = this.db.candidates.find((c) => c.id === id);
     if (!candidate) throw new NotFoundException('Candidate not found');
 
+    if (actorUser && actorUser.role === Role.ADMIN && candidate.companyId && actorUser.companyId) {
+      if (candidate.companyId !== actorUser.companyId) {
+        throw new ForbiddenException('Cannot modify candidate of another company');
+      }
+    }
+
     const oldStatus = candidate.status;
     candidate.status = dto.status;
-    const actorName = dto.actorName || 'Recruiter';
+    const actorName = dto.actorName || actorUser?.email || 'Recruiter';
 
     this.db.logAudit(
-      'sys',
+      actorUser?.id || 'sys',
       actorName,
-      'RECRUITER',
+      actorUser?.role || 'RECRUITER',
       'CANDIDATE_STATUS_CHANGED',
       'Recruitment',
       `Moved candidate ${candidate.fullName} from ${oldStatus} to ${dto.status}`,
@@ -97,9 +137,15 @@ export class RecruitmentService {
     return candidate;
   }
 
-  scheduleInterview(candidateId: string, dto: ScheduleInterviewDto) {
+  scheduleInterview(candidateId: string, dto: ScheduleInterviewDto, actorUser?: User) {
     const candidate = this.db.candidates.find((c) => c.id === candidateId);
     if (!candidate) throw new NotFoundException('Candidate not found');
+
+    if (actorUser && actorUser.role === Role.ADMIN && candidate.companyId && actorUser.companyId) {
+      if (candidate.companyId !== actorUser.companyId) {
+        throw new ForbiddenException('Cannot schedule interview for candidate of another company');
+      }
+    }
 
     if (!candidate.interviews) candidate.interviews = [];
 
@@ -116,6 +162,8 @@ export class RecruitmentService {
 
     this.db.notifications.unshift({
       id: `notif-${Date.now()}`,
+      companyId: candidate.companyId || actorUser?.companyId || '',
+      companyCode: candidate.companyCode || actorUser?.companyCode || '',
       title: 'Interview Scheduled',
       message: `Interview for ${candidate.fullName} with ${dto.interviewerName} scheduled for ${dto.scheduledAt}`,
       type: 'system',
@@ -128,9 +176,20 @@ export class RecruitmentService {
     return candidate;
   }
 
-  convertToEmployee(candidateId: string, dto?: ConvertCandidateDto) {
+  convertToEmployee(candidateId: string, dto?: ConvertCandidateDto, actorUser?: User) {
     const candidate = this.db.candidates.find((c) => c.id === candidateId);
     if (!candidate) throw new NotFoundException('Candidate not found');
+
+    const targetCompanyId =
+      candidate.companyId || actorUser?.companyId || this.db.companies[0]?.id || 'cmp-1';
+    const targetCompany = this.db.companies.find((c) => c.id === targetCompanyId);
+    const targetCompanyCode = candidate.companyCode || targetCompany?.companyCode || 'CMP-000001';
+
+    if (actorUser && actorUser.role === Role.ADMIN && actorUser.companyId) {
+      if (targetCompanyId !== actorUser.companyId) {
+        throw new ForbiddenException('Cannot convert candidate of another company');
+      }
+    }
 
     candidate.status = CandidateStatus.HIRED;
 
@@ -138,13 +197,15 @@ export class RecruitmentService {
     const employeeCode = `PAN-${String(nextCodeNum).padStart(3, '0')}`;
     const [firstName, ...rest] = candidate.fullName.split(' ');
     const lastName = rest.join(' ') || 'Employee';
-    const actorName = dto?.actorName || 'HR Admin';
+    const actorName = dto?.actorName || actorUser?.email || 'HR Admin';
 
     const userId = `user-${Date.now()}`;
 
     const newEmployee = {
       id: userId,
       userId,
+      companyId: targetCompanyId,
+      companyCode: targetCompanyCode,
       employeeCode,
       firstName,
       lastName,
@@ -216,8 +277,8 @@ export class RecruitmentService {
       role: Role.EMPLOYEE,
       isSuperAdmin: false,
       status: 'Active',
-      companyId: this.db.companies[0]?.id || 'cmp-1',
-      companyCode: this.db.companies[0]?.companyCode || 'CMP-000001',
+      companyId: targetCompanyId,
+      companyCode: targetCompanyCode,
       employeeId: userId,
       employeeCode,
       avatarUrl: newEmployee.avatarUrl,
@@ -226,9 +287,9 @@ export class RecruitmentService {
     } as any);
 
     this.db.logAudit(
-      'sys',
+      actorUser?.id || 'sys',
       actorName,
-      'ADMIN',
+      actorUser?.role || 'ADMIN',
       'CANDIDATE_CONVERTED_TO_EMPLOYEE',
       'Recruitment',
       `Converted candidate ${candidate.fullName} into employee ${newEmployee.employeeCode}`,

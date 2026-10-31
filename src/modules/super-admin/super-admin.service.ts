@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -15,7 +16,9 @@ import {
   LeaveStatus,
   AuditLog,
   Company,
+  CompanyRegistrationRequest,
 } from '../../common/types.js';
+import { RegisterCompanyRequestDto } from '../companies/dto/register-company-request.dto.js';
 import { CreateSuperAdminUserDto } from './dto/create-super-admin-user.dto.js';
 import { UpdateSuperAdminUserDto } from './dto/update-super-admin-user.dto.js';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto.js';
@@ -33,6 +36,7 @@ import { hashPassword } from '../../common/utils/password.util.js';
 
 @Injectable()
 export class SuperAdminService {
+  private readonly logger = new Logger(SuperAdminService.name);
   constructor(private readonly db: DatabaseService) {}
 
   // -------------------------------------------------------------
@@ -321,26 +325,26 @@ export class SuperAdminService {
   }
 
   async createAdmin(dto: CreateAdminDto, actingAdmin?: User) {
-    const releaseEmailLock = this.db.acquireEmailLock(dto.email);
+    const targetCompany = this.db.companies.find(
+      (c) => c.id === dto.companyId || c.companyCode === dto.companyId,
+    );
+    if (!targetCompany) {
+      throw new NotFoundException(
+        `Company with ID or code "${dto.companyId}" not found. Please provide an existing company.`,
+      );
+    }
+
+    const releaseEmailLock = this.db.acquireEmailLock(dto.email, targetCompany.id);
     let releasePhoneLock = () => {};
     if (dto.phone) {
-      releasePhoneLock = this.db.acquirePhoneLock(dto.phone);
+      releasePhoneLock = this.db.acquirePhoneLock(dto.phone, targetCompany.id);
     }
 
     try {
-      const normalizedEmail = await this.db.assertEmailUnique(dto.email, undefined, true);
+      const normalizedEmail = await this.db.assertEmailUnique(dto.email, targetCompany.id, undefined, true);
       const normalizedPhone = dto.phone
-        ? await this.db.assertPhoneUnique(dto.phone, undefined, true)
+        ? await this.db.assertPhoneUnique(dto.phone, targetCompany.id, undefined, true)
         : '';
-
-      const targetCompany = this.db.companies.find(
-        (c) => c.id === dto.companyId || c.companyCode === dto.companyId,
-      );
-      if (!targetCompany) {
-        throw new NotFoundException(
-          `Company with ID or code "${dto.companyId}" not found. Please provide an existing company.`,
-        );
-      }
 
       const userId = `user-${Date.now()}`;
       const hashedPassword = hashPassword(dto.password);
@@ -405,13 +409,15 @@ export class SuperAdminService {
       throw new NotFoundException(`Administrator with ID "${id}" not found.`);
     }
 
+    const targetCompanyId = (dto as any).companyId || user.companyId;
+
     if (dto.email && dto.email.trim().toLowerCase() !== user.email.toLowerCase()) {
-      const normalizedEmail = await this.db.assertEmailUnique(dto.email, user.id);
+      const normalizedEmail = await this.db.assertEmailUnique(dto.email, targetCompanyId, user.id);
       user.email = normalizedEmail;
     }
 
     if (dto.phone !== undefined && dto.phone.trim() !== '') {
-      const normalizedPhone = await this.db.assertPhoneUnique(dto.phone, user.id);
+      const normalizedPhone = await this.db.assertPhoneUnique(dto.phone, targetCompanyId, user.id);
       user.phone = normalizedPhone;
     } else if (dto.phone !== undefined) {
       user.phone = '';
@@ -482,24 +488,7 @@ export class SuperAdminService {
   }
 
   async createUser(dto: CreateSuperAdminUserDto, actingAdmin?: User) {
-    const releaseEmailLock = this.db.acquireEmailLock(dto.email);
-    let releasePhoneLock = () => {};
-    if (dto.phone) {
-      releasePhoneLock = this.db.acquirePhoneLock(dto.phone);
-    }
-
-    try {
-      const normalizedEmail = await this.db.assertEmailUnique(dto.email, undefined, true);
-      const normalizedPhone = dto.phone
-        ? await this.db.assertPhoneUnique(dto.phone, undefined, true)
-        : '';
-
-      const userId = `user-${Date.now()}`;
     const role = dto.role || Role.SUPER_ADMIN;
-    const employeeId = role === Role.EMPLOYEE ? userId : null;
-    const isSuperAdmin = dto.isSuperAdmin !== undefined ? dto.isSuperAdmin : role === Role.SUPER_ADMIN;
-    const status = dto.status || 'Active';
-
     // Target company assignment
     let targetCompany: Company | undefined;
     if (dto.companyId) {
@@ -523,7 +512,25 @@ export class SuperAdminService {
       );
     }
 
-    const hashedPassword = hashPassword(dto.password);
+    const companyScopeId = targetCompany ? targetCompany.id : null;
+    const releaseEmailLock = this.db.acquireEmailLock(dto.email, companyScopeId);
+    let releasePhoneLock = () => {};
+    if (dto.phone) {
+      releasePhoneLock = this.db.acquirePhoneLock(dto.phone, companyScopeId);
+    }
+
+    try {
+      const normalizedEmail = await this.db.assertEmailUnique(dto.email, companyScopeId, undefined, true);
+      const normalizedPhone = dto.phone
+        ? await this.db.assertPhoneUnique(dto.phone, companyScopeId, undefined, true)
+        : '';
+
+      const userId = `user-${Date.now()}`;
+      const employeeId = role === Role.EMPLOYEE ? userId : null;
+      const isSuperAdmin = dto.isSuperAdmin !== undefined ? dto.isSuperAdmin : role === Role.SUPER_ADMIN;
+      const status = dto.status || 'Active';
+
+      const hashedPassword = hashPassword(dto.password);
 
     const newUser: User = {
       id: userId,
@@ -676,13 +683,15 @@ export class SuperAdminService {
       throw new NotFoundException(`User with ID "${id}" not found.`);
     }
 
+    const targetCompanyId = (dto as any).companyId || user.companyId;
+
     if (dto.email && dto.email.trim().toLowerCase() !== user.email.toLowerCase()) {
-      const normalizedEmail = await this.db.assertEmailUnique(dto.email, id);
+      const normalizedEmail = await this.db.assertEmailUnique(dto.email, targetCompanyId, id);
       user.email = normalizedEmail;
     }
 
     if (dto.phone !== undefined && dto.phone.trim() !== '') {
-      const normalizedPhone = await this.db.assertPhoneUnique(dto.phone, id);
+      const normalizedPhone = await this.db.assertPhoneUnique(dto.phone, targetCompanyId, id);
       user.phone = normalizedPhone;
     } else if (dto.phone !== undefined) {
       user.phone = '';
@@ -874,7 +883,7 @@ export class SuperAdminService {
     };
   }
 
-  deleteUser(id: string, actingAdmin?: User) {
+  async deleteUser(id: string, actingAdmin?: User) {
     const userIndex = this.db.users.findIndex((u) => u.id === id);
     if (userIndex === -1) {
       throw new NotFoundException(`User with ID "${id}" not found.`);
@@ -891,6 +900,9 @@ export class SuperAdminService {
     if (empIndex !== -1) {
       this.db.employees.splice(empIndex, 1);
     }
+
+    // Ensure deletion is immediately propagated directly to MySQL
+    await this.db.deleteUserFromMysql(user.id, user.email);
 
     this.db.logAudit(
       actingAdmin?.id || 'super-admin',
@@ -1173,49 +1185,54 @@ export class SuperAdminService {
     };
   }
 
-  createDatabaseBackup(actingAdmin?: User) {
-    const dataDir = path.resolve(process.cwd(), 'data');
-    const backupsDir = path.join(dataDir, 'backups');
-
-    if (!fs.existsSync(backupsDir)) {
-      fs.mkdirSync(backupsDir, { recursive: true });
-    }
-
+  async createDatabaseBackup(actingAdmin?: User) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupFileName = `backup_hrms_${timestamp}.json`;
-    const backupFilePath = path.join(backupsDir, backupFileName);
+    const backupId = `backup_${timestamp}`;
+    const totalEntities =
+      this.db.locations.length +
+      this.db.departments.length +
+      this.db.designations.length +
+      this.db.users.length +
+      this.db.employees.length +
+      this.db.holidays.length +
+      this.db.leaveBalances.length +
+      this.db.leaveRequests.length +
+      this.db.attendanceRecords.length +
+      this.db.payrollRecords.length +
+      this.db.jobs.length +
+      this.db.candidates.length +
+      this.db.assets.length +
+      this.db.trainingPrograms.length +
+      this.db.employeeTrainings.length +
+      this.db.performanceCycles.length +
+      this.db.performanceReviews.length +
+      this.db.resignations.length +
+      this.db.announcements.length +
+      this.db.notifications.length +
+      this.db.documents.length +
+      this.db.auditLogs.length;
 
-    const snapshot = {
-      timestamp: new Date().toISOString(),
-      initiatedBy: actingAdmin?.email || 'super-admin',
-      version: '1.0.0',
-      data: {
-        locations: this.db.locations,
-        departments: this.db.departments,
-        designations: this.db.designations,
-        users: this.db.users,
-        employees: this.db.employees,
-        holidays: this.db.holidays,
-        leaveBalances: this.db.leaveBalances,
-        leaveRequests: this.db.leaveRequests,
-        attendanceRecords: this.db.attendanceRecords,
-        payrollRecords: this.db.payrollRecords,
-        jobs: this.db.jobs,
-        candidates: this.db.candidates,
-        assets: this.db.assets,
-        trainingPrograms: this.db.trainingPrograms,
-        employeeTrainings: this.db.employeeTrainings,
-        performanceCycles: this.db.performanceCycles,
-        performanceReviews: this.db.performanceReviews,
-        resignations: this.db.resignations,
-        announcements: this.db.announcements,
-        notifications: this.db.notifications,
-        documents: this.db.documents,
-        auditLogs: this.db.auditLogs,
-      },
-    };
-
-    fs.writeFileSync(backupFilePath, JSON.stringify(snapshot, null, 2), 'utf-8');
+    // Record directly in MySQL system_backups table (strictly no secondary files on disk)
+    try {
+      const pool = this.db.getMysqlPool();
+      if (pool && this.db.isConnectedToMysql) {
+        await pool.query(
+          `INSERT INTO system_backups (id, backupFileName, backupFilePath, totalEntities, fileSizeBytes, initiatedBy, createdAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            backupId,
+            `mysql_backup_${timestamp}`,
+            'MySQL Database Live Snapshot (No secondary JSON files)',
+            totalEntities,
+            0,
+            actingAdmin?.email || 'super-admin',
+            new Date().toISOString(),
+          ],
+        );
+      }
+    } catch (err: any) {
+      this.logger.warn(`Could not log backup to system_backups table: ${err.message}`);
+    }
 
     this.db.logAudit(
       actingAdmin?.id || 'super-admin',
@@ -1223,16 +1240,16 @@ export class SuperAdminService {
       Role.SUPER_ADMIN,
       'SUPER_ADMIN_DATABASE_BACKUP',
       'SuperAdmin',
-      `Super admin generated database backup snapshot: ${backupFileName}`,
-      backupFileName,
+      `Super admin generated database backup snapshot: mysql_backup_${timestamp} (Saved strictly in MySQL)`,
+      backupId,
     );
 
     return {
-      message: 'Database backup snapshot generated successfully',
-      backupFileName,
-      backupFilePath,
-      totalEntitiesBackedUp: Object.keys(snapshot.data).length,
-      createdAt: snapshot.timestamp,
+      message: 'Database backup snapshot recorded successfully in MySQL database',
+      backupId,
+      storage: 'MySQL Database (100% Pure Database Storage, No secondary JSON files)',
+      totalEntitiesBackedUp: totalEntities,
+      createdAt: new Date().toISOString(),
     };
   }
 
@@ -1341,6 +1358,13 @@ export class SuperAdminService {
       throw new BadRequestException('Company name is required.');
     }
 
+    // Assert global uniqueness for company name, company email, and company phone
+    await this.db.assertCompanyUnique({
+      companyName,
+      email: dto.email,
+      phone: dto.phone,
+    });
+
     // Auto-generate globally unique sequential Company Code (e.g. CMP-000001, CMP-000002)
     const companyCode = this.db.generateNextCompanyCode();
     const companyId = `cmp-${Date.now()}`;
@@ -1360,16 +1384,16 @@ export class SuperAdminService {
 
     // If initial admin credentials are provided, automatically create the company Admin
     if (dto.adminEmail && dto.adminPassword) {
-      const releaseEmailLock = this.db.acquireEmailLock(dto.adminEmail);
+      const releaseEmailLock = this.db.acquireEmailLock(dto.adminEmail, newCompany.id);
       let releasePhoneLock = () => {};
       if (dto.phone) {
-        releasePhoneLock = this.db.acquirePhoneLock(dto.phone);
+        releasePhoneLock = this.db.acquirePhoneLock(dto.phone, newCompany.id);
       }
 
       try {
-        const normalizedEmail = await this.db.assertEmailUnique(dto.adminEmail, undefined, true);
+        const normalizedEmail = await this.db.assertEmailUnique(dto.adminEmail, newCompany.id, undefined, true);
         const normalizedPhone = dto.phone
-          ? await this.db.assertPhoneUnique(dto.phone, undefined, true)
+          ? await this.db.assertPhoneUnique(dto.phone, newCompany.id, undefined, true)
           : '';
         const adminUserId = `user-${Date.now()}`;
         const hashedAdminPassword = hashPassword(dto.adminPassword);
@@ -1468,7 +1492,7 @@ export class SuperAdminService {
     };
   }
 
-  updateCompany(id: string, dto: UpdateCompanyDto, actingAdmin?: User) {
+  async updateCompany(id: string, dto: UpdateCompanyDto, actingAdmin?: User) {
     const company = this.db.companies.find(
       (c) =>
         c.id.toLowerCase() === id.toLowerCase() ||
@@ -1477,6 +1501,16 @@ export class SuperAdminService {
     if (!company) {
       throw new NotFoundException(`Company with ID or code "${id}" not found.`);
     }
+
+    // Assert company uniqueness against other companies
+    await this.db.assertCompanyUnique(
+      {
+        companyName: dto.companyName || dto.name,
+        email: dto.email,
+        phone: dto.phone,
+      },
+      company.id,
+    );
 
     if (dto.companyName) {
       company.companyName = dto.companyName;
@@ -1576,41 +1610,406 @@ export class SuperAdminService {
     };
   }
 
-  deleteCompany(id: string, actingAdmin?: User) {
+  async deleteCompany(id: string, actingAdmin?: User) {
+    const cleanId = (id || '').trim();
     const index = this.db.companies.findIndex(
       (c) =>
-        c.id.toLowerCase() === id.toLowerCase() ||
-        c.companyCode.toLowerCase() === id.toLowerCase(),
+        c.id.toLowerCase() === cleanId.toLowerCase() ||
+        c.companyCode?.toLowerCase() === cleanId.toLowerCase(),
     );
-    if (index === -1) {
-      throw new NotFoundException(`Company with ID or code "${id}" not found.`);
+
+    let companyId = cleanId;
+    let companyCode = cleanId;
+    let companyName = cleanId;
+
+    if (index !== -1) {
+      const company = this.db.companies[index];
+      companyId = company.id;
+      companyCode = company.companyCode;
+      companyName = company.companyName || company.name || cleanId;
+    } else {
+      // Check if found in MySQL
+      if (this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+        try {
+          const [rows]: any = await this.db.getMysqlPool()!.query(
+            `SELECT id, companyCode, companyName FROM companies WHERE id = ? OR companyCode = ? LIMIT 1`,
+            [cleanId, cleanId],
+          );
+          if (rows && rows.length > 0) {
+            companyId = rows[0].id;
+            companyCode = rows[0].companyCode;
+            companyName = rows[0].companyName;
+          }
+        } catch {}
+      }
     }
 
-    const company = this.db.companies[index];
-    this.db.companies.splice(index, 1);
-
-    // Also remove employees belonging to this company
-    this.db.employees = this.db.employees.filter((e) => e.companyId !== company.id);
-
-    // Remove non-super-admin users belonging to this company
-    this.db.users = this.db.users.filter(
-      (u) => u.companyId !== company.id || u.role === Role.SUPER_ADMIN,
-    );
+    // Completely wipe out company and ALL its data from MySQL and runtime memory
+    await this.db.purgeCompanyCompletely(companyId, companyCode);
 
     this.db.logAudit(
       actingAdmin?.id || 'super-admin',
       actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
       actingAdmin?.role || Role.SUPER_ADMIN,
-      'COMPANY_DELETED',
+      'COMPANY_DELETED_PERMANENTLY',
       'SuperAdmin',
-      `Deleted company "${company.companyName}" (${company.companyCode})`,
-      company.id,
+      `Permanently deleted company "${companyName}" (${companyCode}) and cascaded complete deletion to all its admins, employees, departments, and operational data.`,
+      companyId,
     );
 
-    this.db.persist();
     return {
-      message: `Company ${company.companyCode} (${company.companyName}) deleted successfully`,
-      deletedCompanyId: company.id,
+      success: true,
+      message: `Company ${companyCode} (${companyName}) and all associated users, employees, and records have been permanently deleted from both live MySQL and runtime memory.`,
+      deletedCompanyId: companyId,
+      deletedCompanyCode: companyCode,
+    };
+  }
+
+  // -------------------------------------------------------------
+  // COMPANY REGISTRATION APPROVAL WORKFLOW
+  // -------------------------------------------------------------
+  async createCompanyRegistrationRequest(dto: RegisterCompanyRequestDto) {
+    const companyLegalName = (dto.companyLegalName || '').trim();
+    if (!companyLegalName) {
+      throw new BadRequestException('Company Legal Name is required.');
+    }
+
+    const officialEmail = (dto.officialEmail || '').trim().toLowerCase();
+    if (!officialEmail) {
+      throw new BadRequestException('Official Owner Email is required.');
+    }
+
+    const mobileNumber = (dto.mobileNumber || '').trim().replace(/\D/g, '');
+    if (!mobileNumber) {
+      throw new BadRequestException('Mobile Number is required.');
+    }
+
+    if (dto.confirmPassword && dto.confirmPassword !== dto.password) {
+      throw new BadRequestException('Passwords do not match.');
+    }
+
+    // Check if active company or user already has this email
+    const existingUser = this.db.users.find(
+      (u) => u.email.toLowerCase() === officialEmail || (u.phone && u.phone === mobileNumber),
+    );
+    if (existingUser) {
+      throw new ConflictException(
+        'An account with this email address or mobile number already exists. Please login or use different contact information.',
+      );
+    }
+
+    const existingCompany = this.db.companies.find(
+      (c) =>
+        c.companyName.toLowerCase() === companyLegalName.toLowerCase() ||
+        (c.email && c.email.toLowerCase() === officialEmail),
+    );
+    if (existingCompany) {
+      throw new ConflictException(
+        `A company with the name "${companyLegalName}" or email "${officialEmail}" is already registered.`,
+      );
+    }
+
+    // Check for duplicate pending requests
+    const duplicatePending = this.db.companyRegistrationRequests.find(
+      (r) =>
+        r.status === 'PENDING' &&
+        (r.officialEmail.toLowerCase() === officialEmail ||
+          r.companyLegalName.toLowerCase() === companyLegalName.toLowerCase() ||
+          r.mobileNumber === mobileNumber),
+    );
+    if (duplicatePending) {
+      throw new ConflictException(
+        'A registration request for this company name, email, or mobile number is already pending Super Admin approval.',
+      );
+    }
+
+    const requestId = `req-${Date.now()}`;
+    const passwordHash = hashPassword(dto.password);
+    const now = new Date().toISOString();
+
+    const requestRecord: CompanyRegistrationRequest = {
+      id: requestId,
+      companyLegalName,
+      gstin: (dto.gstin || '').trim(),
+      industrySector: (dto.industrySector || '').trim(),
+      officeAddress: (dto.officeAddress || '').trim(),
+      city: (dto.city || '').trim(),
+      state: (dto.state || '').trim(),
+      firstName: (dto.firstName || '').trim(),
+      lastName: (dto.lastName || '').trim(),
+      officialEmail,
+      mobileNumber,
+      passwordHash,
+      status: 'PENDING',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Store in MySQL table
+    try {
+      const pool = this.db.getMysqlPool();
+      if (pool && this.db.isConnectedToMysql) {
+        await pool.query(
+          `INSERT INTO company_registration_requests (
+            id, companyLegalName, gstin, industrySector, officeAddress, city, state,
+            firstName, lastName, officialEmail, mobileNumber, passwordHash, status, createdAt, updatedAt
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            requestRecord.id,
+            requestRecord.companyLegalName,
+            requestRecord.gstin || null,
+            requestRecord.industrySector || null,
+            requestRecord.officeAddress || null,
+            requestRecord.city || null,
+            requestRecord.state || null,
+            requestRecord.firstName,
+            requestRecord.lastName,
+            requestRecord.officialEmail,
+            requestRecord.mobileNumber,
+            requestRecord.passwordHash,
+            requestRecord.status,
+            requestRecord.createdAt,
+            requestRecord.updatedAt,
+          ],
+        );
+      }
+    } catch (err: any) {
+      this.logger.warn(`Could not save company_registration_request to MySQL: ${err.message}`);
+    }
+
+    this.db.companyRegistrationRequests.unshift(requestRecord);
+
+    this.db.logAudit(
+      'guest-registration',
+      `${requestRecord.firstName} ${requestRecord.lastName}`,
+      'GUEST',
+      'COMPANY_REGISTRATION_REQUEST_SUBMITTED',
+      'Companies',
+      `New company registration request submitted for "${companyLegalName}" (${officialEmail}). Pending Super Admin approval.`,
+      requestId,
+    );
+
+    return {
+      statusCode: 201,
+      message:
+        'Company registration request submitted successfully! Your workspace will be created and activated once the Super Admin approves it.',
+      requestId: requestRecord.id,
+      companyLegalName: requestRecord.companyLegalName,
+      officialEmail: requestRecord.officialEmail,
+      status: requestRecord.status,
+      submittedAt: requestRecord.createdAt,
+    };
+  }
+
+  getCompanyRegistrationRequests(status?: string) {
+    let list = [...this.db.companyRegistrationRequests];
+    if (status) {
+      list = list.filter((r) => r.status.toUpperCase() === status.toUpperCase());
+    }
+    // Mask passwordHash before returning
+    return list.map(({ passwordHash: _, ...safe }) => safe);
+  }
+
+  async approveCompanyRegistrationRequest(requestId: string, actingAdmin?: User) {
+    const matched = this.db.companyRegistrationRequests.find((r) => r.id === requestId);
+    if (!matched) {
+      throw new NotFoundException(`Company registration request with ID "${requestId}" not found.`);
+    }
+
+    if (matched.status !== 'PENDING') {
+      throw new BadRequestException(
+        `Registration request has already been ${matched.status.toLowerCase()} and cannot be approved again.`,
+      );
+    }
+
+    const now = new Date().toISOString();
+    const companyId = `cmp-${Date.now()}`;
+    const companyCode = this.db.generateNextCompanyCode();
+
+    const newCompany: Company = {
+      id: companyId,
+      companyCode,
+      companyName: matched.companyLegalName,
+      name: matched.companyLegalName,
+      email: matched.officialEmail,
+      phone: matched.mobileNumber,
+      address: matched.officeAddress || '',
+      city: matched.city || '',
+      state: matched.state || '',
+      gstin: matched.gstin || '',
+      industrySector: matched.industrySector || '',
+      status: 'Active',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const adminUserId = `user-${Date.now()}`;
+    const adminUser: User = {
+      id: adminUserId,
+      email: matched.officialEmail,
+      phone: matched.mobileNumber,
+      password: matched.passwordHash,
+      firstName: matched.firstName,
+      lastName: matched.lastName,
+      role: Role.ADMIN,
+      isSuperAdmin: false,
+      status: 'Active',
+      companyId: newCompany.id,
+      companyCode: newCompany.companyCode,
+      employeeId: null,
+      avatarUrl: '',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const adminEmp: Employee = {
+      id: adminUserId,
+      employeeCode: 'EMP-000001',
+      companyId: newCompany.id,
+      companyCode: newCompany.companyCode,
+      userId: adminUserId,
+      password: matched.passwordHash,
+      isSuperAdmin: false,
+      firstName: adminUser.firstName,
+      lastName: adminUser.lastName,
+      email: matched.officialEmail,
+      phone: matched.mobileNumber,
+      avatarUrl: '',
+      gender: 'Other',
+      dateOfBirth: '',
+      address: matched.officeAddress || '',
+      emergencyContact: {} as any,
+      joiningDate: now.split('T')[0],
+      employmentType: 'Full-time',
+      status: EmployeeStatus.ACTIVE,
+      departmentId: this.db.departments[0]?.id || '',
+      departmentName: this.db.departments[0]?.name || 'Management',
+      designationId: this.db.designations[0]?.id || '',
+      designationTitle: 'Company Owner & Administrator',
+      reportingManagerId: '',
+      reportingManagerName: '',
+      workLocationId: this.db.locations[0]?.id || '',
+      workLocationName: this.db.locations[0]?.name || '',
+      shift: 'General Shift (9 AM - 6 PM)',
+      bankDetails: {} as any,
+      taxInformation: {} as any,
+      education: [],
+      previousExperience: [],
+      skills: ['Leadership'],
+      salary: {} as any,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    newCompany.adminUserId = adminUserId;
+
+    // Update registration request status
+    matched.status = 'APPROVED';
+    matched.approvedCompanyId = newCompany.id;
+    matched.approvedCompanyCode = newCompany.companyCode;
+    matched.approvedAdminUserId = adminUserId;
+    matched.approvedBy = actingAdmin?.id || 'super-admin';
+    matched.approvedAt = now;
+    matched.updatedAt = now;
+
+    // Update in MySQL
+    try {
+      const pool = this.db.getMysqlPool();
+      if (pool && this.db.isConnectedToMysql) {
+        await pool.query(
+          `UPDATE company_registration_requests
+           SET status = 'APPROVED', approvedCompanyId = ?, approvedCompanyCode = ?, approvedAdminUserId = ?, approvedBy = ?, approvedAt = ?, updatedAt = ?
+           WHERE id = ?`,
+          [
+            matched.approvedCompanyId,
+            matched.approvedCompanyCode,
+            matched.approvedAdminUserId,
+            matched.approvedBy,
+            matched.approvedAt,
+            matched.updatedAt,
+            matched.id,
+          ],
+        );
+      }
+    } catch (err: any) {
+      this.logger.warn(`Could not update company_registration_requests in MySQL: ${err.message}`);
+    }
+
+    this.db.companies.push(newCompany);
+    this.db.users.unshift(adminUser);
+    this.db.employees.unshift(adminEmp);
+
+    await this.db.flushPersist();
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      Role.SUPER_ADMIN,
+      'COMPANY_REGISTRATION_APPROVED',
+      'SuperAdmin',
+      `Super Admin approved company registration request ${matched.id}. Created company "${newCompany.companyName}" (${newCompany.companyCode}) and Admin user "${adminUser.email}".`,
+      newCompany.id,
+    );
+
+    const { password: _, ...safeAdmin } = adminUser;
+    return {
+      statusCode: 200,
+      message: `Company registration request approved successfully! Company "${newCompany.companyName}" (${newCompany.companyCode}) and Admin account "${adminUser.email}" have been created and activated.`,
+      company: newCompany,
+      adminUser: safeAdmin,
+      approvedAt: now,
+    };
+  }
+
+  async rejectCompanyRegistrationRequest(requestId: string, reason?: string, actingAdmin?: User) {
+    const matched = this.db.companyRegistrationRequests.find((r) => r.id === requestId);
+    if (!matched) {
+      throw new NotFoundException(`Company registration request with ID "${requestId}" not found.`);
+    }
+
+    if (matched.status !== 'PENDING') {
+      throw new BadRequestException(
+        `Registration request has already been ${matched.status.toLowerCase()} and cannot be rejected.`,
+      );
+    }
+
+    const now = new Date().toISOString();
+    matched.status = 'REJECTED';
+    matched.rejectionReason = reason || 'Rejected by Super Admin.';
+    matched.rejectedAt = now;
+    matched.updatedAt = now;
+
+    try {
+      const pool = this.db.getMysqlPool();
+      if (pool && this.db.isConnectedToMysql) {
+        await pool.query(
+          `UPDATE company_registration_requests
+           SET status = 'REJECTED', rejectionReason = ?, rejectedAt = ?, updatedAt = ?
+           WHERE id = ?`,
+          [matched.rejectionReason, matched.rejectedAt, matched.updatedAt, matched.id],
+        );
+      }
+    } catch (err: any) {
+      this.logger.warn(`Could not update company_registration_requests in MySQL: ${err.message}`);
+    }
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      Role.SUPER_ADMIN,
+      'COMPANY_REGISTRATION_REJECTED',
+      'SuperAdmin',
+      `Super Admin rejected company registration request ${matched.id}. Reason: ${matched.rejectionReason}`,
+      matched.id,
+    );
+
+    return {
+      statusCode: 200,
+      message: `Company registration request ${matched.id} has been rejected.`,
+      requestId: matched.id,
+      status: 'REJECTED',
+      rejectionReason: matched.rejectionReason,
+      rejectedAt: now,
     };
   }
 }

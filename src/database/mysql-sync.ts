@@ -50,8 +50,37 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
       email VARCHAR(255),
       phone VARCHAR(50),
       address TEXT,
+      city VARCHAR(100),
+      state VARCHAR(100),
+      gstin VARCHAR(50),
+      industrySector VARCHAR(100),
       status VARCHAR(50) DEFAULT 'Active',
       adminUserId VARCHAR(64),
+      createdAt VARCHAR(50),
+      updatedAt VARCHAR(50)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS company_registration_requests (
+      id VARCHAR(64) PRIMARY KEY,
+      companyLegalName VARCHAR(255) NOT NULL,
+      gstin VARCHAR(50),
+      industrySector VARCHAR(100),
+      officeAddress TEXT,
+      city VARCHAR(100),
+      state VARCHAR(100),
+      firstName VARCHAR(100) NOT NULL,
+      lastName VARCHAR(100) NOT NULL,
+      officialEmail VARCHAR(255) NOT NULL,
+      mobileNumber VARCHAR(50) NOT NULL,
+      passwordHash VARCHAR(255) NOT NULL,
+      status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
+      rejectionReason TEXT,
+      approvedCompanyId VARCHAR(64),
+      approvedCompanyCode VARCHAR(50),
+      approvedAdminUserId VARCHAR(64),
+      approvedBy VARCHAR(64),
+      approvedAt VARCHAR(50),
+      rejectedAt VARCHAR(50),
       createdAt VARCHAR(50),
       updatedAt VARCHAR(50)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
@@ -72,6 +101,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS departments (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       name VARCHAR(255) NOT NULL,
       code VARCHAR(50) NOT NULL,
       headEmployeeId VARCHAR(64),
@@ -83,6 +114,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS designations (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       title VARCHAR(255) NOT NULL,
       departmentId VARCHAR(64),
       departmentName VARCHAR(255),
@@ -93,7 +126,7 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS users (
       id VARCHAR(64) PRIMARY KEY,
-      email VARCHAR(255) NOT NULL UNIQUE,
+      email VARCHAR(255) NOT NULL,
       phone VARCHAR(50),
       password VARCHAR(255),
       firstName VARCHAR(100),
@@ -129,11 +162,14 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
       skills JSON,
       salary JSON,
       createdAt VARCHAR(50),
-      updatedAt VARCHAR(50)
+      updatedAt VARCHAR(50),
+      UNIQUE KEY uq_user_company_email (companyId, email)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
     `CREATE TABLE IF NOT EXISTS holidays (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       name VARCHAR(255) NOT NULL,
       date VARCHAR(30) NOT NULL,
       dayOfWeek VARCHAR(30),
@@ -144,6 +180,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS leave_balances (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       employeeId VARCHAR(64) NOT NULL,
       year INT NOT NULL,
       casualLeave JSON,
@@ -153,6 +191,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS leave_requests (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       employeeId VARCHAR(64) NOT NULL,
       employeeName VARCHAR(255),
       employeeAvatar TEXT,
@@ -174,6 +214,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS attendance_records (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       employeeId VARCHAR(64) NOT NULL,
       employeeName VARCHAR(255),
       date VARCHAR(30) NOT NULL,
@@ -221,6 +263,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS payroll_records (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       payrollMonth VARCHAR(20) NOT NULL,
       employeeId VARCHAR(64) NOT NULL,
       employeeName VARCHAR(255),
@@ -246,6 +290,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS job_openings (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       title VARCHAR(255) NOT NULL,
       departmentId VARCHAR(64),
       departmentName VARCHAR(255),
@@ -264,6 +310,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS candidates (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       jobId VARCHAR(64),
       jobTitle VARCHAR(255),
       fullName VARCHAR(255) NOT NULL,
@@ -283,6 +331,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS company_assets (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       assetCode VARCHAR(50) NOT NULL,
       name VARCHAR(255) NOT NULL,
       category VARCHAR(100),
@@ -297,6 +347,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS training_programs (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       title VARCHAR(255) NOT NULL,
       description TEXT,
       trainerName VARCHAR(255),
@@ -310,6 +362,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS employee_trainings (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       trainingId VARCHAR(64) NOT NULL,
       trainingTitle VARCHAR(255),
       employeeId VARCHAR(64) NOT NULL,
@@ -322,6 +376,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS performance_cycles (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       title VARCHAR(255) NOT NULL,
       year INT NOT NULL,
       period VARCHAR(50),
@@ -332,6 +388,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS performance_reviews (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       cycleId VARCHAR(64),
       cycleTitle VARCHAR(255),
       employeeId VARCHAR(64) NOT NULL,
@@ -351,6 +409,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS resignations (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       employeeId VARCHAR(64) NOT NULL,
       employeeName VARCHAR(255),
       employeeCode VARCHAR(50),
@@ -366,6 +426,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS announcements (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       title VARCHAR(255) NOT NULL,
       content TEXT,
       publishDate VARCHAR(30),
@@ -376,6 +438,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS notifications (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       title VARCHAR(255) NOT NULL,
       message TEXT,
       type VARCHAR(50),
@@ -386,6 +450,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS documents (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       employeeId VARCHAR(64) NOT NULL,
       employeeName VARCHAR(255),
       title VARCHAR(255) NOT NULL,
@@ -400,6 +466,8 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
 
     `CREATE TABLE IF NOT EXISTS audit_logs (
       id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
       userId VARCHAR(64),
       userName VARCHAR(255),
       userRole VARCHAR(50),
@@ -409,6 +477,38 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
       details TEXT,
       ipAddress VARCHAR(50),
       createdAt VARCHAR(50)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS refresh_tokens (
+      id VARCHAR(64) PRIMARY KEY,
+      userId VARCHAR(64) NOT NULL,
+      companyId VARCHAR(64) NOT NULL,
+      companyCode VARCHAR(50) NOT NULL,
+      tokenHash VARCHAR(255) NOT NULL,
+      familyId VARCHAR(64) NOT NULL,
+      isRevoked BOOLEAN DEFAULT FALSE,
+      expiresAt VARCHAR(50) NOT NULL,
+      createdAt VARCHAR(50) NOT NULL,
+      updatedAt VARCHAR(50) NOT NULL,
+      INDEX idx_rt_user (userId),
+      INDEX idx_rt_family (familyId),
+      INDEX idx_rt_hash (tokenHash)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS employee_invitations (
+      id VARCHAR(64) PRIMARY KEY,
+      userId VARCHAR(64) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      companyId VARCHAR(64) NOT NULL,
+      companyCode VARCHAR(50) NOT NULL,
+      tokenHash VARCHAR(255) NOT NULL,
+      expiresAt VARCHAR(50) NOT NULL,
+      usedAt VARCHAR(50) DEFAULT NULL,
+      revokedAt VARCHAR(50) DEFAULT NULL,
+      createdAt VARCHAR(50) NOT NULL,
+      INDEX idx_ei_user (userId),
+      INDEX idx_ei_company (companyId),
+      INDEX idx_ei_hash (tokenHash)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
     `CREATE TABLE IF NOT EXISTS system_settings (
@@ -441,171 +541,125 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
     await pool.query(sql);
   }
 
+  // -------------------------------------------------------------
+  // AUTOMATED CASCADE DELETION TRIGGERS IN MYSQL
+  // Whenever a company or user is deleted directly in MySQL/phpMyAdmin,
+  // all corresponding rows across all tables are deleted instantaneously!
+  // -------------------------------------------------------------
   try {
-    await pool.query(`ALTER TABLE locations ADD COLUMN latitude DECIMAL(10, 8) DEFAULT 0;`);
-  } catch {
-    // Column already exists
+    await pool.query('DROP TRIGGER IF EXISTS trg_cascade_delete_company');
+    await pool.query(`
+      CREATE TRIGGER trg_cascade_delete_company
+      AFTER DELETE ON companies
+      FOR EACH ROW
+      BEGIN
+        DELETE FROM users WHERE (companyId = OLD.id OR companyCode = OLD.companyCode) AND role != 'SUPER_ADMIN' AND isSuperAdmin = 0;
+        DELETE FROM departments WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM designations WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM locations WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM holidays WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM leave_balances WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM leave_requests WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM attendance_records WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM work_sessions WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM payroll_records WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM job_openings WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM candidates WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM company_assets WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM training_programs WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM employee_trainings WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM performance_cycles WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM performance_reviews WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM resignations WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM announcements WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM notifications WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM documents WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM audit_logs WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM employee_invitations WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM refresh_tokens WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM company_registration_requests WHERE approvedCompanyId = OLD.id OR approvedCompanyCode = OLD.companyCode;
+      END;
+    `);
+  } catch (trgErr) {
+    // If triggers are restricted by server permissions, backend cascade handles it
   }
 
   try {
-    await pool.query(`ALTER TABLE locations ADD COLUMN longitude DECIMAL(11, 8) DEFAULT 0;`);
-  } catch {
-    // Column already exists
+    await pool.query('DROP TRIGGER IF EXISTS trg_cascade_delete_user');
+    await pool.query(`
+      CREATE TRIGGER trg_cascade_delete_user
+      AFTER DELETE ON users
+      FOR EACH ROW
+      BEGIN
+        DELETE FROM leave_balances WHERE employeeId = OLD.id OR (OLD.employeeId IS NOT NULL AND employeeId = OLD.employeeId);
+        DELETE FROM leave_requests WHERE employeeId = OLD.id OR (OLD.employeeId IS NOT NULL AND employeeId = OLD.employeeId);
+        DELETE FROM attendance_records WHERE employeeId = OLD.id OR (OLD.employeeId IS NOT NULL AND employeeId = OLD.employeeId);
+        DELETE FROM work_sessions WHERE employeeId = OLD.id OR (OLD.employeeId IS NOT NULL AND employeeId = OLD.employeeId);
+        DELETE FROM payroll_records WHERE employeeId = OLD.id OR (OLD.employeeId IS NOT NULL AND employeeId = OLD.employeeId);
+        DELETE FROM employee_trainings WHERE employeeId = OLD.id OR (OLD.employeeId IS NOT NULL AND employeeId = OLD.employeeId);
+        DELETE FROM performance_reviews WHERE employeeId = OLD.id OR (OLD.employeeId IS NOT NULL AND employeeId = OLD.employeeId);
+        DELETE FROM resignations WHERE employeeId = OLD.id OR (OLD.employeeId IS NOT NULL AND employeeId = OLD.employeeId);
+        DELETE FROM documents WHERE employeeId = OLD.id OR (OLD.employeeId IS NOT NULL AND employeeId = OLD.employeeId);
+        DELETE FROM refresh_tokens WHERE userId = OLD.id;
+        DELETE FROM employee_invitations WHERE email = OLD.email;
+      END;
+    `);
+  } catch (trgErr) {
+    // Fallback handled by backend
   }
+}
 
+/**
+ * Purges any orphaned data in MySQL whose company has been deleted or no longer exists.
+ * Preserves the SUPER_ADMIN account.
+ */
+export async function purgeOrphanedData(pool: mysql.Pool) {
   try {
-    await pool.query(`ALTER TABLE locations ADD COLUMN radiusMeters INT DEFAULT 200;`);
-  } catch {
-    // Column already exists
-  }
+    // 1. Delete non-super-admin users whose company does not exist in companies table
+    await pool.query(`
+      DELETE FROM users 
+      WHERE role != 'SUPER_ADMIN' 
+        AND isSuperAdmin = 0 
+        AND (
+          (companyId IS NULL OR companyId = '' OR companyId NOT IN (SELECT id FROM companies))
+          AND
+          (companyCode IS NULL OR companyCode = '' OR companyCode NOT IN (SELECT companyCode FROM companies))
+        )
+    `);
 
-  try {
-    await pool.query(`ALTER TABLE locations ADD COLUMN companyId VARCHAR(64);`);
-  } catch {
-    // Column already exists
-  }
+    // 2. Cascade delete from all child tables
+    const tablesWithCompanyCols = [
+      'departments', 'designations', 'locations', 'holidays', 'leave_balances',
+      'leave_requests', 'attendance_records', 'work_sessions', 'payroll_records',
+      'job_openings', 'candidates', 'company_assets', 'training_programs',
+      'employee_trainings', 'performance_cycles', 'performance_reviews',
+      'resignations', 'announcements', 'notifications', 'documents',
+      'audit_logs', 'refresh_tokens', 'employee_invitations'
+    ];
 
-  try {
-    await pool.query(`ALTER TABLE locations ADD COLUMN isActive BOOLEAN DEFAULT TRUE;`);
-  } catch {
-    // Column already exists
-  }
+    for (const tbl of tablesWithCompanyCols) {
+      try {
+        await pool.query(`
+          DELETE FROM ${tbl}
+          WHERE (
+            (companyId IS NULL OR companyId = '' OR companyId NOT IN (SELECT id FROM companies))
+            AND
+            (companyCode IS NULL OR companyCode = '' OR companyCode NOT IN (SELECT companyCode FROM companies))
+          )
+        `);
+      } catch {}
+    }
 
-  try {
-    await pool.query(`ALTER TABLE users ADD COLUMN password VARCHAR(255) AFTER email;`);
-  } catch {
-    // Column already exists or table freshly created
-  }
-
-  try {
-    await pool.query(`ALTER TABLE users ADD COLUMN isSuperAdmin BOOLEAN DEFAULT FALSE AFTER role;`);
-  } catch {
-    // Column already exists
-  }
-
-  try {
-    await pool.query(`ALTER TABLE users ADD COLUMN status VARCHAR(50) DEFAULT 'Active' AFTER isSuperAdmin;`);
-  } catch {
-    // Column already exists
-  }
-
-  try {
-    await pool.query(`ALTER TABLE employees ADD COLUMN isSuperAdmin BOOLEAN DEFAULT FALSE AFTER password;`);
-  } catch {
-    // Column already exists
-  }
-
-  try {
-    await pool.query(`ALTER TABLE users MODIFY COLUMN role ENUM('SUPER_ADMIN', 'ADMIN', 'EMPLOYEE') DEFAULT 'EMPLOYEE';`);
-  } catch {
-    // Column already enum
-  }
-
-  try {
-    await pool.query(`ALTER TABLE users ADD COLUMN companyId VARCHAR(64) AFTER status;`);
-  } catch {
-    // Column already exists
-  }
-
-  try {
-    await pool.query(`ALTER TABLE users ADD COLUMN companyCode VARCHAR(50) AFTER companyId;`);
-  } catch {
-    // Column already exists
-  }
-
-  try {
-    await pool.query(`ALTER TABLE employees ADD COLUMN companyId VARCHAR(64) AFTER employeeCode;`);
-  } catch {
-    // Column already exists
-  }
-
-  try {
-    await pool.query(`ALTER TABLE employees ADD COLUMN companyCode VARCHAR(50) AFTER companyId;`);
-  } catch {
-    // Column already exists
-  }
-
-  try {
-    await pool.query(`ALTER TABLE employees DROP INDEX employeeCode;`);
-  } catch {
-    // Index already dropped or does not exist
-  }
-
-  try {
-    await pool.query(`ALTER TABLE users ADD COLUMN phone VARCHAR(50) AFTER email;`);
-  } catch {
-    // Column phone already exists
-  }
-
-  try {
-    await pool.query(`ALTER TABLE users ADD COLUMN employeeCode VARCHAR(50) AFTER employeeId;`);
-  } catch {
-    // Column employeeCode already exists
-  }
-
-  try {
-    await pool.query(`ALTER TABLE users ADD COLUMN permissions JSON AFTER employeeCode;`);
-  } catch {
-    // Column permissions already exists
-  }
-
-  const userProfileCols = [
-    'gender VARCHAR(20) NULL',
-    'dateOfBirth VARCHAR(30) NULL',
-    'address TEXT NULL',
-    'joiningDate VARCHAR(30) NULL',
-    'employmentType VARCHAR(50) NULL',
-    'departmentId VARCHAR(64) NULL',
-    'departmentName VARCHAR(255) NULL',
-    'designationId VARCHAR(64) NULL',
-    'designationTitle VARCHAR(255) NULL',
-    'reportingManagerId VARCHAR(64) NULL',
-    'reportingManagerName VARCHAR(255) NULL',
-    'workLocationId VARCHAR(64) NULL',
-    'workLocationName VARCHAR(255) NULL',
-    'shift VARCHAR(100) NULL',
-    'emergencyContact JSON NULL',
-    'bankDetails JSON NULL',
-    'taxInformation JSON NULL',
-    'education JSON NULL',
-    'previousExperience JSON NULL',
-    'skills JSON NULL',
-    'salary JSON NULL',
-  ];
-  for (const c of userProfileCols) {
+    // 3. Purge orphaned leave balances and refresh tokens where user no longer exists
     try {
-      await pool.query(`ALTER TABLE users ADD COLUMN ${c};`);
-    } catch {
-      // Column already exists
-    }
-  }
+      await pool.query(`DELETE FROM leave_balances WHERE employeeId NOT IN (SELECT id FROM users)`);
+    } catch {}
 
-  try {
-    const [rows]: any = await pool.query(`SELECT COUNT(*) as count FROM system_settings`);
-    if (rows && rows[0]?.count === 0) {
-      await pool.query(
-        `INSERT INTO system_settings (id, companyName, supportEmail, timeZone, currency, maintenanceMode, allowRegistration, twoFactorAuthEnforced, sessionTimeoutMinutes, configData, updatedAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          'settings-1',
-          'Paneliya Enterprise HRMS',
-          'admin@paneliya.com',
-          'Asia/Kolkata',
-          'INR',
-          0,
-          1,
-          0,
-          120,
-          JSON.stringify({
-            rbacRoles: ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE'],
-            activeModules: ['Super Admin', 'Employees', 'Organization', 'Attendance', 'Leaves', 'Payroll', 'Recruitment'],
-          }),
-          new Date().toISOString(),
-        ],
-      );
-    }
-  } catch {
-    // Ignore seeding error if table already populated
+    try {
+      await pool.query(`DELETE FROM refresh_tokens WHERE userId NOT IN (SELECT id FROM users)`);
+    } catch {}
+  } catch (err) {
+    // Handled
   }
 }
 
@@ -619,6 +673,9 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
       } else {
         await pool.query(`DELETE FROM companies`);
       }
+
+      // Automatically purge all orphaned records in child tables for any company that was deleted
+      await purgeOrphanedData(pool);
 
       for (const c of data.companies) {
         await pool.query(
@@ -669,10 +726,13 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.departments && data.departments.length > 0) {
       for (const dept of data.departments) {
         await pool.query(
-          `INSERT INTO departments (id, name, code, headEmployeeId, headName, employeeCount, description, createdAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE name=VALUES(name), code=VALUES(code), headEmployeeId=VALUES(headEmployeeId), headName=VALUES(headName), employeeCount=VALUES(employeeCount), description=VALUES(description)`,
-          [dept.id, dept.name, dept.code, dept.headEmployeeId || null, dept.headName || null, dept.employeeCount || 0, dept.description || '', dept.createdAt || new Date().toISOString()],
+          `INSERT INTO departments (id, companyId, companyCode, name, code, headEmployeeId, headName, employeeCount, description, createdAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             companyId=COALESCE(VALUES(companyId), departments.companyId, 'cmp-1'),
+             companyCode=COALESCE(VALUES(companyCode), departments.companyCode, 'CMP-000001'),
+             name=VALUES(name), code=VALUES(code), headEmployeeId=VALUES(headEmployeeId), headName=VALUES(headName), employeeCount=VALUES(employeeCount), description=VALUES(description)`,
+          [dept.id, dept.companyId || 'cmp-1', dept.companyCode || 'CMP-000001', dept.name, dept.code, dept.headEmployeeId || null, dept.headName || null, dept.employeeCount || 0, dept.description || '', dept.createdAt || new Date().toISOString()],
         );
       }
     }
@@ -681,10 +741,13 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.designations && data.designations.length > 0) {
       for (const des of data.designations) {
         await pool.query(
-          `INSERT INTO designations (id, title, departmentId, departmentName, minSalary, maxSalary, createdAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE title=VALUES(title), departmentId=VALUES(departmentId), departmentName=VALUES(departmentName), minSalary=VALUES(minSalary), maxSalary=VALUES(maxSalary)`,
-          [des.id, des.title, des.departmentId, des.departmentName, des.minSalary || 0, des.maxSalary || 0, des.createdAt || new Date().toISOString()],
+          `INSERT INTO designations (id, companyId, companyCode, title, departmentId, departmentName, minSalary, maxSalary, createdAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             companyId=COALESCE(VALUES(companyId), designations.companyId, 'cmp-1'),
+             companyCode=COALESCE(VALUES(companyCode), designations.companyCode, 'CMP-000001'),
+             title=VALUES(title), departmentId=VALUES(departmentId), departmentName=VALUES(departmentName), minSalary=VALUES(minSalary), maxSalary=VALUES(maxSalary)`,
+          [des.id, des.companyId || 'cmp-1', des.companyCode || 'CMP-000001', des.title, des.departmentId, des.departmentName, des.minSalary || 0, des.maxSalary || 0, des.createdAt || new Date().toISOString()],
         );
       }
     }
@@ -724,7 +787,10 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE
             email=VALUES(email), phone=VALUES(phone), password=VALUES(password), firstName=VALUES(firstName), lastName=VALUES(lastName), role=VALUES(role),
-            isSuperAdmin=VALUES(isSuperAdmin), status=VALUES(status), companyId=VALUES(companyId), companyCode=VALUES(companyCode), employeeId=VALUES(employeeId), employeeCode=VALUES(employeeCode),
+            isSuperAdmin=VALUES(isSuperAdmin), status=VALUES(status),
+            companyId=COALESCE(VALUES(companyId), users.companyId, 'cmp-1'),
+            companyCode=COALESCE(VALUES(companyCode), users.companyCode, 'CMP-000001'),
+            employeeId=VALUES(employeeId), employeeCode=VALUES(employeeCode),
             permissions=VALUES(permissions), avatarUrl=VALUES(avatarUrl),
             gender=VALUES(gender), dateOfBirth=VALUES(dateOfBirth), address=VALUES(address), joiningDate=VALUES(joiningDate), employmentType=VALUES(employmentType),
             departmentId=VALUES(departmentId), departmentName=VALUES(departmentName), designationId=VALUES(designationId), designationTitle=VALUES(designationTitle),
@@ -741,8 +807,8 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
             role,
             isSuper ? 1 : 0,
             u.status || 'Active',
-            isSuper ? null : (u.companyId || null),
-            isSuper ? null : (u.companyCode || null),
+            u.companyId || 'cmp-1',
+            u.companyCode || 'CMP-000001',
             isSuper ? null : (u.employeeId || null),
             isSuper ? null : employeeCode,
             permissions,
@@ -779,10 +845,10 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.attendanceRecords && data.attendanceRecords.length > 0) {
       for (const att of data.attendanceRecords) {
         await pool.query(
-          `INSERT INTO attendance_records (id, employeeId, employeeName, date, checkIn, checkOut, breakDurationMinutes, workingHours, overtimeHours, status, remarks, createdAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE checkIn=VALUES(checkIn), checkOut=VALUES(checkOut), breakDurationMinutes=VALUES(breakDurationMinutes), workingHours=VALUES(workingHours), overtimeHours=VALUES(overtimeHours), status=VALUES(status), remarks=VALUES(remarks)`,
-          [att.id, att.employeeId, att.employeeName, att.date, att.checkIn || '', att.checkOut || '', att.breakDurationMinutes || 0, att.workingHours || 0, att.overtimeHours || 0, att.status, att.remarks || '', att.createdAt || new Date().toISOString()],
+          `INSERT INTO attendance_records (id, companyId, companyCode, employeeId, employeeName, date, checkIn, checkOut, breakDurationMinutes, workingHours, overtimeHours, status, remarks, createdAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE companyId=VALUES(companyId), companyCode=VALUES(companyCode), checkIn=VALUES(checkIn), checkOut=VALUES(checkOut), breakDurationMinutes=VALUES(breakDurationMinutes), workingHours=VALUES(workingHours), overtimeHours=VALUES(overtimeHours), status=VALUES(status), remarks=VALUES(remarks)`,
+          [att.id, (att as any).companyId || null, (att as any).companyCode || null, att.employeeId, att.employeeName, att.date, att.checkIn || '', att.checkOut || '', att.breakDurationMinutes || 0, att.workingHours || 0, att.overtimeHours || 0, att.status, att.remarks || '', att.createdAt || new Date().toISOString()],
         );
       }
     }
@@ -830,10 +896,34 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.leaveRequests && data.leaveRequests.length > 0) {
       for (const lr of data.leaveRequests) {
         await pool.query(
-          `INSERT INTO leave_requests (id, employeeId, employeeName, employeeAvatar, departmentName, leaveType, startDate, endDate, daysCount, isHalfDay, reason, status, appliedDate, managerApproverId, managerApproverName, hrApprovedAt, managerApprovedAt, comments)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE status=VALUES(status), comments=VALUES(comments), hrApprovedAt=VALUES(hrApprovedAt), managerApprovedAt=VALUES(managerApprovedAt)`,
-          [lr.id, lr.employeeId, lr.employeeName, lr.employeeAvatar || '', lr.departmentName || '', lr.leaveType, lr.startDate, lr.endDate, lr.daysCount, Boolean(lr.isHalfDay), lr.reason, lr.status, lr.appliedDate, lr.managerApproverId || null, lr.managerApproverName || null, lr.hrApprovedAt || null, lr.managerApprovedAt || null, lr.comments || ''],
+          `INSERT INTO leave_requests (id, companyId, companyCode, employeeId, employeeName, employeeAvatar, departmentName, leaveType, startDate, endDate, daysCount, isHalfDay, reason, status, appliedDate, managerApproverId, managerApproverName, hrApprovedAt, managerApprovedAt, comments)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE companyId=VALUES(companyId), companyCode=VALUES(companyCode), status=VALUES(status), comments=VALUES(comments), hrApprovedAt=VALUES(hrApprovedAt), managerApprovedAt=VALUES(managerApprovedAt)`,
+          [lr.id, (lr as any).companyId || null, (lr as any).companyCode || null, lr.employeeId, lr.employeeName, lr.employeeAvatar || '', lr.departmentName || '', lr.leaveType, lr.startDate, lr.endDate, lr.daysCount, Boolean(lr.isHalfDay), lr.reason, lr.status, lr.appliedDate, lr.managerApproverId || null, lr.managerApproverName || null, lr.hrApprovedAt || null, lr.managerApprovedAt || null, lr.comments || ''],
+        );
+      }
+    }
+
+    // 7b. Leave Balances
+    if (data.leaveBalances && data.leaveBalances.length > 0) {
+      for (const lb of data.leaveBalances) {
+        await pool.query(
+          `INSERT INTO leave_balances (id, companyId, companyCode, employeeId, year, casualLeave, sickLeave, paidLeave)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             companyId=COALESCE(VALUES(companyId), leave_balances.companyId),
+             companyCode=COALESCE(VALUES(companyCode), leave_balances.companyCode),
+             casualLeave=VALUES(casualLeave), sickLeave=VALUES(sickLeave), paidLeave=VALUES(paidLeave)`,
+          [
+            lb.id,
+            (lb as any).companyId || null,
+            (lb as any).companyCode || null,
+            lb.employeeId,
+            lb.year,
+            JSON.stringify(lb.casualLeave || {}),
+            JSON.stringify(lb.sickLeave || {}),
+            JSON.stringify(lb.paidLeave || {}),
+          ],
         );
       }
     }
@@ -842,10 +932,10 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.payrollRecords && data.payrollRecords.length > 0) {
       for (const pr of data.payrollRecords) {
         await pool.query(
-          `INSERT INTO payroll_records (id, payrollMonth, employeeId, employeeName, employeeCode, designationTitle, departmentName, basicSalary, hra, allowances, bonus, overtimePay, grossSalary, pfDeduction, taxDeduction, professionalTax, otherDeductions, totalDeductions, netSalary, status, paymentDate, paymentMethod)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE status=VALUES(status), paymentDate=VALUES(paymentDate)`,
-          [pr.id, pr.payrollMonth, pr.employeeId, pr.employeeName, pr.employeeCode, pr.designationTitle, pr.departmentName, pr.basicSalary, pr.hra, pr.allowances, pr.bonus, pr.overtimePay, pr.grossSalary, pr.pfDeduction, pr.taxDeduction, pr.professionalTax, pr.otherDeductions, pr.totalDeductions, pr.netSalary, pr.status, pr.paymentDate || '', pr.paymentMethod || ''],
+          `INSERT INTO payroll_records (id, companyId, companyCode, payrollMonth, employeeId, employeeName, employeeCode, designationTitle, departmentName, basicSalary, hra, allowances, bonus, overtimePay, grossSalary, pfDeduction, taxDeduction, professionalTax, otherDeductions, totalDeductions, netSalary, status, paymentDate, paymentMethod)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE companyId=VALUES(companyId), companyCode=VALUES(companyCode), status=VALUES(status), paymentDate=VALUES(paymentDate)`,
+          [pr.id, pr.companyId || null, pr.companyCode || null, pr.payrollMonth, pr.employeeId, pr.employeeName, pr.employeeCode, pr.designationTitle, pr.departmentName, pr.basicSalary, pr.hra, pr.allowances, pr.bonus, pr.overtimePay, pr.grossSalary, pr.pfDeduction, pr.taxDeduction, pr.professionalTax, pr.otherDeductions, pr.totalDeductions, pr.netSalary, pr.status, pr.paymentDate || '', pr.paymentMethod || ''],
         );
       }
     }
@@ -854,10 +944,10 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.jobs && data.jobs.length > 0) {
       for (const j of data.jobs) {
         await pool.query(
-          `INSERT INTO job_openings (id, title, departmentId, departmentName, designationTitle, location, employmentType, experienceLevel, openingsCount, salaryRange, description, skillsRequired, status, postedDate, applicantCount)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE status=VALUES(status), applicantCount=VALUES(applicantCount)`,
-          [j.id, j.title, j.departmentId, j.departmentName, j.designationTitle, j.location, j.employmentType, j.experienceLevel, j.openingsCount, j.salaryRange, j.description, JSON.stringify(j.skillsRequired || []), j.status, j.postedDate, j.applicantCount || 0],
+          `INSERT INTO job_openings (id, companyId, companyCode, title, departmentId, departmentName, designationTitle, location, employmentType, experienceLevel, openingsCount, salaryRange, description, skillsRequired, status, postedDate, applicantCount)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE companyId=VALUES(companyId), companyCode=VALUES(companyCode), status=VALUES(status), applicantCount=VALUES(applicantCount)`,
+          [j.id, j.companyId || null, j.companyCode || null, j.title, j.departmentId, j.departmentName, j.designationTitle, j.location, j.employmentType, j.experienceLevel, j.openingsCount, j.salaryRange, j.description, JSON.stringify(j.skillsRequired || []), j.status, j.postedDate, j.applicantCount || 0],
         );
       }
     }
@@ -866,10 +956,10 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.candidates && data.candidates.length > 0) {
       for (const c of data.candidates) {
         await pool.query(
-          `INSERT INTO candidates (id, jobId, jobTitle, fullName, email, phone, resumeUrl, experienceYears, currentCompany, skills, source, status, appliedDate, rating, notes, interviews)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE status=VALUES(status), notes=VALUES(notes), interviews=VALUES(interviews)`,
-          [c.id, c.jobId, c.jobTitle, c.fullName, c.email, c.phone || '', c.resumeUrl || '', c.experienceYears || 0, c.currentCompany || '', JSON.stringify(c.skills || []), c.source || '', c.status, c.appliedDate, c.rating || 0, c.notes || '', JSON.stringify(c.interviews || [])],
+          `INSERT INTO candidates (id, companyId, companyCode, jobId, jobTitle, fullName, email, phone, resumeUrl, experienceYears, currentCompany, skills, source, status, appliedDate, rating, notes, interviews)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE companyId=VALUES(companyId), companyCode=VALUES(companyCode), status=VALUES(status), notes=VALUES(notes), interviews=VALUES(interviews)`,
+          [c.id, c.companyId || null, c.companyCode || null, c.jobId, c.jobTitle, c.fullName, c.email, c.phone || '', c.resumeUrl || '', c.experienceYears || 0, c.currentCompany || '', JSON.stringify(c.skills || []), c.source || '', c.status, c.appliedDate, c.rating || 0, c.notes || '', JSON.stringify(c.interviews || [])],
         );
       }
     }
@@ -878,10 +968,10 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.assets && data.assets.length > 0) {
       for (const a of data.assets) {
         await pool.query(
-          `INSERT INTO company_assets (id, assetCode, name, category, serialNumber, condition_status, status, assignedToEmployeeId, assignedToEmployeeName, assignedDate, purchaseDate)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE status=VALUES(status), condition_status=VALUES(condition_status), assignedToEmployeeId=VALUES(assignedToEmployeeId), assignedToEmployeeName=VALUES(assignedToEmployeeName), assignedDate=VALUES(assignedDate)`,
-          [a.id, a.assetCode, a.name, a.category, a.serialNumber || '', a.condition || 'Good', a.status, a.assignedToEmployeeId || null, a.assignedToEmployeeName || null, a.assignedDate || null, a.purchaseDate || ''],
+          `INSERT INTO company_assets (id, companyId, companyCode, assetCode, name, category, serialNumber, condition_status, status, assignedToEmployeeId, assignedToEmployeeName, assignedDate, purchaseDate)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE companyId=VALUES(companyId), companyCode=VALUES(companyCode), status=VALUES(status), condition_status=VALUES(condition_status), assignedToEmployeeId=VALUES(assignedToEmployeeId), assignedToEmployeeName=VALUES(assignedToEmployeeName), assignedDate=VALUES(assignedDate)`,
+          [a.id, a.companyId || null, a.companyCode || null, a.assetCode, a.name, a.category, a.serialNumber || '', a.condition || 'Good', a.status, a.assignedToEmployeeId || null, a.assignedToEmployeeName || null, a.assignedDate || null, a.purchaseDate || ''],
         );
       }
     }
@@ -890,10 +980,13 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.holidays && data.holidays.length > 0) {
       for (const h of data.holidays) {
         await pool.query(
-          `INSERT INTO holidays (id, name, date, dayOfWeek, type, description, locationId)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE name=VALUES(name), date=VALUES(date), dayOfWeek=VALUES(dayOfWeek), type=VALUES(type), description=VALUES(description)`,
-          [h.id, h.name, h.date, h.dayOfWeek, h.type, h.description || '', h.locationId || null],
+          `INSERT INTO holidays (id, companyId, companyCode, name, date, dayOfWeek, type, description, locationId)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             companyId=COALESCE(VALUES(companyId), holidays.companyId),
+             companyCode=COALESCE(VALUES(companyCode), holidays.companyCode),
+             name=VALUES(name), date=VALUES(date), dayOfWeek=VALUES(dayOfWeek), type=VALUES(type), description=VALUES(description)`,
+          [h.id, h.companyId || null, h.companyCode || null, h.name, h.date, h.dayOfWeek, h.type, h.description || '', h.locationId || null],
         );
       }
     }
@@ -902,10 +995,13 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.announcements && data.announcements.length > 0) {
       for (const anc of data.announcements) {
         await pool.query(
-          `INSERT INTO announcements (id, title, content, publishDate, targetAudience, priority, authorName)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE title=VALUES(title), content=VALUES(content), priority=VALUES(priority)`,
-          [anc.id, anc.title, anc.content, anc.publishDate, anc.targetAudience, anc.priority, anc.authorName],
+          `INSERT INTO announcements (id, companyId, companyCode, title, content, publishDate, targetAudience, priority, authorName)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             companyId=COALESCE(VALUES(companyId), announcements.companyId, 'cmp-1'),
+             companyCode=COALESCE(VALUES(companyCode), announcements.companyCode, 'CMP-000001'),
+             title=VALUES(title), content=VALUES(content), priority=VALUES(priority)`,
+          [anc.id, anc.companyId || 'cmp-1', anc.companyCode || 'CMP-000001', anc.title, anc.content, anc.publishDate, anc.targetAudience, anc.priority, anc.authorName],
         );
       }
     }
@@ -914,10 +1010,10 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.notifications && data.notifications.length > 0) {
       for (const n of data.notifications) {
         await pool.query(
-          `INSERT INTO notifications (id, title, message, type, isRead, createdAt, link)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE isRead=VALUES(isRead)`,
-          [n.id, n.title, n.message, n.type, Boolean(n.isRead), n.createdAt, n.link || ''],
+          `INSERT INTO notifications (id, companyId, companyCode, title, message, type, isRead, createdAt, link)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE companyId=VALUES(companyId), companyCode=VALUES(companyCode), isRead=VALUES(isRead)`,
+          [n.id, n.companyId || null, n.companyCode || null, n.title, n.message, n.type, Boolean(n.isRead), n.createdAt, n.link || ''],
         );
       }
     }
@@ -926,10 +1022,13 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.documents && data.documents.length > 0) {
       for (const d of data.documents) {
         await pool.query(
-          `INSERT INTO documents (id, employeeId, employeeName, title, category, fileUrl, fileSize, uploadDate, expiryDate, verificationStatus, verifiedBy)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE verificationStatus=VALUES(verificationStatus), verifiedBy=VALUES(verifiedBy)`,
-          [d.id, d.employeeId, d.employeeName, d.title, d.category, d.fileUrl, d.fileSize || '', d.uploadDate, d.expiryDate || null, d.verificationStatus, d.verifiedBy || null],
+          `INSERT INTO documents (id, companyId, companyCode, employeeId, employeeName, title, category, fileUrl, fileSize, uploadDate, expiryDate, verificationStatus, verifiedBy)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             companyId=COALESCE(VALUES(companyId), documents.companyId, 'cmp-1'),
+             companyCode=COALESCE(VALUES(companyCode), documents.companyCode, 'CMP-000001'),
+             verificationStatus=VALUES(verificationStatus), verifiedBy=VALUES(verifiedBy)`,
+          [d.id, d.companyId || 'cmp-1', d.companyCode || 'CMP-000001', d.employeeId, d.employeeName, d.title, d.category, d.fileUrl, d.fileSize || '', d.uploadDate, d.expiryDate || null, d.verificationStatus, d.verifiedBy || null],
         );
       }
     }
@@ -938,10 +1037,123 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     if (data.auditLogs && data.auditLogs.length > 0) {
       for (const al of data.auditLogs.slice(0, 50)) {
         await pool.query(
-          `INSERT INTO audit_logs (id, userId, userName, userRole, action, module, recordId, details, ipAddress, createdAt)
+          `INSERT INTO audit_logs (id, companyId, companyCode, userId, userName, userRole, action, module, recordId, details, ipAddress, createdAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             companyId=COALESCE(VALUES(companyId), audit_logs.companyId, 'cmp-1'),
+             companyCode=COALESCE(VALUES(companyCode), audit_logs.companyCode, 'CMP-000001'),
+             details=VALUES(details)`,
+          [al.id, al.companyId || 'cmp-1', al.companyCode || 'CMP-000001', al.userId, al.userName, al.userRole, al.action, al.module, al.recordId || null, al.details, al.ipAddress || '127.0.0.1', al.createdAt],
+        );
+      }
+    }
+
+    // 17. Training Programs
+    if (data.trainingPrograms && data.trainingPrograms.length > 0) {
+      for (const tp of data.trainingPrograms) {
+        await pool.query(
+          `INSERT INTO training_programs (id, companyId, companyCode, title, description, trainerName, skillsCovered, startDate, endDate, durationHours, status, enrolledCount)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             companyId=COALESCE(VALUES(companyId), training_programs.companyId, 'cmp-1'),
+             companyCode=COALESCE(VALUES(companyCode), training_programs.companyCode, 'CMP-000001'),
+             title=VALUES(title), status=VALUES(status), enrolledCount=VALUES(enrolledCount)`,
+          [tp.id, tp.companyId || 'cmp-1', tp.companyCode || 'CMP-000001', tp.title, tp.description || '', tp.trainerName || '', JSON.stringify(tp.skillsCovered || []), tp.startDate, tp.endDate, tp.durationHours || 0, tp.status, tp.enrolledCount || 0],
+        );
+      }
+    }
+
+    // 18. Employee Trainings
+    if (data.employeeTrainings && data.employeeTrainings.length > 0) {
+      for (const et of data.employeeTrainings) {
+        await pool.query(
+          `INSERT INTO employee_trainings (id, companyId, companyCode, trainingId, trainingTitle, employeeId, employeeName, status, progressPercent, completionDate, certificateUrl)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             companyId=COALESCE(VALUES(companyId), employee_trainings.companyId, 'cmp-1'),
+             companyCode=COALESCE(VALUES(companyCode), employee_trainings.companyCode, 'CMP-000001'),
+             status=VALUES(status), progressPercent=VALUES(progressPercent), completionDate=VALUES(completionDate)`,
+          [et.id, et.companyId || 'cmp-1', et.companyCode || 'CMP-000001', et.trainingId, et.trainingTitle, et.employeeId, et.employeeName, et.status, et.progressPercent || 0, et.completionDate || null, et.certificateUrl || null],
+        );
+      }
+    }
+
+    // 19. Performance Cycles
+    if (data.performanceCycles && data.performanceCycles.length > 0) {
+      for (const pc of data.performanceCycles) {
+        await pool.query(
+          `INSERT INTO performance_cycles (id, companyId, companyCode, title, year, period, startDate, endDate, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             companyId=COALESCE(VALUES(companyId), performance_cycles.companyId, 'cmp-1'),
+             companyCode=COALESCE(VALUES(companyCode), performance_cycles.companyCode, 'CMP-000001'),
+             status=VALUES(status)`,
+          [pc.id, pc.companyId || 'cmp-1', pc.companyCode || 'CMP-000001', pc.title, pc.year, pc.period, pc.startDate, pc.endDate, pc.status],
+        );
+      }
+    }
+
+    // 20. Performance Reviews
+    if (data.performanceReviews && data.performanceReviews.length > 0) {
+      for (const pr of data.performanceReviews) {
+        await pool.query(
+          `INSERT INTO performance_reviews (id, companyId, companyCode, cycleId, cycleTitle, employeeId, employeeName, departmentName, managerId, managerName, selfRating, selfComments, managerRating, managerFeedback, finalRating, appraisalRecommended, status, completedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             companyId=COALESCE(VALUES(companyId), performance_reviews.companyId, 'cmp-1'),
+             companyCode=COALESCE(VALUES(companyCode), performance_reviews.companyCode, 'CMP-000001'),
+             status=VALUES(status), selfRating=VALUES(selfRating), managerRating=VALUES(managerRating), finalRating=VALUES(finalRating)`,
+          [pr.id, pr.companyId || 'cmp-1', pr.companyCode || 'CMP-000001', pr.cycleId, pr.cycleTitle, pr.employeeId, pr.employeeName, pr.departmentName || '', pr.managerId || '', pr.managerName || '', pr.selfRating || null, pr.selfComments || null, pr.managerRating || null, pr.managerFeedback || null, pr.finalRating || null, pr.appraisalRecommended || null, pr.status, pr.completedAt || null],
+        );
+      }
+    }
+
+    // 21. Resignations
+    if (data.resignations && data.resignations.length > 0) {
+      for (const res of data.resignations) {
+        await pool.query(
+          `INSERT INTO resignations (id, companyId, companyCode, employeeId, employeeName, employeeCode, departmentName, resignationDate, lastWorkingDay, noticePeriodDays, reason, status, managerApproval, clearance)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             companyId=COALESCE(VALUES(companyId), resignations.companyId, 'cmp-1'),
+             companyCode=COALESCE(VALUES(companyCode), resignations.companyCode, 'CMP-000001'),
+             status=VALUES(status), managerApproval=VALUES(managerApproval), clearance=VALUES(clearance)`,
+          [res.id, res.companyId || 'cmp-1', res.companyCode || 'CMP-000001', res.employeeId, res.employeeName, res.employeeCode, res.departmentName, res.resignationDate, res.lastWorkingDay, res.noticePeriodDays || 30, res.reason, res.status, JSON.stringify(res.managerApproval || {}), JSON.stringify(res.clearance || {})],
+        );
+      }
+    }
+
+    // 22. Refresh Tokens
+    if (data.refreshTokens && data.refreshTokens.length > 0) {
+      for (const rt of data.refreshTokens) {
+        await pool.query(
+          `INSERT INTO refresh_tokens (id, userId, companyId, companyCode, tokenHash, familyId, isRevoked, expiresAt, createdAt, updatedAt)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE details=VALUES(details)`,
-          [al.id, al.userId, al.userName, al.userRole, al.action, al.module, al.recordId || null, al.details, al.ipAddress || '127.0.0.1', al.createdAt],
+           ON DUPLICATE KEY UPDATE isRevoked=VALUES(isRevoked), updatedAt=VALUES(updatedAt)`,
+          [rt.id, rt.userId, rt.companyId || 'cmp-1', rt.companyCode || 'CMP-000001', rt.tokenHash, rt.familyId, rt.isRevoked ? 1 : 0, rt.expiresAt, rt.createdAt, rt.updatedAt],
+        );
+      }
+    }
+
+    // 23. Employee Invitations
+    if (data.employeeInvitations && data.employeeInvitations.length > 0) {
+      for (const inv of data.employeeInvitations) {
+        await pool.query(
+          `INSERT INTO employee_invitations (id, userId, email, companyId, companyCode, tokenHash, expiresAt, usedAt, revokedAt, createdAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE usedAt=VALUES(usedAt), revokedAt=VALUES(revokedAt)`,
+          [
+            inv.id,
+            inv.userId,
+            inv.email,
+            inv.companyId || 'cmp-1',
+            inv.companyCode || 'CMP-000001',
+            inv.tokenHash,
+            inv.expiresAt,
+            inv.usedAt || null,
+            inv.revokedAt || null,
+            inv.createdAt,
+          ],
         );
       }
     }

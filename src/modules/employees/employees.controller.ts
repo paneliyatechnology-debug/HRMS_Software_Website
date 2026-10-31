@@ -22,6 +22,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { EmployeesService } from './employees.service.js';
+import { EmployeeInvitationService } from './employee-invitation.service.js';
 import { CreateEmployeeDto } from './dto/create-employee.dto.js';
 import { UpdateEmployeeDto } from './dto/update-employee.dto.js';
 import { QueryEmployeeDto } from './dto/query-employee.dto.js';
@@ -35,6 +36,7 @@ import { Role } from '../../common/types.js';
 export class EmployeesController {
   constructor(
     private readonly employeesService: EmployeesService,
+    private readonly invitationService: EmployeeInvitationService,
     private readonly authService: AuthService,
     private readonly db: DatabaseService,
   ) {}
@@ -166,7 +168,33 @@ export class EmployeesController {
       body,
       `${actor.firstName} ${actor.lastName}`,
       companyIdOverride,
+      actor,
     );
+  }
+
+  @Post(':id/resend-invitation')
+  @ApiOperation({
+    summary: 'Resend password setup invitation email [ADMIN / SUPER_ADMIN only]',
+    description:
+      '**Role Required: ADMIN or SUPER_ADMIN**\n\n' +
+      'Admin resends password setup invitation email to an employee in their company. Revokes previous unused tokens.',
+  })
+  @ApiHeader({
+    name: 'authorization',
+    description: 'Bearer token from POST /api/auth/login',
+    required: true,
+  })
+  @ApiResponse({ status: 200, description: 'Invitation email resent successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden — outside tenant company' })
+  @ApiResponse({ status: 404, description: 'Employee not found' })
+  resendInvitation(
+    @Param('id') id: string,
+    @Body('expiresInSeconds') expiresInSeconds?: number,
+    @Req() req?: any,
+    @Headers('authorization') auth?: string,
+  ) {
+    const actor = this.requireAdminOrAbove(req, auth);
+    return this.invitationService.resendInvitation(id, actor, { expiresInSeconds });
   }
 
   @Put(':id')

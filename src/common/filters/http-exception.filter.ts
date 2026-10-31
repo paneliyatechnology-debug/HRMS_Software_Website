@@ -37,12 +37,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
       };
     }
 
-    this.logger.error(
-      `[${request.method}] ${request.url} >> Status: ${status} >> Error: ${JSON.stringify(
-        message,
-      )}`,
-    );
-
     const resolvedMessage =
       typeof message === 'object' && message?.message
         ? message.message
@@ -50,9 +44,25 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? message
         : '';
 
+    // Log client validation / operational issues (HTTP 4xx) as WARN, and internal server crashes (HTTP 5xx) as ERROR
+    if (status >= 500) {
+      this.logger.error(
+        `[${request.method}] ${request.url} >> Status: ${status} >> Error: ${JSON.stringify(
+          message,
+        )}`,
+      );
+    } else {
+      this.logger.warn(
+        `[${request.method}] ${request.url} >> Status: ${status} >> Warning: ${JSON.stringify(
+          message,
+        )}`,
+      );
+    }
+
     response.status(status).json({
       statusCode: status,
       message: resolvedMessage,
+      warning: status < 500 ? resolvedMessage : undefined,
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,

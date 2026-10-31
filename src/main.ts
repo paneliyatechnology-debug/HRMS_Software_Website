@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module.js';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -12,12 +13,34 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS
+  // Enable CORS with credentials support for HttpOnly cookies and authorization
+  const defaultAllowedOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    'http://localhost:4000',
+    'http://127.0.0.1:4000',
+  ];
+  const envOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+    : [];
+  const allowedOrigins = new Set([...defaultAllowedOrigins, ...envOrigins]);
+
   app.enableCors({
-    origin: '*',
+    origin: (origin: any, callback: any) => {
+      // Allow non-browser tools, same-origin, or CLI requests (where origin is undefined)
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
+
+  app.use(cookieParser());
 
   // Global validation pipe with automatic transformation
   app.useGlobalPipes(

@@ -1,9 +1,12 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Req, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AnnouncementsService } from './announcements.service.js';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto.js';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 
 @ApiTags('Announcements')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('announcements')
 export class AnnouncementsController {
   constructor(private readonly ancService: AnnouncementsService) {}
@@ -11,11 +14,12 @@ export class AnnouncementsController {
   @Get()
   @ApiOperation({
     summary: 'List company announcements',
-    description: 'Retrieves all organization-wide broadcasts, notices, and bulletins.',
+    description: 'Retrieves all organization-wide broadcasts, notices, and bulletins for authenticated company.',
   })
+  @ApiQuery({ name: 'companyId', required: false, description: 'Optional company filter for Super Admin' })
   @ApiResponse({ status: 200, description: 'List of announcements' })
-  findAll() {
-    return this.ancService.findAll();
+  findAll(@Req() req: any, @Query('companyId') companyFilter?: string) {
+    return this.ancService.findAll(req.user, companyFilter);
   }
 
   @Post()
@@ -25,7 +29,7 @@ export class AnnouncementsController {
   })
   @ApiBody({ type: CreateAnnouncementDto })
   @ApiResponse({ status: 201, description: 'Announcement published successfully' })
-  create(@Body() body: CreateAnnouncementDto) {
-    return this.ancService.create(body);
+  create(@Body() body: CreateAnnouncementDto, @Req() req: any) {
+    return this.ancService.create(body, req.user);
   }
 }

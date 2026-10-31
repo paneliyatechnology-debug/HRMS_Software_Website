@@ -73,5 +73,12 @@ export class CreateAdminEmployeeDto {
   })
   @IsOptional()
   salary?: any;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'If true and employee email already exists in company, automatically resends invitation email instead of throwing 409',
+  })
+  @IsOptional()
+  resendIfExisting?: boolean;
 }
 

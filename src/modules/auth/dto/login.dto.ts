@@ -37,4 +37,22 @@ export class LoginDto {
   @IsString()
   @IsOptional()
   password?: string;
+
+  @ApiProperty({
+    example: 'CMP-000001',
+    description: 'Company Code to select specific company when identifier belongs to multiple companies',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  companyCode?: string;
+
+  @ApiProperty({
+    example: 'cmp-1',
+    description: 'Company ID (optional alternative to companyCode)',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  companyId?: string;
 }

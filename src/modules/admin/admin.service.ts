@@ -31,12 +31,16 @@ import { UpdateAdminCompanyDto } from './dto/update-admin-company.dto.js';
 import { AdminManualAttendanceDto } from './dto/admin-manual-attendance.dto.js';
 import { CreateAdminDepartmentDto } from './dto/create-admin-department.dto.js';
 import { CreateAdminDesignationDto } from './dto/create-admin-designation.dto.js';
+import { EmployeeInvitationService } from '../employees/employee-invitation.service.js';
 
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly invitationService: EmployeeInvitationService,
+  ) {}
 
   /**
    * Strictly enforces company-level data isolation.
@@ -165,8 +169,17 @@ export class AdminService {
     };
   }
 
-  updateCompany(actor: User, dto: UpdateAdminCompanyDto) {
+  async updateCompany(actor: User, dto: UpdateAdminCompanyDto) {
     const company = this.resolveTargetCompany(actor);
+
+    await this.db.assertCompanyUnique(
+      {
+        companyName: dto.companyName,
+        email: dto.email,
+        phone: dto.phone,
+      },
+      company.id,
+    );
 
     if (dto.companyName) {
       company.companyName = dto.companyName.trim();
@@ -293,17 +306,32 @@ export class AdminService {
   async createEmployee(actor: User, dto: CreateAdminEmployeeDto) {
     const company = this.resolveTargetCompany(actor);
 
-    // 1. Strict global email & phone uniqueness check and mutex lock
-    const releaseEmailLock = this.db.acquireEmailLock(dto.email);
+    // If resendIfExisting is requested and employee already exists in this company, resend setup invitation
+    if (dto.resendIfExisting) {
+      const normalizedReqEmail = normalizeEmail(dto.email);
+      const existingEmployee = this.db.employees.find(
+        (e) => normalizeEmail(e.email) === normalizedReqEmail && e.companyId === company.id,
+      );
+      if (existingEmployee) {
+        return this.invitationService.resendInvitation(existingEmployee.id, {
+          id: actor.id,
+          role: actor.role,
+          companyId: company.id,
+        });
+      }
+    }
+
+    // 1. Company-scoped email & phone uniqueness check and mutex lock
+    const releaseEmailLock = this.db.acquireEmailLock(dto.email, company.id);
     let releasePhoneLock = () => {};
     if (dto.phone) {
-      releasePhoneLock = this.db.acquirePhoneLock(dto.phone);
+      releasePhoneLock = this.db.acquirePhoneLock(dto.phone, company.id);
     }
 
     try {
-      const normalizedEmail = await this.db.assertEmailUnique(dto.email, undefined, true);
+      const normalizedEmail = await this.db.assertEmailUnique(dto.email, company.id, undefined, true);
       const normalizedPhone = dto.phone
-        ? await this.db.assertPhoneUnique(dto.phone, undefined, true)
+        ? await this.db.assertPhoneUnique(dto.phone, company.id, undefined, true)
         : '';
 
       // 2. Sequential employee code generation scoped to company
@@ -420,18 +448,75 @@ export class AdminService {
         userId,
       );
 
+      // 6. Automatically dispatch setup email invitation via Nodemailer
+      let invitationResult: any = undefined;
+      try {
+        const invResult = await this.invitationService.createAndSendInvitation({
+          userId,
+          email: normalizedEmail,
+          employeeName: `${newEmployee.firstName} ${newEmployee.lastName}`.trim(),
+          companyId: company.id,
+          companyCode: company.companyCode,
+          companyName: company.companyName || company.name || 'Your Company',
+        });
+        invitationResult = {
+          id: invResult.invitationId,
+          sent: invResult.sent,
+          error: invResult.error,
+          rawToken: invResult.rawToken,
+        };
+        (newEmployee as any).invitation = invitationResult;
+      } catch (invErr: any) {
+        this.logger.error(`Failed to send invitation email: ${invErr.message}`, invErr.stack);
+        this.db.logAudit(
+          'sys',
+          `${actor.firstName} ${actor.lastName}`,
+          actor.role,
+          'INVITATION_EMAIL_FAILED',
+          'Admin',
+          `Invitation email failed for employee ${userId}: ${invErr.message}`,
+          userId,
+        );
+      }
+
       this.db.persist();
 
       const { password: _, ...safeUser } = newUser;
       return {
-        message: 'Employee successfully created and added to company',
+        message: invitationResult?.sent
+          ? 'Employee successfully created and invitation email dispatched'
+          : 'Employee successfully created and added to company',
         employee: newEmployee,
         user: safeUser,
+        invitation: invitationResult,
       };
     } finally {
       releaseEmailLock();
       releasePhoneLock();
     }
+  }
+
+  async resendEmployeeInvitation(actor: User, id: string) {
+    const company = this.resolveTargetCompany(actor);
+    const searchVal = id.trim().toLowerCase();
+    const employee = this.db.employees.find(
+      (e) =>
+        e.companyId === company.id &&
+        (e.id === id ||
+          e.userId === id ||
+          e.employeeCode?.toLowerCase() === searchVal ||
+          e.email?.toLowerCase() === searchVal),
+    );
+
+    if (!employee) {
+      throw new NotFoundException(`Employee "${id}" not found in your company.`);
+    }
+
+    return this.invitationService.resendInvitation(employee.id, {
+      id: actor.id,
+      role: actor.role,
+      companyId: company.id,
+    });
   }
 
   async updateEmployee(actor: User, id: string, dto: UpdateAdminEmployeeDto) {
@@ -445,12 +530,12 @@ export class AdminService {
     }
 
     if (dto.email && dto.email.trim().toLowerCase() !== employee.email.toLowerCase()) {
-      const normalizedEmail = await this.db.assertEmailUnique(dto.email, employee.userId || employee.id);
+      const normalizedEmail = await this.db.assertEmailUnique(dto.email, company.id, employee.userId || employee.id);
       employee.email = normalizedEmail;
     }
 
     if (dto.phone !== undefined && dto.phone.trim() !== '') {
-      const normalizedPhone = await this.db.assertPhoneUnique(dto.phone, employee.userId || employee.id);
+      const normalizedPhone = await this.db.assertPhoneUnique(dto.phone, company.id, employee.userId || employee.id);
       employee.phone = normalizedPhone;
     } else if (dto.phone !== undefined) {
       employee.phone = '';
@@ -517,7 +602,7 @@ export class AdminService {
     };
   }
 
-  deleteEmployee(actor: User, id: string) {
+  async deleteEmployee(actor: User, id: string) {
     const company = this.resolveTargetCompany(actor);
     const empIdx = this.db.employees.findIndex(
       (e) => (e.id === id || e.employeeCode?.toLowerCase() === id.toLowerCase()) && e.companyId === company.id,
@@ -536,6 +621,12 @@ export class AdminService {
     );
     if (userIdx !== -1) {
       this.db.users.splice(userIdx, 1);
+    }
+
+    // Ensure deletion is immediately propagated directly to MySQL
+    await this.db.deleteUserFromMysql(employee.id, employee.email);
+    if (employee.userId && employee.userId !== employee.id) {
+      await this.db.deleteUserFromMysql(employee.userId, employee.email);
     }
 
     this.db.logAudit(

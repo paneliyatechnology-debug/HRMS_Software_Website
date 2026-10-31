@@ -245,7 +245,7 @@ export class UsersService {
       user.id,
     );
 
-    // 10. Persist to database.json and sync with MySQL
+    // 10. Persist and sync directly with MySQL
     this.db.persist();
 
     // 11. Return response
