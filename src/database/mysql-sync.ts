@@ -573,6 +573,30 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
     // Composite key already exists
   }
 
+  // Safe migrations for newly added columns across tables
+  const safeAlterQueries = [
+    `ALTER TABLE leave_requests ADD COLUMN employeeCode VARCHAR(64);`,
+    `ALTER TABLE leave_requests ADD COLUMN employeeEmail VARCHAR(255);`,
+    `ALTER TABLE leave_requests ADD COLUMN employeeAvatar TEXT;`,
+    `ALTER TABLE leave_requests ADD COLUMN companyId VARCHAR(64);`,
+    `ALTER TABLE leave_requests ADD COLUMN companyCode VARCHAR(64);`,
+    `ALTER TABLE attendance_records ADD COLUMN companyId VARCHAR(64);`,
+    `ALTER TABLE attendance_records ADD COLUMN companyCode VARCHAR(50);`,
+    `ALTER TABLE departments ADD COLUMN companyId VARCHAR(64);`,
+    `ALTER TABLE designations ADD COLUMN companyId VARCHAR(64);`,
+    `ALTER TABLE announcements ADD COLUMN companyId VARCHAR(64);`,
+    `ALTER TABLE payroll_records ADD COLUMN companyId VARCHAR(64);`,
+    `ALTER TABLE payroll_records ADD COLUMN paymentMethod VARCHAR(100);`,
+  ];
+
+  for (const q of safeAlterQueries) {
+    try {
+      await pool.query(q);
+    } catch {
+      // Column already exists or table freshly defined
+    }
+  }
+
   try {
     const [rows]: any = await pool.query(`SELECT COUNT(*) as count FROM system_settings`);
     if (rows && rows[0]?.count === 0) {

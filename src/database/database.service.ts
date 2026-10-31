@@ -148,32 +148,100 @@ export class DatabaseService implements OnModuleInit {
       // Load persistent state directly from MySQL
       const loaded = await loadAllDataFromMysql(this.mysqlPool);
       if (loaded && loaded.companies && loaded.companies.length > 0) {
-        this.companies = loaded.companies;
-        this.locations = loaded.locations || this.locations;
-        this.departments = loaded.departments || this.departments;
-        this.designations = loaded.designations || this.designations;
-        this.users = loaded.users || this.users;
-        this.employees = loaded.employees || this.employees;
-        this.holidays = loaded.holidays || this.holidays;
-        this.leaveBalances = loaded.leaveBalances || this.leaveBalances;
-        this.leaveRequests = loaded.leaveRequests || this.leaveRequests;
-        this.attendanceRecords = loaded.attendanceRecords || this.attendanceRecords;
+        // Merge companies: keep baseline companies (like Paneliya & Demo Technologies)
+        const companyMap = new Map<string, Company>();
+        for (const c of initialCompanies) {
+          companyMap.set(c.id, c);
+        }
+        for (const c of loaded.companies) {
+          companyMap.set(c.id, { ...companyMap.get(c.id), ...c });
+        }
+        this.companies = Array.from(companyMap.values());
+
+        // Merge users non-destructively: preserve baseline seed accounts and passwords
+        const userMap = new Map<string, User>();
+        for (const u of initialUsers) {
+          userMap.set(u.email.toLowerCase(), u);
+        }
+        if (loaded.users && Array.isArray(loaded.users)) {
+          for (const u of loaded.users) {
+            const existing = userMap.get(u.email.toLowerCase());
+            const validPassword =
+              u.password && typeof u.password === 'string' && u.password.trim() !== ''
+                ? u.password
+                : existing?.password || hashPassword('Admin@123');
+            userMap.set(u.email.toLowerCase(), {
+              ...(existing || {}),
+              ...u,
+              password: validPassword,
+            });
+          }
+        }
+
+        // Merge employees
+        const empMap = new Map<string, Employee>();
+        for (const emp of initialEmployees) {
+          empMap.set(emp.id, emp);
+        }
+        if (loaded.employees && Array.isArray(loaded.employees)) {
+          for (const emp of loaded.employees) {
+            empMap.set(emp.id, { ...empMap.get(emp.id), ...emp });
+          }
+        }
+        this.employees = Array.from(empMap.values());
+
+        // Ensure every employee has an active user account for login
+        for (const emp of this.employees) {
+          if (!emp.email) continue;
+          if (!userMap.has(emp.email.toLowerCase())) {
+            const newU: User = {
+              id: emp.userId || `user-${emp.id}`,
+              email: emp.email,
+              firstName: emp.firstName,
+              lastName: emp.lastName,
+              role: (emp as any).role || Role.EMPLOYEE,
+              isSuperAdmin: Boolean((emp as any).isSuperAdmin),
+              status: emp.status || 'Active',
+              companyId: emp.companyId || this.companies[0]?.id || 'cmp-1',
+              companyCode: emp.companyCode || this.companies[0]?.companyCode || 'CMP-000001',
+              employeeId: emp.id,
+              phone: emp.phone,
+              avatarUrl: emp.avatarUrl,
+              password: emp.password || hashPassword('Employee@123'),
+              createdAt: emp.createdAt || new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            userMap.set(emp.email.toLowerCase(), newU);
+          }
+        }
+        this.users = Array.from(userMap.values());
+
+        this.locations = (loaded.locations && loaded.locations.length > 0) ? loaded.locations : this.locations;
+        this.departments = (loaded.departments && loaded.departments.length > 0) ? loaded.departments : this.departments;
+        this.designations = (loaded.designations && loaded.designations.length > 0) ? loaded.designations : this.designations;
+        this.holidays = (loaded.holidays && loaded.holidays.length > 0) ? loaded.holidays : this.holidays;
+        this.leaveBalances = (loaded.leaveBalances && loaded.leaveBalances.length > 0) ? loaded.leaveBalances : this.leaveBalances;
+        this.leaveRequests = (loaded.leaveRequests && loaded.leaveRequests.length > 0) ? loaded.leaveRequests : this.leaveRequests;
+        this.attendanceRecords = (loaded.attendanceRecords && loaded.attendanceRecords.length > 0) ? loaded.attendanceRecords : this.attendanceRecords;
         this.workSessions = loaded.workSessions || this.workSessions;
-        this.payrollRecords = loaded.payrollRecords || this.payrollRecords;
-        this.jobs = loaded.jobs || this.jobs;
-        this.candidates = loaded.candidates || this.candidates;
-        this.assets = loaded.assets || this.assets;
-        this.trainingPrograms = loaded.trainingPrograms || this.trainingPrograms;
-        this.employeeTrainings = loaded.employeeTrainings || this.employeeTrainings;
-        this.performanceCycles = loaded.performanceCycles || this.performanceCycles;
-        this.performanceReviews = loaded.performanceReviews || this.performanceReviews;
-        this.resignations = loaded.resignations || this.resignations;
-        this.announcements = loaded.announcements || this.announcements;
-        this.notifications = loaded.notifications || this.notifications;
-        this.documents = loaded.documents || this.documents;
-        this.auditLogs = loaded.auditLogs || this.auditLogs;
+        this.payrollRecords = (loaded.payrollRecords && loaded.payrollRecords.length > 0) ? loaded.payrollRecords : this.payrollRecords;
+        this.jobs = (loaded.jobs && loaded.jobs.length > 0) ? loaded.jobs : this.jobs;
+        this.candidates = (loaded.candidates && loaded.candidates.length > 0) ? loaded.candidates : this.candidates;
+        this.assets = (loaded.assets && loaded.assets.length > 0) ? loaded.assets : this.assets;
+        this.trainingPrograms = (loaded.trainingPrograms && loaded.trainingPrograms.length > 0) ? loaded.trainingPrograms : this.trainingPrograms;
+        this.employeeTrainings = (loaded.employeeTrainings && loaded.employeeTrainings.length > 0) ? loaded.employeeTrainings : this.employeeTrainings;
+        this.performanceCycles = (loaded.performanceCycles && loaded.performanceCycles.length > 0) ? loaded.performanceCycles : this.performanceCycles;
+        this.performanceReviews = (loaded.performanceReviews && loaded.performanceReviews.length > 0) ? loaded.performanceReviews : this.performanceReviews;
+        this.resignations = (loaded.resignations && loaded.resignations.length > 0) ? loaded.resignations : this.resignations;
+        this.announcements = (loaded.announcements && loaded.announcements.length > 0) ? loaded.announcements : this.announcements;
+        this.notifications = (loaded.notifications && loaded.notifications.length > 0) ? loaded.notifications : this.notifications;
+        this.documents = (loaded.documents && loaded.documents.length > 0) ? loaded.documents : this.documents;
+        this.auditLogs = (loaded.auditLogs && loaded.auditLogs.length > 0) ? loaded.auditLogs : this.auditLogs;
         this.systemSettings = loaded.systemSettings || this.systemSettings;
-        this.logger.log(`Loaded ${this.companies.length} companies and ${this.users.length} users from MySQL.`);
+
+        // Immediately push complete, synchronized data (with passwords) to MySQL
+        await this.syncToMysql(this.getCurrentData());
+        this.logger.log(`Loaded and synced ${this.companies.length} companies and ${this.users.length} users with MySQL.`);
       } else {
         // MySQL is fresh/empty: push baseline in-memory data to MySQL
         await this.syncToMysql(this.getCurrentData());
