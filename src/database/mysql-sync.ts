@@ -986,3 +986,194 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
     console.error('Error synchronizing data to MySQL:', err);
   }
 }
+
+function parseJsonCol(val: any, fallback: any = null) {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === 'object') return val;
+  if (typeof val === 'string') {
+    try {
+      return JSON.parse(val);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
+export async function loadAllDataFromMysql(pool: mysql.Pool): Promise<Record<string, any> | null> {
+  try {
+    const [companiesRows]: any = await pool.query('SELECT * FROM companies');
+    const [locationsRows]: any = await pool.query('SELECT * FROM locations');
+    const [departmentsRows]: any = await pool.query('SELECT * FROM departments');
+    const [designationsRows]: any = await pool.query('SELECT * FROM designations');
+    const [usersRows]: any = await pool.query('SELECT * FROM users');
+    const [employeesRows]: any = await pool.query('SELECT * FROM employees');
+    const [holidaysRows]: any = await pool.query('SELECT * FROM holidays');
+    const [leaveBalancesRows]: any = await pool.query('SELECT * FROM leave_balances');
+    const [leaveRequestsRows]: any = await pool.query('SELECT * FROM leave_requests');
+    const [attendanceRecordsRows]: any = await pool.query('SELECT * FROM attendance_records');
+    const [workSessionsRows]: any = await pool.query('SELECT * FROM work_sessions');
+    const [payrollRecordsRows]: any = await pool.query('SELECT * FROM payroll_records');
+    const [jobsRows]: any = await pool.query('SELECT * FROM job_openings');
+    const [candidatesRows]: any = await pool.query('SELECT * FROM candidates');
+    const [assetsRows]: any = await pool.query('SELECT * FROM company_assets');
+    const [trainingProgramsRows]: any = await pool.query('SELECT * FROM training_programs');
+    const [employeeTrainingsRows]: any = await pool.query('SELECT * FROM employee_trainings');
+    const [performanceCyclesRows]: any = await pool.query('SELECT * FROM performance_cycles');
+    const [performanceReviewsRows]: any = await pool.query('SELECT * FROM performance_reviews');
+    const [resignationsRows]: any = await pool.query('SELECT * FROM resignations');
+    const [announcementsRows]: any = await pool.query('SELECT * FROM announcements');
+    const [notificationsRows]: any = await pool.query('SELECT * FROM notifications');
+    const [documentsRows]: any = await pool.query('SELECT * FROM documents');
+    const [auditLogsRows]: any = await pool.query('SELECT * FROM audit_logs ORDER BY createdAt DESC LIMIT 100');
+    const [settingsRows]: any = await pool.query('SELECT * FROM system_settings LIMIT 1');
+
+    return {
+      companies: (companiesRows || []).map((c: any) => ({
+        id: c.id,
+        companyCode: c.companyCode,
+        companyName: c.companyName,
+        name: c.companyName,
+        email: c.email || '',
+        phone: c.phone || '',
+        address: c.address || '',
+        status: c.status || 'Active',
+        adminUserId: c.adminUserId || null,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+      })),
+      locations: (locationsRows || []).map((loc: any) => ({
+        id: loc.id,
+        name: loc.name,
+        city: loc.city || '',
+        country: loc.country || '',
+        address: loc.address || '',
+        isHeadquarter: Boolean(loc.isHeadquarter),
+        latitude: Number(loc.latitude) || 0,
+        longitude: Number(loc.longitude) || 0,
+        radiusMeters: Number(loc.radiusMeters) || 200,
+        companyId: loc.companyId || '',
+        isActive: loc.isActive !== undefined ? Boolean(loc.isActive) : true,
+      })),
+      departments: departmentsRows || [],
+      designations: (designationsRows || []).map((d: any) => ({
+        ...d,
+        minSalary: Number(d.minSalary) || 0,
+        maxSalary: Number(d.maxSalary) || 0,
+      })),
+      users: (usersRows || []).map((u: any) => ({
+        ...u,
+        isSuperAdmin: Boolean(u.isSuperAdmin),
+      })),
+      employees: (employeesRows || []).map((e: any) => ({
+        ...e,
+        isSuperAdmin: Boolean(e.isSuperAdmin),
+        emergencyContact: parseJsonCol(e.emergencyContact, { name: '', relationship: '', phone: '' }),
+        bankDetails: parseJsonCol(e.bankDetails, { bankName: '', accountNumber: '', ifscOrRouting: '', accountHolderName: '' }),
+        taxInformation: parseJsonCol(e.taxInformation, { taxId: '', panOrSsn: '', taxRegime: '' }),
+        education: parseJsonCol(e.education, []),
+        previousExperience: parseJsonCol(e.previousExperience, []),
+        skills: parseJsonCol(e.skills, []),
+        salary: parseJsonCol(e.salary, { basic: 0, hra: 0, allowances: 0, bonus: 0, pf: 0, tax: 0, professionalTax: 0, gross: 0, net: 0 }),
+      })),
+      holidays: holidaysRows || [],
+      leaveBalances: (leaveBalancesRows || []).map((lb: any) => ({
+        id: lb.id,
+        employeeId: lb.employeeId,
+        year: Number(lb.year) || new Date().getFullYear(),
+        casualLeave: parseJsonCol(lb.casualLeave, { total: 12, used: 0, remaining: 12 }),
+        sickLeave: parseJsonCol(lb.sickLeave, { total: 10, used: 0, remaining: 10 }),
+        paidLeave: parseJsonCol(lb.paidLeave, { total: 15, used: 0, remaining: 15 }),
+      })),
+      leaveRequests: (leaveRequestsRows || []).map((lr: any) => ({
+        ...lr,
+        daysCount: Number(lr.daysCount) || 1,
+        isHalfDay: Boolean(lr.isHalfDay),
+      })),
+      attendanceRecords: (attendanceRecordsRows || []).map((att: any) => ({
+        ...att,
+        workingHours: Number(att.workingHours) || 0,
+        overtimeHours: Number(att.overtimeHours) || 0,
+        breakDurationMinutes: Number(att.breakDurationMinutes) || 0,
+      })),
+      workSessions: (workSessionsRows || []).map((ws: any) => ({
+        ...ws,
+        durationSeconds: Number(ws.durationSeconds) || 0,
+        startLatitude: Number(ws.startLatitude) || 0,
+        startLongitude: Number(ws.startLongitude) || 0,
+        startAccuracy: Number(ws.startAccuracy) || 0,
+        startDistanceMeters: Number(ws.startDistanceMeters) || 0,
+        stopLatitude: ws.stopLatitude ? Number(ws.stopLatitude) : undefined,
+        stopLongitude: ws.stopLongitude ? Number(ws.stopLongitude) : undefined,
+        stopAccuracy: ws.stopAccuracy ? Number(ws.stopAccuracy) : undefined,
+        stopDistanceMeters: ws.stopDistanceMeters ? Number(ws.stopDistanceMeters) : undefined,
+      })),
+      payrollRecords: (payrollRecordsRows || []).map((p: any) => ({
+        ...p,
+        basicSalary: Number(p.basicSalary) || 0,
+        hra: Number(p.hra) || 0,
+        allowances: Number(p.allowances) || 0,
+        bonus: Number(p.bonus) || 0,
+        overtimePay: Number(p.overtimePay) || 0,
+        grossSalary: Number(p.grossSalary) || 0,
+        pfDeduction: Number(p.pfDeduction) || 0,
+        taxDeduction: Number(p.taxDeduction) || 0,
+        professionalTax: Number(p.professionalTax) || 0,
+        otherDeductions: Number(p.otherDeductions) || 0,
+        totalDeductions: Number(p.totalDeductions) || 0,
+        netSalary: Number(p.netSalary) || 0,
+      })),
+      jobs: (jobsRows || []).map((j: any) => ({
+        ...j,
+        openingsCount: Number(j.openingsCount) || 1,
+        applicantCount: Number(j.applicantCount) || 0,
+        skillsRequired: parseJsonCol(j.skillsRequired, []),
+      })),
+      candidates: (candidatesRows || []).map((c: any) => ({
+        ...c,
+        experienceYears: Number(c.experienceYears) || 0,
+        rating: Number(c.rating) || 0,
+        skills: parseJsonCol(c.skills, []),
+        interviews: parseJsonCol(c.interviews, []),
+      })),
+      assets: assetsRows || [],
+      trainingPrograms: (trainingProgramsRows || []).map((tp: any) => ({
+        ...tp,
+        durationHours: Number(tp.durationHours) || 0,
+        enrolledCount: Number(tp.enrolledCount) || 0,
+        skillsCovered: parseJsonCol(tp.skillsCovered, []),
+      })),
+      employeeTrainings: (employeeTrainingsRows || []).map((et: any) => ({
+        ...et,
+        progressPercent: Number(et.progressPercent) || 0,
+      })),
+      performanceCycles: (performanceCyclesRows || []).map((pc: any) => ({
+        ...pc,
+        year: Number(pc.year) || new Date().getFullYear(),
+      })),
+      performanceReviews: (performanceReviewsRows || []).map((pr: any) => ({
+        ...pr,
+        selfRating: pr.selfRating ? Number(pr.selfRating) : null,
+        managerRating: pr.managerRating ? Number(pr.managerRating) : null,
+        finalRating: pr.finalRating ? Number(pr.finalRating) : null,
+      })),
+      resignations: (resignationsRows || []).map((r: any) => ({
+        ...r,
+        noticePeriodDays: Number(r.noticePeriodDays) || 30,
+        managerApproval: parseJsonCol(r.managerApproval, null),
+        clearance: parseJsonCol(r.clearance, []),
+      })),
+      announcements: announcementsRows || [],
+      notifications: (notificationsRows || []).map((n: any) => ({
+        ...n,
+        isRead: Boolean(n.isRead),
+      })),
+      documents: documentsRows || [],
+      auditLogs: auditLogsRows || [],
+      systemSettings: settingsRows && settingsRows.length > 0 ? settingsRows[0] : null,
+    };
+  } catch (err) {
+    console.error('Error loading data from MySQL:', err);
+    return null;
+  }
+}
