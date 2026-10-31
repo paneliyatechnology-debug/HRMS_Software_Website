@@ -59,4 +59,12 @@ export class UpdateSuperAdminUserDto {
   @IsString()
   @IsOptional()
   avatarUrl?: string;
+
+  @ApiPropertyOptional({
+    example: '+91 98765 43210',
+    description: 'Contact phone number',
+  })
+  @IsString()
+  @IsOptional()
+  phone?: string;
 }

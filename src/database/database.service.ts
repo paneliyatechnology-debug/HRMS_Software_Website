@@ -4,6 +4,12 @@ import * as path from 'path';
 import type mysql from 'mysql2/promise';
 import { normalizeEmail, EMAIL_ALREADY_REGISTERED_MESSAGE } from '../common/utils/email.util.js';
 import {
+  normalizePhone,
+  arePhoneNumbersEqual,
+  extractComparablePhoneDigits,
+  PHONE_ALREADY_REGISTERED_MESSAGE,
+} from '../common/utils/phone.util.js';
+import {
   User,
   Employee,
   Department,
@@ -699,6 +705,105 @@ export class DatabaseService implements OnModuleInit {
     this.inFlightEmailLocks.add(normalized);
     return () => {
       this.inFlightEmailLocks.delete(normalized);
+    };
+  }
+
+  private inFlightPhoneLocks = new Set<string>();
+
+  /**
+   * Asserts strict global phone/mobile number uniqueness across all roles (SUPER_ADMIN, ADMIN, EMPLOYEE).
+   * Checks in-flight locks, in-memory users, in-memory employees, and MySQL users table.
+   * If phone is empty/null/undefined, it returns '' without throwing (phone is optional).
+   */
+  public async assertPhoneUnique(
+    phone?: string | null,
+    excludeUserId?: string,
+    lockAlreadyAcquired = false,
+  ): Promise<string> {
+    const normalized = normalizePhone(phone);
+    if (!normalized) {
+      return '';
+    }
+
+    const comparableDigits = extractComparablePhoneDigits(normalized);
+
+    // 1. In-flight lock for concurrent requests
+    if (!lockAlreadyAcquired) {
+      if (
+        this.inFlightPhoneLocks.has(normalized) ||
+        (comparableDigits && this.inFlightPhoneLocks.has(comparableDigits))
+      ) {
+        throw new ConflictException(PHONE_ALREADY_REGISTERED_MESSAGE);
+      }
+    }
+
+    // 2. Check in-memory users collection
+    const userConflict = this.users.find((u) => {
+      if (u.id === excludeUserId) return false;
+      return arePhoneNumbersEqual(u.phone, normalized);
+    });
+    if (userConflict) {
+      throw new ConflictException(PHONE_ALREADY_REGISTERED_MESSAGE);
+    }
+
+    // 3. Check in-memory employees collection
+    const empConflict = this.employees.find((e) => {
+      if (e.id === excludeUserId || e.userId === excludeUserId) return false;
+      return arePhoneNumbersEqual(e.phone, normalized);
+    });
+    if (empConflict) {
+      throw new ConflictException(PHONE_ALREADY_REGISTERED_MESSAGE);
+    }
+
+    // 4. Check live MySQL users table (database-level concurrency safety)
+    if (this.mysqlPool && this.isMysqlConnected) {
+      try {
+        const [rows]: any = await this.mysqlPool.query(
+          excludeUserId
+            ? `SELECT id, phone FROM users WHERE phone IS NOT NULL AND phone != '' AND id != ?`
+            : `SELECT id, phone FROM users WHERE phone IS NOT NULL AND phone != ''`,
+          excludeUserId ? [excludeUserId] : [],
+        );
+        if (rows && Array.isArray(rows)) {
+          for (const r of rows) {
+            if (arePhoneNumbersEqual(r.phone, normalized)) {
+              throw new ConflictException(PHONE_ALREADY_REGISTERED_MESSAGE);
+            }
+          }
+        }
+      } catch (dbErr) {
+        if (dbErr instanceof ConflictException) throw dbErr;
+        this.logger.warn(`Could not verify phone in MySQL: ${dbErr}`);
+      }
+    }
+
+    return normalized;
+  }
+
+  /**
+   * Acquires a lock on the normalized phone number for the duration of an asynchronous operation
+   */
+  public acquirePhoneLock(phone?: string | null): () => void {
+    const normalized = normalizePhone(phone);
+    if (!normalized) {
+      return () => {};
+    }
+    const comparableDigits = extractComparablePhoneDigits(normalized);
+    if (
+      this.inFlightPhoneLocks.has(normalized) ||
+      (comparableDigits && this.inFlightPhoneLocks.has(comparableDigits))
+    ) {
+      throw new ConflictException(PHONE_ALREADY_REGISTERED_MESSAGE);
+    }
+    this.inFlightPhoneLocks.add(normalized);
+    if (comparableDigits) {
+      this.inFlightPhoneLocks.add(comparableDigits);
+    }
+    return () => {
+      this.inFlightPhoneLocks.delete(normalized);
+      if (comparableDigits) {
+        this.inFlightPhoneLocks.delete(comparableDigits);
+      }
     };
   }
 }

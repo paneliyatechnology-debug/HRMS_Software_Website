@@ -293,11 +293,18 @@ export class AdminService {
   async createEmployee(actor: User, dto: CreateAdminEmployeeDto) {
     const company = this.resolveTargetCompany(actor);
 
-    // 1. Strict global email uniqueness check and mutex lock
-    const releaseLock = this.db.acquireEmailLock(dto.email);
+    // 1. Strict global email & phone uniqueness check and mutex lock
+    const releaseEmailLock = this.db.acquireEmailLock(dto.email);
+    let releasePhoneLock = () => {};
+    if (dto.phone) {
+      releasePhoneLock = this.db.acquirePhoneLock(dto.phone);
+    }
 
     try {
       const normalizedEmail = await this.db.assertEmailUnique(dto.email, undefined, true);
+      const normalizedPhone = dto.phone
+        ? await this.db.assertPhoneUnique(dto.phone, undefined, true)
+        : '';
 
       // 2. Sequential employee code generation scoped to company
       let maxNum = 0;
@@ -332,7 +339,7 @@ export class AdminService {
         firstName: dto.firstName.trim(),
         lastName: dto.lastName.trim(),
         email: normalizedEmail,
-        phone: dto.phone?.trim() || '',
+        phone: normalizedPhone,
         avatarUrl: '',
         gender: (dto.gender as any) || 'Other',
         dateOfBirth: '',
@@ -422,7 +429,8 @@ export class AdminService {
         user: safeUser,
       };
     } finally {
-      releaseLock();
+      releaseEmailLock();
+      releasePhoneLock();
     }
   }
 
@@ -441,9 +449,12 @@ export class AdminService {
       employee.email = normalizedEmail;
     }
 
-    if (dto.firstName) employee.firstName = dto.firstName.trim();
-    if (dto.lastName) employee.lastName = dto.lastName.trim();
-    if (dto.phone !== undefined) employee.phone = dto.phone.trim();
+    if (dto.phone !== undefined && dto.phone.trim() !== '') {
+      const normalizedPhone = await this.db.assertPhoneUnique(dto.phone, employee.userId || employee.id);
+      employee.phone = normalizedPhone;
+    } else if (dto.phone !== undefined) {
+      employee.phone = '';
+    }
     if (dto.gender) employee.gender = dto.gender as any;
     if (dto.address !== undefined) employee.address = dto.address.trim();
     if (dto.employmentType) employee.employmentType = dto.employmentType as any;

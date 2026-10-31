@@ -21,10 +21,17 @@ export class AuthService {
   constructor(private readonly db: DatabaseService) {}
 
   async register(data: RegisterDto) {
-    const releaseLock = this.db.acquireEmailLock(data.email);
+    const releaseEmailLock = this.db.acquireEmailLock(data.email);
+    let releasePhoneLock = () => {};
+    if (data.phone) {
+      releasePhoneLock = this.db.acquirePhoneLock(data.phone);
+    }
 
     try {
       const normalizedEmail = await this.db.assertEmailUnique(data.email, undefined, true);
+      const normalizedPhone = data.phone
+        ? await this.db.assertPhoneUnique(data.phone, undefined, true)
+        : '';
       const userId = `user-${Date.now()}`;
       const employeeId = userId;
       const role = data.role || Role.EMPLOYEE;
@@ -50,11 +57,11 @@ export class AuthService {
 
       const hashedPassword = hashPassword(data.password);
 
-      // Create User record with normalized email
+      // Create User record with normalized email and phone
       const newUser: User = {
         id: userId,
         email: normalizedEmail,
-        phone: data.phone ? data.phone.trim() : '',
+        phone: normalizedPhone,
         password: hashedPassword,
         firstName: data.firstName ? data.firstName.trim() : '',
         lastName: data.lastName ? data.lastName.trim() : '',
@@ -103,7 +110,7 @@ export class AuthService {
           firstName: data.firstName ? data.firstName.trim() : '',
           lastName: data.lastName ? data.lastName.trim() : '',
           email: normalizedEmail,
-          phone: data.phone ? data.phone.trim() : '',
+          phone: normalizedPhone,
           avatarUrl: '',
           gender: 'Other',
           dateOfBirth: '',
@@ -209,7 +216,8 @@ export class AuthService {
         },
       };
     } finally {
-      releaseLock();
+      releaseEmailLock();
+      releasePhoneLock();
     }
   }
 

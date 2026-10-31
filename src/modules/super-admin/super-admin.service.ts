@@ -321,10 +321,17 @@ export class SuperAdminService {
   }
 
   async createAdmin(dto: CreateAdminDto, actingAdmin?: User) {
-    const releaseLock = this.db.acquireEmailLock(dto.email);
+    const releaseEmailLock = this.db.acquireEmailLock(dto.email);
+    let releasePhoneLock = () => {};
+    if (dto.phone) {
+      releasePhoneLock = this.db.acquirePhoneLock(dto.phone);
+    }
 
     try {
       const normalizedEmail = await this.db.assertEmailUnique(dto.email, undefined, true);
+      const normalizedPhone = dto.phone
+        ? await this.db.assertPhoneUnique(dto.phone, undefined, true)
+        : '';
 
       const targetCompany = this.db.companies.find(
         (c) => c.id === dto.companyId || c.companyCode === dto.companyId,
@@ -341,7 +348,7 @@ export class SuperAdminService {
       const newAdmin: User = {
         id: userId,
         email: normalizedEmail,
-        phone: dto.phone || '',
+        phone: normalizedPhone,
         password: hashedPassword,
         firstName: dto.firstName,
         lastName: dto.lastName,
@@ -382,7 +389,8 @@ export class SuperAdminService {
         },
       };
     } finally {
-      releaseLock();
+      releaseEmailLock();
+      releasePhoneLock();
     }
   }
 
@@ -402,9 +410,15 @@ export class SuperAdminService {
       user.email = normalizedEmail;
     }
 
+    if (dto.phone !== undefined && dto.phone.trim() !== '') {
+      const normalizedPhone = await this.db.assertPhoneUnique(dto.phone, user.id);
+      user.phone = normalizedPhone;
+    } else if (dto.phone !== undefined) {
+      user.phone = '';
+    }
+
     if (dto.firstName) user.firstName = dto.firstName;
     if (dto.lastName) user.lastName = dto.lastName;
-    if (dto.phone !== undefined) user.phone = dto.phone;
     if (dto.password) user.password = hashPassword(dto.password);
     if (dto.status) user.status = dto.status;
 
@@ -468,12 +482,19 @@ export class SuperAdminService {
   }
 
   async createUser(dto: CreateSuperAdminUserDto, actingAdmin?: User) {
-    const releaseLock = this.db.acquireEmailLock(dto.email);
+    const releaseEmailLock = this.db.acquireEmailLock(dto.email);
+    let releasePhoneLock = () => {};
+    if (dto.phone) {
+      releasePhoneLock = this.db.acquirePhoneLock(dto.phone);
+    }
 
     try {
       const normalizedEmail = await this.db.assertEmailUnique(dto.email, undefined, true);
+      const normalizedPhone = dto.phone
+        ? await this.db.assertPhoneUnique(dto.phone, undefined, true)
+        : '';
 
-    const userId = `user-${Date.now()}`;
+      const userId = `user-${Date.now()}`;
     const role = dto.role || Role.SUPER_ADMIN;
     const employeeId = role === Role.EMPLOYEE ? userId : null;
     const isSuperAdmin = dto.isSuperAdmin !== undefined ? dto.isSuperAdmin : role === Role.SUPER_ADMIN;
@@ -507,7 +528,7 @@ export class SuperAdminService {
     const newUser: User = {
       id: userId,
       email: normalizedEmail,
-      phone: dto.phone || '',
+      phone: normalizedPhone,
       password: hashedPassword,
       firstName: dto.firstName,
       lastName: dto.lastName,
@@ -644,7 +665,8 @@ export class SuperAdminService {
       user: safeUser,
     };
     } finally {
-      releaseLock();
+      releaseEmailLock();
+      releasePhoneLock();
     }
   }
 
@@ -657,6 +679,13 @@ export class SuperAdminService {
     if (dto.email && dto.email.trim().toLowerCase() !== user.email.toLowerCase()) {
       const normalizedEmail = await this.db.assertEmailUnique(dto.email, id);
       user.email = normalizedEmail;
+    }
+
+    if (dto.phone !== undefined && dto.phone.trim() !== '') {
+      const normalizedPhone = await this.db.assertPhoneUnique(dto.phone, id);
+      user.phone = normalizedPhone;
+    } else if (dto.phone !== undefined) {
+      user.phone = '';
     }
 
     if (dto.firstName) user.firstName = dto.firstName;
@@ -683,6 +712,7 @@ export class SuperAdminService {
       if (dto.firstName) employee.firstName = dto.firstName;
       if (dto.lastName) employee.lastName = dto.lastName;
       if (dto.email) employee.email = user.email;
+      if (dto.phone !== undefined) employee.phone = user.phone || '';
       if (dto.isSuperAdmin !== undefined) employee.isSuperAdmin = dto.isSuperAdmin;
       employee.updatedAt = new Date().toISOString();
     }
@@ -1330,15 +1360,23 @@ export class SuperAdminService {
 
     // If initial admin credentials are provided, automatically create the company Admin
     if (dto.adminEmail && dto.adminPassword) {
-      const releaseLock = this.db.acquireEmailLock(dto.adminEmail);
+      const releaseEmailLock = this.db.acquireEmailLock(dto.adminEmail);
+      let releasePhoneLock = () => {};
+      if (dto.phone) {
+        releasePhoneLock = this.db.acquirePhoneLock(dto.phone);
+      }
 
       try {
         const normalizedEmail = await this.db.assertEmailUnique(dto.adminEmail, undefined, true);
+        const normalizedPhone = dto.phone
+          ? await this.db.assertPhoneUnique(dto.phone, undefined, true)
+          : '';
         const adminUserId = `user-${Date.now()}`;
         const hashedAdminPassword = hashPassword(dto.adminPassword);
         const adminUser: User = {
           id: adminUserId,
           email: normalizedEmail,
+          phone: normalizedPhone,
           password: hashedAdminPassword,
           firstName: dto.adminFirstName || 'Company',
           lastName: dto.adminLastName || 'Admin',
@@ -1365,7 +1403,7 @@ export class SuperAdminService {
           firstName: adminUser.firstName,
           lastName: adminUser.lastName,
           email: normalizedEmail,
-          phone: dto.phone || '',
+          phone: normalizedPhone,
           avatarUrl: '',
         gender: 'Other',
         dateOfBirth: '',
@@ -1405,7 +1443,8 @@ export class SuperAdminService {
 
       newCompany.adminUserId = adminUserId;
       } finally {
-        releaseLock();
+        releaseEmailLock();
+        releasePhoneLock();
       }
     }
 

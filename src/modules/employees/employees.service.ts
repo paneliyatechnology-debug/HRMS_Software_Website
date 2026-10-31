@@ -148,10 +148,17 @@ export class EmployeesService {
   }
 
   async create(data: CreateEmployeeDto, actorName = 'Admin', companyIdOverride?: string) {
-    const releaseLock = this.db.acquireEmailLock(data.email);
+    const releaseEmailLock = this.db.acquireEmailLock(data.email);
+    let releasePhoneLock = () => {};
+    if (data.phone) {
+      releasePhoneLock = this.db.acquirePhoneLock(data.phone);
+    }
 
     try {
       const normalizedEmail = await this.db.assertEmailUnique(data.email, undefined, true);
+      const normalizedPhone = data.phone
+        ? await this.db.assertPhoneUnique(data.phone, undefined, true)
+        : '';
       const userId = `user-${Date.now()}`;
       const newId = userId;
 
@@ -230,7 +237,7 @@ export class EmployeesService {
         firstName: data.firstName ? data.firstName.trim() : '',
         lastName: data.lastName ? data.lastName.trim() : '',
         email: normalizedEmail,
-        phone: data.phone || '',
+        phone: normalizedPhone,
         avatarUrl: data.avatarUrl || '',
         gender: (data.gender as any) || 'Other',
         dateOfBirth: data.dateOfBirth || '',
@@ -329,7 +336,8 @@ export class EmployeesService {
       this.db.persist();
       return newEmployee;
     } finally {
-      releaseLock();
+      releaseEmailLock();
+      releasePhoneLock();
     }
   }
 
@@ -358,6 +366,12 @@ export class EmployeesService {
     if (data.email) {
       const normalizedEmail = await this.db.assertEmailUnique(data.email, current.userId || current.id);
       data.email = normalizedEmail;
+    }
+
+    // Global phone uniqueness check on update
+    if (data.phone) {
+      const normalizedPhone = await this.db.assertPhoneUnique(data.phone, current.userId || current.id);
+      data.phone = normalizedPhone;
     }
 
     const updated: Employee = {
