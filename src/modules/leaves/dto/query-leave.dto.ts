@@ -2,6 +2,11 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 
 export class QueryLeaveDto {
+  @ApiPropertyOptional({ description: 'Filter leaves by User ID or Employee ID' })
+  @IsString()
+  @IsOptional()
+  userId?: string;
+
   @ApiPropertyOptional({ description: 'Filter leaves by Employee ID' })
   @IsString()
   @IsOptional()

@@ -101,9 +101,66 @@ export interface User {
   isSuperAdmin?: boolean;
   status?: string;
   companyId?: string | null;
-  companyCode?: string;
-  employeeId?: string;
+  companyCode?: string | null;
+  employeeId?: string | null;
+  employeeCode?: string | null;
+  permissions?: string[] | any;
   avatarUrl?: string;
+
+  // Unified Employee Profile & HR Dossier Fields
+  gender?: 'Male' | 'Female' | 'Other' | string;
+  dateOfBirth?: string;
+  address?: string;
+  emergencyContact?: {
+    name: string;
+    relationship: string;
+    phone: string;
+  } | any;
+  joiningDate?: string;
+  employmentType?: 'Full-time' | 'Remote' | 'Part-time' | 'Contractual' | 'Hourly' | string;
+  departmentId?: string;
+  departmentName?: string;
+  designationId?: string;
+  designationTitle?: string;
+  reportingManagerId?: string;
+  reportingManagerName?: string;
+  workLocationId?: string;
+  workLocationName?: string;
+  shift?: string;
+  bankDetails?: {
+    bankName: string;
+    accountNumber: string;
+    ifscOrRouting: string;
+    accountHolderName: string;
+  } | any;
+  taxInformation?: {
+    taxId: string;
+    panOrSsn: string;
+    taxRegime: string;
+  } | any;
+  education?: Array<{
+    degree: string;
+    institution: string;
+    year: number;
+  }> | any;
+  previousExperience?: Array<{
+    company: string;
+    role: string;
+    years: number;
+  }> | any;
+  skills?: string[];
+  salary?: {
+    basic: number;
+    hra: number;
+    allowances: number;
+    bonus: number;
+    pf: number;
+    tax: number;
+    professionalTax: number;
+    gross: number;
+    net: number;
+  } | any;
+
   createdAt: string;
   updatedAt: string;
 }

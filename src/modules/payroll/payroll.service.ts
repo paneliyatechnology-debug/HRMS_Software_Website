@@ -19,10 +19,15 @@ export class PayrollService {
     // Multi-company isolation
     if (actorUser && (actorUser.role === Role.ADMIN || actorUser.role === Role.EMPLOYEE)) {
       if (actorUser.companyId) {
-        const companyEmpIds = new Set(
-          this.db.employees.filter((e) => e.companyId === actorUser.companyId).map((e) => e.id),
+        const companyUserIds = new Set(
+          this.db.users.filter((u) => u.companyId === actorUser.companyId).map((u) => u.id),
         );
-        list = list.filter((p) => companyEmpIds.has(p.employeeId));
+        list = list.filter((p) => {
+          const user = this.db.users.find(
+            (u) => u.id === p.employeeId || u.employeeId === p.employeeId || (p as any).userId === u.id,
+          );
+          return user ? companyUserIds.has(user.id) : companyUserIds.has(p.employeeId);
+        });
       }
     }
 
@@ -32,18 +37,46 @@ export class PayrollService {
     if (params?.status && params.status !== 'ALL') {
       list = list.filter((p) => p.status === params.status);
     }
-    if (params?.employeeId) {
-      list = list.filter((p) => p.employeeId === params.employeeId);
+    const filterId = (params as any)?.userId || params?.employeeId;
+    if (filterId) {
+      list = list.filter((p) => {
+        if (p.employeeId === filterId || (p as any).userId === filterId) return true;
+        const user = this.db.users.find((u) => u.id === p.employeeId || u.employeeId === p.employeeId);
+        return user?.id === filterId || user?.employeeId === filterId;
+      });
     }
 
-    return list;
+    return list.map((p) => {
+      const user = this.db.users.find(
+        (u) =>
+          u.id === p.employeeId ||
+          u.employeeId === p.employeeId ||
+          (p as any).userId === u.id ||
+          ((u.firstName || '') + ' ' + (u.lastName || '')).trim().toLowerCase() ===
+            (p.employeeName || '').trim().toLowerCase(),
+      );
+      const realUserId = user ? user.id : p.employeeId;
+      return {
+        ...p,
+        userId: realUserId,
+        employeeId: realUserId,
+        role: user?.role || 'EMPLOYEE',
+        employeeName: user
+          ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || p.employeeName
+          : p.employeeName,
+      };
+    });
   }
 
   getPayslip(id: string) {
     const record = this.db.payrollRecords.find((p) => p.id === id);
     if (!record) throw new NotFoundException('Payslip not found');
 
-    const employee = this.db.employees.find((e) => e.id === record.employeeId);
+    const user = this.db.users.find(
+      (u) => u.id === record.employeeId || u.employeeId === record.employeeId,
+    );
+    const employee = user || this.db.employees.find((e) => e.id === record.employeeId);
+    const realUserId = user ? user.id : (employee ? employee.id : record.employeeId);
 
     return {
       payslipId: record.id,
@@ -55,15 +88,17 @@ export class PayrollService {
         email: 'payroll@paneliya.com',
       },
       employee: {
-        id: employee?.id || record.employeeId,
+        id: realUserId,
+        userId: realUserId,
+        role: user?.role || 'EMPLOYEE',
         code: record.employeeCode,
         name: record.employeeName,
         designation: record.designationTitle,
         department: record.departmentName,
         joiningDate: employee?.joiningDate || '2023-01-10',
-        panOrSsn: employee?.taxInformation.panOrSsn || '***-**-4910',
-        bankName: employee?.bankDetails.bankName || 'Direct Deposit',
-        accountNumber: employee?.bankDetails.accountNumber
+        panOrSsn: employee?.taxInformation?.panOrSsn || '***-**-4910',
+        bankName: employee?.bankDetails?.bankName || 'Direct Deposit',
+        accountNumber: employee?.bankDetails?.accountNumber
           ? `•••• ${employee.bankDetails.accountNumber.slice(-4)}`
           : '•••• 4910',
       },

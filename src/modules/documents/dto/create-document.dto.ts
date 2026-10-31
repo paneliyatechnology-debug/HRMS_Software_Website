@@ -2,10 +2,15 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateDocumentMetadataDto {
-  @ApiProperty({ example: 'emp-1', description: 'Employee ID' })
+  @ApiPropertyOptional({ example: 'user-1793190505324', description: 'User ID' })
   @IsString()
-  @IsNotEmpty()
-  employeeId: string;
+  @IsOptional()
+  userId?: string;
+
+  @ApiPropertyOptional({ example: 'user-1793190505324', description: 'Employee ID' })
+  @IsString()
+  @IsOptional()
+  employeeId?: string;
 
   @ApiProperty({ example: 'Offer Letter - Signed', description: 'Document title' })
   @IsString()

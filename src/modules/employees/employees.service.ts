@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
 import { Employee, EmployeeStatus, Role, User } from '../../common/types.js';
@@ -146,124 +147,123 @@ export class EmployeesService {
     return { nextCode, companyCode: company?.companyCode };
   }
 
-  create(data: CreateEmployeeDto, actorName = 'Admin', companyIdOverride?: string) {
-    const newId = `emp-${Date.now()}`;
+  async create(data: CreateEmployeeDto, actorName = 'Admin', companyIdOverride?: string) {
+    const releaseLock = this.db.acquireEmailLock(data.email);
 
-    // Determine target company:
-    // If companyIdOverride is provided (from Admin token or SuperAdmin explicit selection), use it
-    let targetCompanyId = companyIdOverride || data.companyId;
-    let targetCompany: any;
-    if (targetCompanyId) {
-      targetCompany = this.db.companies.find(
-        (c) => c.id === targetCompanyId || c.companyCode === targetCompanyId,
-      );
-      if (!targetCompany) {
-        throw new NotFoundException(
-          `Company with ID or code "${targetCompanyId}" not found. Please provide an existing company.`,
+    try {
+      const normalizedEmail = await this.db.assertEmailUnique(data.email, undefined, true);
+      const userId = `user-${Date.now()}`;
+      const newId = userId;
+
+      // Determine target company:
+      // If companyIdOverride is provided (from Admin token or SuperAdmin explicit selection), use it
+      let targetCompanyId = companyIdOverride || data.companyId;
+      let targetCompany: any;
+      if (targetCompanyId) {
+        targetCompany = this.db.companies.find(
+          (c) => c.id === targetCompanyId || c.companyCode === targetCompanyId,
         );
+        if (!targetCompany) {
+          throw new NotFoundException(
+            `Company with ID or code "${targetCompanyId}" not found. Please provide an existing company.`,
+          );
+        }
+      } else if (this.db.companies.length > 0) {
+        targetCompany = this.db.companies[0];
       }
-    } else if (this.db.companies.length > 0) {
-      targetCompany = this.db.companies[0];
-    }
 
-    if (!targetCompany) {
-      throw new BadRequestException('No valid company found to assign this employee to.');
-    }
+      if (!targetCompany) {
+        throw new BadRequestException('No valid company found to assign this employee to.');
+      }
 
-    // Scoped automatic generation of sequential employee code (e.g. EMP-000001 per company)
-    const employeeCode = this.generateNextEmployeeCode(targetCompany.id);
+      // Scoped automatic generation of sequential employee code (e.g. EMP-000001 per company)
+      const employeeCode = this.generateNextEmployeeCode(targetCompany.id);
 
-    const department = this.db.departments.find((d) => d.id === data.departmentId);
-    const designation = this.db.designations.find((d) => d.id === data.designationId);
-    const location =
-      this.db.locations.find((l) => l.id === data.workLocationId) || this.db.locations[0];
+      const department = this.db.departments.find((d) => d.id === data.departmentId);
+      const designation = this.db.designations.find((d) => d.id === data.designationId);
+      const location =
+        this.db.locations.find((l) => l.id === data.workLocationId) || this.db.locations[0];
 
-    // Dynamic salary calculation
-    let salary = data.salary;
-    if (data.salary && Object.keys(data.salary).length > 0) {
-      const basic = data.salary.basic || 0;
-      const hra = data.salary.hra || 0;
-      const allowances = data.salary.allowances || 0;
-      const bonus = data.salary.bonus || 0;
-      const pf = data.salary.pf || 0;
-      const tax = data.salary.tax || 0;
-      const professionalTax = (data.salary as any).professionalTax || 0;
-      const gross =
-        (data.salary as any).gross !== undefined
-          ? (data.salary as any).gross
-          : basic + hra + allowances + bonus;
-      const net =
-        (data.salary as any).net !== undefined
-          ? (data.salary as any).net
-          : gross - (pf + tax + professionalTax);
-      salary = {
-        basic,
-        hra,
-        allowances,
-        bonus,
-        pf,
-        tax,
-        professionalTax,
-        gross,
-        net,
-      } as any;
-    }
+      // Dynamic salary calculation
+      let salary = data.salary;
+      if (data.salary && Object.keys(data.salary).length > 0) {
+        const basic = data.salary.basic || 0;
+        const hra = data.salary.hra || 0;
+        const allowances = data.salary.allowances || 0;
+        const bonus = data.salary.bonus || 0;
+        const pf = data.salary.pf || 0;
+        const tax = data.salary.tax || 0;
+        const professionalTax = (data.salary as any).professionalTax || 0;
+        const gross =
+          (data.salary as any).gross !== undefined
+            ? (data.salary as any).gross
+            : basic + hra + allowances + bonus;
+        const net =
+          (data.salary as any).net !== undefined
+            ? (data.salary as any).net
+            : gross - (pf + tax + professionalTax);
+        salary = {
+          basic,
+          hra,
+          allowances,
+          bonus,
+          pf,
+          tax,
+          professionalTax,
+          gross,
+          net,
+        } as any;
+      }
 
-    const userId = `user-${Date.now()}`;
-    const userPassword = data.password ? hashPassword(data.password) : '';
-    const userRole = data.role || Role.EMPLOYEE;
-    const isSuperAdmin = userRole === Role.SUPER_ADMIN;
+      const userPassword = data.password ? hashPassword(data.password) : '';
+      const userRole = data.role || Role.EMPLOYEE;
+      const isSuperAdmin = userRole === Role.SUPER_ADMIN;
 
-    const newEmployee: Employee = {
-      id: newId,
-      employeeCode,
-      companyId: targetCompany.id,
-      companyCode: targetCompany.companyCode,
-      userId,
-      password: userPassword,
-      isSuperAdmin,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      phone: data.phone || '',
-      avatarUrl: data.avatarUrl || '',
-      gender: (data.gender as any) || 'Other',
-      dateOfBirth: data.dateOfBirth || '',
-      address: data.address || '',
-      emergencyContact: (data.emergencyContact as any) || {},
-      joiningDate: data.joiningDate || new Date().toISOString().split('T')[0],
-      employmentType: (data.employmentType as any) || 'Full-time',
-      status: data.status || EmployeeStatus.ACTIVE,
-      departmentId: department?.id || data.departmentId || '',
-      departmentName: department?.name || '',
-      designationId: designation?.id || data.designationId || '',
-      designationTitle: designation?.title || '',
-      reportingManagerId: data.reportingManagerId || '',
-      reportingManagerName: data.reportingManagerName || '',
-      workLocationId: location?.id || data.workLocationId || '',
-      workLocationName: location?.name || '',
-      shift: data.shift || '',
-      bankDetails: (data.bankDetails as any) || {},
-      taxInformation: (data.taxInformation as any) || {},
-      education: data.education || [],
-      previousExperience: data.previousExperience || [],
-      skills: data.skills || [],
-      salary: (salary as any) || {},
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      const newEmployee: Employee = {
+        id: newId,
+        employeeCode,
+        companyId: targetCompany.id,
+        companyCode: targetCompany.companyCode,
+        userId,
+        password: userPassword,
+        isSuperAdmin,
+        firstName: data.firstName ? data.firstName.trim() : '',
+        lastName: data.lastName ? data.lastName.trim() : '',
+        email: normalizedEmail,
+        phone: data.phone || '',
+        avatarUrl: data.avatarUrl || '',
+        gender: (data.gender as any) || 'Other',
+        dateOfBirth: data.dateOfBirth || '',
+        address: data.address || '',
+        emergencyContact: (data.emergencyContact as any) || {},
+        joiningDate: data.joiningDate || new Date().toISOString().split('T')[0],
+        employmentType: (data.employmentType as any) || 'Full-time',
+        status: data.status || EmployeeStatus.ACTIVE,
+        departmentId: department?.id || data.departmentId || '',
+        departmentName: department?.name || '',
+        designationId: designation?.id || data.designationId || '',
+        designationTitle: designation?.title || '',
+        reportingManagerId: data.reportingManagerId || '',
+        reportingManagerName: data.reportingManagerName || '',
+        workLocationId: location?.id || data.workLocationId || '',
+        workLocationName: location?.name || '',
+        shift: data.shift || '',
+        bankDetails: (data.bankDetails as any) || {},
+        taxInformation: (data.taxInformation as any) || {},
+        education: data.education || [],
+        previousExperience: data.previousExperience || [],
+        skills: data.skills || [],
+        salary: (salary as any) || {},
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-    this.db.employees.unshift(newEmployee);
+      this.db.employees.unshift(newEmployee);
 
-    // Create or link login User account
-    const existingUser = this.db.users.find(
-      (u) => u.email.toLowerCase() === newEmployee.email.toLowerCase(),
-    );
-
-    if (!existingUser) {
       const newUser: User = {
         id: userId,
-        email: newEmployee.email,
+        email: normalizedEmail,
+        phone: newEmployee.phone,
         password: userPassword,
         firstName: newEmployee.firstName,
         lastName: newEmployee.lastName,
@@ -273,54 +273,67 @@ export class EmployeesService {
         companyId: targetCompany.id,
         companyCode: targetCompany.companyCode,
         employeeId: newEmployee.id,
+        employeeCode: newEmployee.employeeCode,
         avatarUrl: newEmployee.avatarUrl,
+        gender: newEmployee.gender,
+        dateOfBirth: newEmployee.dateOfBirth,
+        address: newEmployee.address,
+        joiningDate: newEmployee.joiningDate,
+        employmentType: newEmployee.employmentType,
+        departmentId: newEmployee.departmentId,
+        departmentName: newEmployee.departmentName,
+        designationId: newEmployee.designationId,
+        designationTitle: newEmployee.designationTitle,
+        reportingManagerId: newEmployee.reportingManagerId,
+        reportingManagerName: newEmployee.reportingManagerName,
+        workLocationId: newEmployee.workLocationId,
+        workLocationName: newEmployee.workLocationName,
+        shift: newEmployee.shift,
+        emergencyContact: newEmployee.emergencyContact,
+        bankDetails: newEmployee.bankDetails,
+        taxInformation: newEmployee.taxInformation,
+        education: newEmployee.education,
+        previousExperience: newEmployee.previousExperience,
+        skills: newEmployee.skills,
+        salary: newEmployee.salary,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       this.db.users.push(newUser);
-    } else {
-      existingUser.employeeId = newEmployee.id;
-      existingUser.companyId = targetCompany.id;
-      existingUser.companyCode = targetCompany.companyCode;
-      if (data.password) {
-        existingUser.password = hashPassword(data.password);
+
+      // Create initial leave balance
+      this.db.leaveBalances.push({
+        id: `bal-${newEmployee.id}`,
+        employeeId: newEmployee.id,
+        year: 2026,
+        casualLeave: { total: 12, used: 0, remaining: 12 },
+        sickLeave: { total: 10, used: 0, remaining: 10 },
+        paidLeave: { total: 15, used: 0, remaining: 15 },
+      });
+
+      // Update department count
+      if (department) {
+        department.employeeCount += 1;
       }
-      if (data.role) {
-        existingUser.role = data.role;
-      }
-      newEmployee.userId = existingUser.id;
+
+      this.db.logAudit(
+        'sys',
+        actorName,
+        'ADMIN',
+        'EMPLOYEE_CREATED',
+        'Employee Management',
+        `Created new employee ${newEmployee.firstName} ${newEmployee.lastName} (${newEmployee.employeeCode}) in company ${targetCompany.companyCode}`,
+        newEmployee.id,
+      );
+
+      this.db.persist();
+      return newEmployee;
+    } finally {
+      releaseLock();
     }
-
-    // Create initial leave balance
-    this.db.leaveBalances.push({
-      id: `bal-${newEmployee.id}`,
-      employeeId: newEmployee.id,
-      year: 2026,
-      casualLeave: { total: 12, used: 0, remaining: 12 },
-      sickLeave: { total: 10, used: 0, remaining: 10 },
-      paidLeave: { total: 15, used: 0, remaining: 15 },
-    });
-
-    // Update department count
-    if (department) {
-      department.employeeCount += 1;
-    }
-
-    this.db.logAudit(
-      'sys',
-      actorName,
-      'ADMIN',
-      'EMPLOYEE_CREATED',
-      'Employee Management',
-      `Created new employee ${newEmployee.firstName} ${newEmployee.lastName} (${newEmployee.employeeCode}) in company ${targetCompany.companyCode}`,
-      newEmployee.id,
-    );
-
-    this.db.persist();
-    return newEmployee;
   }
 
-  update(id: string, data: UpdateEmployeeDto, actorName = 'Admin', actorUser?: User) {
+  async update(id: string, data: UpdateEmployeeDto, actorName = 'Admin', actorUser?: User) {
     const idx = this.db.employees.findIndex(
       (e) => e.id === id || e.employeeCode.toLowerCase() === id.toLowerCase(),
     );
@@ -339,6 +352,12 @@ export class EmployeesService {
       if (data.role === Role.SUPER_ADMIN) {
         throw new ForbiddenException('Admin cannot grant SuperAdmin privileges.');
       }
+    }
+
+    // Global email uniqueness check on update
+    if (data.email) {
+      const normalizedEmail = await this.db.assertEmailUnique(data.email, current.userId || current.id);
+      data.email = normalizedEmail;
     }
 
     const updated: Employee = {
@@ -365,8 +384,33 @@ export class EmployeesService {
       if (data.email) user.email = data.email;
       if (data.firstName) user.firstName = data.firstName;
       if (data.lastName) user.lastName = data.lastName;
+      if (data.phone) user.phone = data.phone;
       if (data.password) user.password = hashPassword(data.password);
+      if (data.avatarUrl) user.avatarUrl = data.avatarUrl;
       if (data.role && actorUser?.role === Role.SUPER_ADMIN) user.role = data.role;
+      user.employeeId = updated.id;
+      user.employeeCode = updated.employeeCode;
+      user.gender = updated.gender;
+      user.dateOfBirth = updated.dateOfBirth;
+      user.address = updated.address;
+      user.joiningDate = updated.joiningDate;
+      user.employmentType = updated.employmentType;
+      user.departmentId = updated.departmentId;
+      user.departmentName = updated.departmentName;
+      user.designationId = updated.designationId;
+      user.designationTitle = updated.designationTitle;
+      user.reportingManagerId = updated.reportingManagerId;
+      user.reportingManagerName = updated.reportingManagerName;
+      user.workLocationId = updated.workLocationId;
+      user.workLocationName = updated.workLocationName;
+      user.shift = updated.shift;
+      user.emergencyContact = updated.emergencyContact;
+      user.bankDetails = updated.bankDetails;
+      user.taxInformation = updated.taxInformation;
+      user.education = updated.education;
+      user.previousExperience = updated.previousExperience;
+      user.skills = updated.skills;
+      user.salary = updated.salary;
       user.updatedAt = new Date().toISOString();
     }
 

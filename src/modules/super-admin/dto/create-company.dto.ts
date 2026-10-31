@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, IsOptional, IsEmail, IsEnum } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateCompanyDto {
   @ApiProperty({ example: 'ABC Technologies', description: 'Official corporate legal name' })
@@ -14,6 +15,7 @@ export class CreateCompanyDto {
 
   @ApiPropertyOptional({ example: 'contact@abctech.com', description: 'Corporate contact email' })
   @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   @IsEmail({}, { message: 'Must be a valid email format' })
   email?: string;
 
@@ -35,6 +37,7 @@ export class CreateCompanyDto {
   // Optional: provision an admin at company creation time
   @ApiPropertyOptional({ example: 'admin@abctech.com', description: 'Email for initial company administrator' })
   @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   @IsEmail()
   adminEmail?: string;
 

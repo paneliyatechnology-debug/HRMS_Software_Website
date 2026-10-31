@@ -21,6 +21,7 @@ export class UpdateSuperAdminUserDto {
   lastName?: string;
 
   @ApiPropertyOptional({ example: 'keyur.sangani1234@gmail.com', description: 'Email address' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   @IsEmail()
   @IsOptional()
   email?: string;

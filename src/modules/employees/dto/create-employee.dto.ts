@@ -94,6 +94,7 @@ export class CreateEmployeeDto {
   lastName: string;
 
   @ApiProperty({ example: 'david.miller@paneliya.com', description: 'Corporate email address' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   @IsEmail()
   @IsNotEmpty()
   email: string;

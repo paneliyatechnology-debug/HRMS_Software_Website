@@ -1,7 +1,8 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger, BadRequestException, ConflictException } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import type mysql from 'mysql2/promise';
+import { normalizeEmail, EMAIL_ALREADY_REGISTERED_MESSAGE } from '../common/utils/email.util.js';
 import {
   User,
   Employee,
@@ -233,7 +234,159 @@ export class DatabaseService implements OnModuleInit {
           }
         }
 
-        if (passwordsHashed || avatarsNormalized) {
+        // Normalize users & employee linkages with unified user IDs
+        let usersNormalized = false;
+        const legacyEmpMap = new Map<string, string>();
+        for (const u of this.users) {
+          if (u.role === Role.EMPLOYEE) {
+            if (u.employeeId && u.employeeId !== u.id) {
+              legacyEmpMap.set(u.employeeId, u.id);
+            }
+            const tsMatch = u.id.match(/\d+/);
+            if (tsMatch) {
+              legacyEmpMap.set(`emp-${tsMatch[0]}`, u.id);
+            }
+            if (u.employeeId !== u.id) {
+              u.employeeId = u.id;
+              usersNormalized = true;
+            }
+          }
+          if ((u.role === Role.SUPER_ADMIN || u.isSuperAdmin) && !u.permissions) {
+            u.permissions = ['*'];
+            usersNormalized = true;
+          }
+        }
+
+        // Keep employees aligned with unified users with role EMPLOYEE
+        const employeeUsers = this.users.filter((u) => u.role === Role.EMPLOYEE);
+        if (employeeUsers.length > 0) {
+          this.employees = employeeUsers.map((u) => ({
+            ...u,
+            id: u.id,
+            userId: u.id,
+            employeeId: u.id,
+          })) as unknown as Employee[];
+        }
+
+        // Migrate any legacy employeeId in related collections to unified user.id
+        for (const lr of this.leaveRequests) {
+          if (lr.employeeId && (lr.employeeId.startsWith('emp-') || legacyEmpMap.has(lr.employeeId))) {
+            const mapped = legacyEmpMap.get(lr.employeeId) || this.users.find(u => u.id === lr.employeeId || u.employeeId === lr.employeeId)?.id;
+            if (mapped) {
+              lr.employeeId = mapped;
+              (lr as any).userId = mapped;
+              usersNormalized = true;
+            }
+          }
+        }
+        for (const ar of this.attendanceRecords) {
+          if (ar.employeeId && (ar.employeeId.startsWith('emp-') || legacyEmpMap.has(ar.employeeId))) {
+            const mapped = legacyEmpMap.get(ar.employeeId) || this.users.find(u => u.id === ar.employeeId || u.employeeId === ar.employeeId)?.id;
+            if (mapped) {
+              ar.employeeId = mapped;
+              (ar as any).userId = mapped;
+              usersNormalized = true;
+            }
+          }
+        }
+        for (const pr of this.payrollRecords) {
+          if (pr.employeeId && (pr.employeeId.startsWith('emp-') || legacyEmpMap.has(pr.employeeId))) {
+            const mapped = legacyEmpMap.get(pr.employeeId) || this.users.find(u => u.id === pr.employeeId || u.employeeId === pr.employeeId)?.id;
+            if (mapped) {
+              pr.employeeId = mapped;
+              (pr as any).userId = mapped;
+              usersNormalized = true;
+            }
+          }
+        }
+        for (const ws of this.workSessions) {
+          if (ws.employeeId && (ws.employeeId.startsWith('emp-') || legacyEmpMap.has(ws.employeeId))) {
+            const mapped = legacyEmpMap.get(ws.employeeId) || this.users.find(u => u.id === ws.employeeId || u.employeeId === ws.employeeId)?.id;
+            if (mapped) {
+              ws.employeeId = mapped;
+              (ws as any).userId = mapped;
+              usersNormalized = true;
+            }
+          }
+        }
+        for (const lb of this.leaveBalances) {
+          if (lb.employeeId && (lb.employeeId.startsWith('emp-') || legacyEmpMap.has(lb.employeeId))) {
+            const mapped = legacyEmpMap.get(lb.employeeId) || this.users.find(u => u.id === lb.employeeId || u.employeeId === lb.employeeId)?.id;
+            if (mapped) {
+              lb.employeeId = mapped;
+              (lb as any).userId = mapped;
+              usersNormalized = true;
+            }
+          }
+        }
+        for (const doc of this.documents) {
+          if (doc.employeeId && (doc.employeeId.startsWith('emp-') || legacyEmpMap.has(doc.employeeId))) {
+            const mapped = legacyEmpMap.get(doc.employeeId) || this.users.find(u => u.id === doc.employeeId || u.employeeId === doc.employeeId)?.id;
+            if (mapped) {
+              doc.employeeId = mapped;
+              (doc as any).userId = mapped;
+              usersNormalized = true;
+            }
+          }
+        }
+        for (const r of this.resignations) {
+          if (r.employeeId && (r.employeeId.startsWith('emp-') || legacyEmpMap.has(r.employeeId))) {
+            const mapped = legacyEmpMap.get(r.employeeId) || this.users.find(u => u.id === r.employeeId || u.employeeId === r.employeeId)?.id;
+            if (mapped) {
+              r.employeeId = mapped;
+              (r as any).userId = mapped;
+              usersNormalized = true;
+            }
+          }
+        }
+        for (const a of this.assets) {
+          if (a.assignedToEmployeeId && (a.assignedToEmployeeId.startsWith('emp-') || legacyEmpMap.has(a.assignedToEmployeeId))) {
+            const mapped = legacyEmpMap.get(a.assignedToEmployeeId) || this.users.find(u => u.id === a.assignedToEmployeeId || u.employeeId === a.assignedToEmployeeId)?.id;
+            if (mapped) {
+              a.assignedToEmployeeId = mapped;
+              (a as any).assignedToUserId = mapped;
+              usersNormalized = true;
+            }
+          }
+        }
+        for (const pr of this.performanceReviews) {
+          if (pr.employeeId && (pr.employeeId.startsWith('emp-') || legacyEmpMap.has(pr.employeeId))) {
+            const mapped = legacyEmpMap.get(pr.employeeId) || this.users.find(u => u.id === pr.employeeId || u.employeeId === pr.employeeId)?.id;
+            if (mapped) {
+              pr.employeeId = mapped;
+              (pr as any).userId = mapped;
+              usersNormalized = true;
+            }
+          }
+        }
+        for (const et of this.employeeTrainings) {
+          if (et.employeeId && (et.employeeId.startsWith('emp-') || legacyEmpMap.has(et.employeeId))) {
+            const mapped = legacyEmpMap.get(et.employeeId) || this.users.find(u => u.id === et.employeeId || u.employeeId === et.employeeId)?.id;
+            if (mapped) {
+              et.employeeId = mapped;
+              (et as any).userId = mapped;
+              usersNormalized = true;
+            }
+          }
+        }
+        for (const log of this.auditLogs) {
+          if (log.userId && (log.userId.startsWith('emp-') || legacyEmpMap.has(log.userId))) {
+            const mapped = legacyEmpMap.get(log.userId) || this.users.find(u => u.id === log.userId || u.employeeId === log.userId)?.id;
+            if (mapped) {
+              log.userId = mapped;
+              usersNormalized = true;
+            }
+          }
+          if (log.recordId && (log.recordId.startsWith('emp-') || legacyEmpMap.has(log.recordId))) {
+            const mapped = legacyEmpMap.get(log.recordId) || this.users.find(u => u.id === log.recordId || u.employeeId === log.recordId)?.id;
+            if (mapped) {
+              log.recordId = mapped;
+              usersNormalized = true;
+            }
+          }
+        }
+
+        if (passwordsHashed || avatarsNormalized || usersNormalized) {
           this.persist();
         }
 
@@ -468,5 +621,84 @@ export class DatabaseService implements OnModuleInit {
     this.auditLogs.unshift(log);
     this.persist();
     return log;
+  }
+
+  private inFlightEmailLocks = new Set<string>();
+
+  /**
+   * Asserts strict global email uniqueness across all roles (SUPER_ADMIN, ADMIN, EMPLOYEE).
+   * Checks both in-memory state and live MySQL users table.
+   * Handles concurrent in-flight requests.
+   */
+  public async assertEmailUnique(
+    email: string,
+    excludeUserId?: string,
+    lockAlreadyAcquired = false,
+  ): Promise<string> {
+    const normalized = normalizeEmail(email);
+    if (!normalized) {
+      throw new BadRequestException('Email address is required.');
+    }
+
+    // 1. Check in-flight lock for concurrent requests
+    if (!lockAlreadyAcquired && this.inFlightEmailLocks.has(normalized)) {
+      throw new ConflictException(EMAIL_ALREADY_REGISTERED_MESSAGE);
+    }
+
+    // 2. Check in-memory users collection
+    const userConflict = this.users.find(
+      (u) => normalizeEmail(u.email) === normalized && u.id !== excludeUserId,
+    );
+    if (userConflict) {
+      throw new ConflictException(EMAIL_ALREADY_REGISTERED_MESSAGE);
+    }
+
+    // 3. Check in-memory employees collection
+    const empConflict = this.employees.find(
+      (e) =>
+        normalizeEmail(e.email) === normalized &&
+        e.id !== excludeUserId &&
+        e.userId !== excludeUserId,
+    );
+    if (empConflict) {
+      throw new ConflictException(EMAIL_ALREADY_REGISTERED_MESSAGE);
+    }
+
+    // 4. Check live MySQL users table (database-level concurrency safety)
+    if (this.mysqlPool && this.isMysqlConnected) {
+      try {
+        const [rows]: any = await this.mysqlPool.query(
+          excludeUserId
+            ? `SELECT id FROM users WHERE LOWER(TRIM(email)) = ? AND id != ? LIMIT 1`
+            : `SELECT id FROM users WHERE LOWER(TRIM(email)) = ? LIMIT 1`,
+          excludeUserId ? [normalized, excludeUserId] : [normalized],
+        );
+        if (rows && rows.length > 0) {
+          throw new ConflictException(EMAIL_ALREADY_REGISTERED_MESSAGE);
+        }
+      } catch (dbErr) {
+        if (dbErr instanceof ConflictException) throw dbErr;
+        this.logger.warn(`Could not verify email in MySQL: ${dbErr}`);
+      }
+    }
+
+    return normalized;
+  }
+
+  /**
+   * Acquires a lock on the normalized email for the duration of an asynchronous operation
+   */
+  public acquireEmailLock(email: string): () => void {
+    const normalized = normalizeEmail(email);
+    if (!normalized) {
+      throw new BadRequestException('Email address is required.');
+    }
+    if (this.inFlightEmailLocks.has(normalized)) {
+      throw new ConflictException(EMAIL_ALREADY_REGISTERED_MESSAGE);
+    }
+    this.inFlightEmailLocks.add(normalized);
+    return () => {
+      this.inFlightEmailLocks.delete(normalized);
+    };
   }
 }

@@ -10,17 +10,26 @@ export class DocumentsService {
 
   findAll(employeeId?: string) {
     if (employeeId) {
-      return this.db.documents.filter((d) => d.employeeId === employeeId);
+      const user = this.db.users.find((u) => u.id === employeeId || u.employeeId === employeeId);
+      const targetId = user ? user.id : employeeId;
+      return this.db.documents.filter((d) => d.employeeId === targetId || (d as any).userId === targetId || d.employeeId === employeeId);
     }
     return this.db.documents;
   }
 
   create(data: Partial<CreateDocumentMetadataDto>): EmployeeDocument {
-    const employee = this.db.employees.find((e) => e.id === data.employeeId);
+    const targetId = (data as any).userId || data.employeeId;
+    const user = this.db.users.find((u) => u.id === targetId || u.employeeId === targetId);
+    const employee = user || this.db.employees.find((e) => e.id === targetId || e.userId === targetId);
+    const realUserId = user ? user.id : (employee ? employee.id : (this.db.users[0]?.id || 'user-default'));
+    const empName = user
+      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+      : (employee ? `${employee.firstName} ${employee.lastName}` : 'Employee');
+
     const newDoc: EmployeeDocument = {
       id: `doc-${Date.now()}`,
-      employeeId: data.employeeId || 'emp-8',
-      employeeName: employee ? `${employee.firstName} ${employee.lastName}` : 'Employee',
+      employeeId: realUserId,
+      employeeName: empName || 'Employee',
       title: data.title || 'Document',
       category: (data.category as any) || 'Other',
       fileUrl: data.fileUrl || '/docs/sample.pdf',
@@ -29,6 +38,7 @@ export class DocumentsService {
       expiryDate: data.expiryDate,
       verificationStatus: 'Pending',
     };
+    (newDoc as any).userId = realUserId;
 
     this.db.documents.unshift(newDoc);
     this.db.persist();

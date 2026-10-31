@@ -20,38 +20,86 @@ export class LeavesService {
     // Company isolation for ADMIN or EMPLOYEE
     if (actorUser && (actorUser.role === Role.ADMIN || actorUser.role === Role.EMPLOYEE)) {
       if (actorUser.companyId) {
-        const companyEmpIds = new Set(
-          this.db.employees.filter((e) => e.companyId === actorUser.companyId).map((e) => e.id),
+        const companyUserIds = new Set(
+          this.db.users.filter((u) => u.companyId === actorUser.companyId).map((u) => u.id),
         );
-        list = list.filter((l) => companyEmpIds.has(l.employeeId));
+        list = list.filter((l) => {
+          const user = this.db.users.find(
+            (u) => u.id === l.employeeId || u.employeeId === l.employeeId || (l as any).userId === u.id,
+          );
+          return user ? companyUserIds.has(user.id) : companyUserIds.has(l.employeeId);
+        });
       }
     }
 
-    if (params?.employeeId) {
-      list = list.filter((l) => l.employeeId === params.employeeId);
+    const filterId = params?.userId || params?.employeeId;
+    if (filterId) {
+      list = list.filter((l) => {
+        if (l.employeeId === filterId || (l as any).userId === filterId) return true;
+        const user = this.db.users.find((u) => u.id === l.employeeId || u.employeeId === l.employeeId);
+        return user?.id === filterId || user?.employeeId === filterId;
+      });
     }
     if (params?.status && params.status !== 'ALL') {
       list = list.filter((l) => l.status === params.status);
     }
 
-    return list.sort((a, b) => (b.appliedDate > a.appliedDate ? 1 : -1));
+    return list
+      .map((l) => {
+        const user = this.db.users.find(
+          (u) =>
+            u.id === l.employeeId ||
+            u.employeeId === l.employeeId ||
+            (l as any).userId === u.id ||
+            ((u.firstName || '') + ' ' + (u.lastName || '')).trim().toLowerCase() ===
+              (l.employeeName || '').trim().toLowerCase(),
+        );
+        const realUserId = user ? user.id : l.employeeId;
+        return {
+          ...l,
+          userId: realUserId,
+          employeeId: realUserId,
+          role: user?.role || 'EMPLOYEE',
+          employeeName: user
+            ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || l.employeeName
+            : l.employeeName,
+          employeeAvatar: user?.avatarUrl || l.employeeAvatar,
+          departmentName: user?.departmentName || l.departmentName,
+        };
+      })
+      .sort((a, b) => (b.appliedDate > a.appliedDate ? 1 : -1));
   }
 
   getBalances(employeeId: string) {
-    let balance = this.db.leaveBalances.find((b) => b.employeeId === employeeId);
+    const user = this.db.users.find(
+      (u) =>
+        u.id === employeeId ||
+        u.employeeId === employeeId ||
+        (u.email && u.email.toLowerCase() === employeeId.toLowerCase()),
+    );
+    const targetUserId = user ? user.id : employeeId;
+
+    let balance = this.db.leaveBalances.find(
+      (b) => b.employeeId === targetUserId || b.employeeId === employeeId,
+    );
     if (!balance) {
       balance = {
-        id: `bal-${employeeId}`,
-        employeeId,
+        id: `bal-${targetUserId}`,
+        employeeId: targetUserId,
         year: 2026,
-        casualLeave: { total: 12, used: 2, remaining: 10 },
-        sickLeave: { total: 10, used: 1, remaining: 9 },
-        paidLeave: { total: 15, used: 3, remaining: 12 },
+        casualLeave: { total: 12, used: 0, remaining: 12 },
+        sickLeave: { total: 10, used: 0, remaining: 10 },
+        paidLeave: { total: 15, used: 0, remaining: 15 },
       };
       this.db.leaveBalances.push(balance);
       this.db.persist();
     }
-    return balance;
+    return {
+      ...balance,
+      userId: targetUserId,
+      employeeId: targetUserId,
+      role: user?.role || 'EMPLOYEE',
+    };
   }
 
   apply(data: ApplyLeaveDto) {
@@ -62,8 +110,30 @@ export class LeavesService {
       throw new BadRequestException('End date cannot be prior to start date');
     }
 
-    const employee = this.db.employees.find((e) => e.id === data.employeeId);
-    if (!employee) throw new NotFoundException('Employee not found');
+    const targetId = data.userId || data.employeeId;
+    if (!targetId) {
+      throw new BadRequestException('userId or employeeId is required');
+    }
+
+    const user = this.db.users.find(
+      (u) =>
+        u.id === targetId ||
+        u.employeeId === targetId ||
+        (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
+    );
+    const employee = this.db.employees.find((e) => e.id === targetId || e.userId === targetId);
+
+    if (!user && !employee) throw new NotFoundException('Employee or user record not found');
+
+    const realUserId = user ? user.id : employee!.id;
+    const fullName = user
+      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+      : `${employee?.firstName || ''} ${employee?.lastName || ''}`.trim();
+    const avatarUrl = user?.avatarUrl || employee?.avatarUrl || '';
+    const deptName = user?.departmentName || employee?.departmentName || '';
+    const managerId = user?.reportingManagerId || employee?.reportingManagerId || '';
+    const managerName = user?.reportingManagerName || employee?.reportingManagerName || 'Team Manager';
+    const userRole = user?.role || Role.EMPLOYEE;
 
     const start = new Date(data.startDate);
     const end = new Date(data.endDate);
@@ -72,10 +142,10 @@ export class LeavesService {
 
     const newRequest: LeaveRequest = {
       id: `lr-${Date.now()}`,
-      employeeId: employee.id,
-      employeeName: `${employee.firstName} ${employee.lastName}`,
-      employeeAvatar: employee.avatarUrl,
-      departmentName: employee.departmentName,
+      employeeId: realUserId,
+      employeeName: fullName || 'Employee',
+      employeeAvatar: avatarUrl,
+      departmentName: deptName,
       leaveType: data.leaveType,
       startDate: data.startDate,
       endDate: data.endDate,
@@ -84,17 +154,19 @@ export class LeavesService {
       reason: data.reason,
       status: LeaveStatus.PENDING,
       appliedDate: new Date().toISOString().split('T')[0],
-      managerApproverId: employee.reportingManagerId,
-      managerApproverName: employee.reportingManagerName || 'Team Manager',
+      managerApproverId: managerId,
+      managerApproverName: managerName,
       comments: 'Pending review',
     };
+    (newRequest as any).userId = realUserId;
+    (newRequest as any).role = userRole;
 
     this.db.leaveRequests.unshift(newRequest);
 
     this.db.logAudit(
-      employee.id,
-      `${employee.firstName} ${employee.lastName}`,
-      'EMPLOYEE',
+      realUserId,
+      fullName || 'Employee',
+      userRole,
       'LEAVE_APPLIED',
       'Leave Management',
       `Applied for ${diffDays} day(s) of ${data.leaveType} (${data.startDate} to ${data.endDate})`,
@@ -104,7 +176,7 @@ export class LeavesService {
     this.db.notifications.unshift({
       id: `notif-${Date.now()}`,
       title: 'New Leave Application',
-      message: `${employee.firstName} ${employee.lastName} applied for ${data.leaveType} (${diffDays} days).`,
+      message: `${fullName || 'Employee'} applied for ${data.leaveType} (${diffDays} days).`,
       type: 'leave',
       isRead: false,
       createdAt: new Date().toISOString(),
@@ -116,13 +188,18 @@ export class LeavesService {
     if (this.eventsGateway) {
       this.eventsGateway.emitNotification({
         title: 'New Leave Request',
-        message: `${employee.firstName} ${employee.lastName} requested ${diffDays} day(s) of ${data.leaveType}.`,
+        message: `${fullName || 'Employee'} requested ${diffDays} day(s) of ${data.leaveType}.`,
         type: 'warning',
         module: 'leave',
       });
     }
 
-    return newRequest;
+    return {
+      ...newRequest,
+      userId: realUserId,
+      employeeId: realUserId,
+      role: userRole,
+    };
   }
 
   approve(id: string, dto: ApproveLeaveDto) {
@@ -189,7 +266,15 @@ export class LeavesService {
       });
     }
 
-    return request;
+    const user = this.db.users.find(
+      (u) => u.id === request.employeeId || u.employeeId === request.employeeId,
+    );
+    return {
+      ...request,
+      userId: user ? user.id : request.employeeId,
+      employeeId: user ? user.id : request.employeeId,
+      role: user?.role || 'EMPLOYEE',
+    };
   }
 
   reject(id: string, dto: RejectLeaveDto) {
@@ -222,6 +307,14 @@ export class LeavesService {
       });
     }
 
-    return request;
+    const user = this.db.users.find(
+      (u) => u.id === request.employeeId || u.employeeId === request.employeeId,
+    );
+    return {
+      ...request,
+      userId: user ? user.id : request.employeeId,
+      employeeId: user ? user.id : request.employeeId,
+      role: user?.role || 'EMPLOYEE',
+    };
   }
 }

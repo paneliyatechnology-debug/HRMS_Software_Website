@@ -52,37 +52,81 @@ export class AttendanceService {
     // Company isolation for ADMIN or EMPLOYEE
     if (actorUser && (actorUser.role === Role.ADMIN || actorUser.role === Role.EMPLOYEE)) {
       if (actorUser.companyId) {
-        const companyEmpIds = new Set(
-          this.db.employees.filter((e) => e.companyId === actorUser.companyId).map((e) => e.id),
+        const companyUserIds = new Set(
+          this.db.users.filter((u) => u.companyId === actorUser.companyId).map((u) => u.id),
         );
-        list = list.filter((a) => companyEmpIds.has(a.employeeId));
+        list = list.filter((a) => {
+          const user = this.db.users.find(
+            (u) => u.id === a.employeeId || u.employeeId === a.employeeId || (a as any).userId === u.id,
+          );
+          return user ? companyUserIds.has(user.id) : companyUserIds.has(a.employeeId);
+        });
       }
     }
 
-    if (params?.employeeId) {
-      list = list.filter((a) => a.employeeId === params.employeeId);
+    const filterId = (params as any)?.userId || params?.employeeId;
+    if (filterId) {
+      list = list.filter((a) => {
+        if (a.employeeId === filterId || (a as any).userId === filterId) return true;
+        const user = this.db.users.find((u) => u.id === a.employeeId || u.employeeId === a.employeeId);
+        return user?.id === filterId || user?.employeeId === filterId;
+      });
     }
     if (params?.date) {
       list = list.filter((a) => a.date === params.date);
     }
     if (params?.departmentId) {
-      const empIdsInDept = this.db.employees
-        .filter((e) => e.departmentId === params.departmentId)
-        .map((e) => e.id);
-      list = list.filter((a) => empIdsInDept.includes(a.employeeId));
+      const userIdsInDept = this.db.users
+        .filter((u) => u.departmentId === params.departmentId)
+        .map((u) => u.id);
+      list = list.filter((a) => {
+        const user = this.db.users.find((u) => u.id === a.employeeId || u.employeeId === a.employeeId);
+        return user ? userIdsInDept.includes(user.id) : false;
+      });
     }
 
-    return list.sort((a, b) => (b.date > a.date ? 1 : -1));
+    return list
+      .map((a) => {
+        const user = this.db.users.find(
+          (u) =>
+            u.id === a.employeeId ||
+            u.employeeId === a.employeeId ||
+            (a as any).userId === u.id ||
+            ((u.firstName || '') + ' ' + (u.lastName || '')).trim().toLowerCase() ===
+              (a.employeeName || '').trim().toLowerCase(),
+        );
+        const realUserId = user ? user.id : a.employeeId;
+        return {
+          ...a,
+          userId: realUserId,
+          employeeId: realUserId,
+          role: user?.role || 'EMPLOYEE',
+          employeeName: user
+            ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || a.employeeName
+            : a.employeeName,
+        };
+      })
+      .sort((a, b) => (b.date > a.date ? 1 : -1));
   }
 
   getTodayStatus(employeeId: string) {
+    const user = this.db.users.find(
+      (u) =>
+        u.id === employeeId ||
+        u.employeeId === employeeId ||
+        (u.email && u.email.toLowerCase() === employeeId.toLowerCase()),
+    );
+    const targetUserId = user ? user.id : employeeId;
     const today = new Date().toISOString().split('T')[0];
     const record = this.db.attendanceRecords.find(
-      (a) => a.employeeId === employeeId && a.date === today,
+      (a) => (a.employeeId === targetUserId || a.employeeId === employeeId) && a.date === today,
     );
 
     if (!record) {
       return {
+        userId: targetUserId,
+        employeeId: targetUserId,
+        role: user?.role || 'EMPLOYEE',
         isCheckedIn: false,
         isCheckedOut: false,
         checkInTime: null,
@@ -93,6 +137,9 @@ export class AttendanceService {
     }
 
     return {
+      userId: targetUserId,
+      employeeId: targetUserId,
+      role: user?.role || 'EMPLOYEE',
       isCheckedIn: Boolean(record.checkIn),
       isCheckedOut: Boolean(record.checkOut),
       checkInTime: record.checkIn,
@@ -104,10 +151,15 @@ export class AttendanceService {
   }
 
   checkIn(dto: CheckInDto) {
-    const { employeeId, remarks } = dto;
+    const targetId = (dto as any).userId || dto.employeeId;
+    const { remarks } = dto;
     const today = new Date().toISOString().split('T')[0];
-    const employee = this.db.employees.find((e) => e.id === employeeId);
+    const user = this.db.users.find(
+      (u) => u.id === targetId || u.employeeId === targetId,
+    );
+    const employee = user || this.db.employees.find((e) => e.id === targetId || e.userId === targetId);
     if (!employee) throw new NotFoundException('Employee not found');
+    const realUserId = user ? user.id : employee.id;
 
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -115,10 +167,11 @@ export class AttendanceService {
     const punchStatus = isLate ? AttendanceStatus.LATE : AttendanceStatus.PRESENT;
 
     let record = this.db.attendanceRecords.find(
-      (a) => a.employeeId === employeeId && a.date === today,
+      (a) => (a.employeeId === realUserId || a.employeeId === targetId) && a.date === today,
     );
 
     if (record) {
+      record.employeeId = realUserId;
       record.checkIn = record.checkIn || timeStr;
       record.checkOut = '';
       record.status = punchStatus;
@@ -126,7 +179,7 @@ export class AttendanceService {
     } else {
       record = {
         id: `att-${Date.now()}`,
-        employeeId,
+        employeeId: realUserId,
         employeeName: `${employee.firstName} ${employee.lastName}`,
         date: today,
         checkIn: timeStr,
@@ -166,20 +219,27 @@ export class AttendanceService {
   }
 
   checkOut(dto: CheckOutDto) {
-    const { employeeId, remarks } = dto;
+    const targetId = (dto as any).userId || dto.employeeId;
+    const { remarks } = dto;
     const today = new Date().toISOString().split('T')[0];
+
+    const user = this.db.users.find(
+      (u) => u.id === targetId || u.employeeId === targetId,
+    );
+    const employee = user || this.db.employees.find((e) => e.id === targetId || e.userId === targetId);
+    const realUserId = user ? user.id : (employee ? employee.id : targetId);
+
     let record = this.db.attendanceRecords.find(
-      (a) => a.employeeId === employeeId && a.date === today,
+      (a) => (a.employeeId === realUserId || a.employeeId === targetId) && a.date === today,
     );
 
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
     if (!record) {
-      const employee = this.db.employees.find((e) => e.id === employeeId);
       record = {
         id: `att-${Date.now()}`,
-        employeeId,
+        employeeId: realUserId,
         employeeName: employee ? `${employee.firstName} ${employee.lastName}` : 'Employee',
         date: today,
         checkIn: '09:00 AM',
@@ -201,7 +261,7 @@ export class AttendanceService {
     }
 
     this.db.logAudit(
-      employeeId,
+      realUserId,
       record.employeeName || 'Employee',
       'EMPLOYEE',
       'ATTENDANCE_CHECKOUT',

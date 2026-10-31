@@ -12,10 +12,22 @@ export class PerformanceService {
   }
 
   getReviews(employeeId?: string) {
+    let list = this.db.performanceReviews;
     if (employeeId) {
-      return this.db.performanceReviews.filter((r) => r.employeeId === employeeId);
+      const user = this.db.users.find((u) => u.id === employeeId || u.employeeId === employeeId);
+      const targetId = user ? user.id : employeeId;
+      list = list.filter((r) => r.employeeId === targetId || (r as any).userId === targetId || r.employeeId === employeeId);
     }
-    return this.db.performanceReviews;
+    return list.map((r) => {
+      const user = this.db.users.find((u) => u.id === r.employeeId || u.employeeId === r.employeeId || (r as any).userId === u.id);
+      const realUserId = user ? user.id : r.employeeId;
+      return {
+        ...r,
+        userId: realUserId,
+        employeeId: realUserId,
+        role: user?.role || 'EMPLOYEE',
+      };
+    });
   }
 
   submitRating(id: string, data: SubmitReviewRatingDto) {

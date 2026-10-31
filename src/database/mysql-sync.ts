@@ -104,27 +104,14 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
       companyId VARCHAR(64),
       companyCode VARCHAR(50),
       employeeId VARCHAR(64),
-      avatarUrl TEXT,
-      createdAt VARCHAR(50),
-      updatedAt VARCHAR(50)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
-
-    `CREATE TABLE IF NOT EXISTS employees (
-      id VARCHAR(64) PRIMARY KEY,
-      employeeCode VARCHAR(50) NOT NULL UNIQUE,
-      companyId VARCHAR(64),
-      companyCode VARCHAR(50),
-      firstName VARCHAR(100) NOT NULL,
-      lastName VARCHAR(100) NOT NULL,
-      email VARCHAR(255) NOT NULL,
-      phone VARCHAR(50),
+      employeeCode VARCHAR(50),
+      permissions JSON,
       avatarUrl TEXT,
       gender VARCHAR(20),
       dateOfBirth VARCHAR(30),
       address TEXT,
       joiningDate VARCHAR(30),
       employmentType VARCHAR(50),
-      status VARCHAR(50),
       departmentId VARCHAR(64),
       departmentName VARCHAR(255),
       designationId VARCHAR(64),
@@ -424,19 +411,6 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
       createdAt VARCHAR(50)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
-    `CREATE TABLE IF NOT EXISTS super_admins (
-      id VARCHAR(64) PRIMARY KEY,
-      userId VARCHAR(64) NOT NULL UNIQUE,
-      email VARCHAR(255) NOT NULL UNIQUE,
-      fullName VARCHAR(255) NOT NULL,
-      permissions JSON,
-      isRoot BOOLEAN DEFAULT TRUE,
-      status VARCHAR(50) DEFAULT 'Active',
-      lastLoginAt VARCHAR(50),
-      createdAt VARCHAR(50),
-      updatedAt VARCHAR(50)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
-
     `CREATE TABLE IF NOT EXISTS system_settings (
       id VARCHAR(64) PRIMARY KEY,
       companyName VARCHAR(255) NOT NULL,
@@ -564,9 +538,46 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
   }
 
   try {
-    await pool.query(`ALTER TABLE employees ADD UNIQUE KEY unique_company_emp (companyId, employeeCode);`);
+    await pool.query(`ALTER TABLE users ADD COLUMN employeeCode VARCHAR(50) AFTER employeeId;`);
   } catch {
-    // Composite key already exists
+    // Column employeeCode already exists
+  }
+
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN permissions JSON AFTER employeeCode;`);
+  } catch {
+    // Column permissions already exists
+  }
+
+  const userProfileCols = [
+    'gender VARCHAR(20) NULL',
+    'dateOfBirth VARCHAR(30) NULL',
+    'address TEXT NULL',
+    'joiningDate VARCHAR(30) NULL',
+    'employmentType VARCHAR(50) NULL',
+    'departmentId VARCHAR(64) NULL',
+    'departmentName VARCHAR(255) NULL',
+    'designationId VARCHAR(64) NULL',
+    'designationTitle VARCHAR(255) NULL',
+    'reportingManagerId VARCHAR(64) NULL',
+    'reportingManagerName VARCHAR(255) NULL',
+    'workLocationId VARCHAR(64) NULL',
+    'workLocationName VARCHAR(255) NULL',
+    'shift VARCHAR(100) NULL',
+    'emergencyContact JSON NULL',
+    'bankDetails JSON NULL',
+    'taxInformation JSON NULL',
+    'education JSON NULL',
+    'previousExperience JSON NULL',
+    'skills JSON NULL',
+    'salary JSON NULL',
+  ];
+  for (const c of userProfileCols) {
+    try {
+      await pool.query(`ALTER TABLE users ADD COLUMN ${c};`);
+    } catch {
+      // Column already exists
+    }
   }
 
   try {
@@ -678,131 +689,87 @@ export async function syncDataToMysql(pool: mysql.Pool, data: any) {
       }
     }
 
-    // 4. Users (Only ADMIN and SUPER_ADMIN are stored in MySQL users table)
+    // 4. Users (Unified login accounts: SUPER_ADMIN, ADMIN, EMPLOYEE)
     if (data.users !== undefined) {
-      const adminUsers = (data.users || []).filter(
-        (u: any) => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN' || u.isSuperAdmin === true,
-      );
-      const activeAdminUserIds = adminUsers.map((u: any) => u.id);
-      if (activeAdminUserIds.length > 0) {
-        await pool.query(`DELETE FROM users WHERE id NOT IN (?)`, [activeAdminUserIds]);
+      const allUsers = data.users || [];
+      const activeUserIds = allUsers.map((u: any) => u.id).filter(Boolean);
+      if (activeUserIds.length > 0) {
+        await pool.query(`DELETE FROM users WHERE id NOT IN (?)`, [activeUserIds]);
       } else {
         await pool.query(`DELETE FROM users`);
       }
 
-      for (const u of adminUsers) {
+      for (const u of allUsers) {
+        let employeeCode = u.employeeCode || null;
+        if (!employeeCode && u.employeeId && data.employees) {
+          const matchedEmp = data.employees.find((e: any) => e.id === u.employeeId);
+          if (matchedEmp) {
+            employeeCode = matchedEmp.employeeCode;
+          }
+        }
+
+        const isSuper = u.role === 'SUPER_ADMIN' || u.isSuperAdmin === true;
+        const role = u.role || (isSuper ? 'SUPER_ADMIN' : 'EMPLOYEE');
+        const permissions = u.permissions
+          ? (typeof u.permissions === 'string' ? u.permissions : JSON.stringify(u.permissions))
+          : (isSuper ? JSON.stringify(['*']) : null);
+
         await pool.query(
-          `INSERT INTO users (id, email, phone, password, firstName, lastName, role, isSuperAdmin, status, companyId, companyCode, employeeId, avatarUrl, createdAt, updatedAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE email=VALUES(email), phone=VALUES(phone), password=VALUES(password), firstName=VALUES(firstName), lastName=VALUES(lastName), role=VALUES(role), isSuperAdmin=VALUES(isSuperAdmin), status=VALUES(status), companyId=VALUES(companyId), companyCode=VALUES(companyCode), employeeId=VALUES(employeeId), avatarUrl=VALUES(avatarUrl), updatedAt=VALUES(updatedAt)`,
+          `INSERT INTO users (
+            id, email, phone, password, firstName, lastName, role, isSuperAdmin, status, companyId, companyCode, employeeId, employeeCode, permissions, avatarUrl,
+            gender, dateOfBirth, address, joiningDate, employmentType, departmentId, departmentName, designationId, designationTitle,
+            reportingManagerId, reportingManagerName, workLocationId, workLocationName, shift, emergencyContact, bankDetails, taxInformation, education, previousExperience, skills, salary,
+            createdAt, updatedAt
+           )
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+            email=VALUES(email), phone=VALUES(phone), password=VALUES(password), firstName=VALUES(firstName), lastName=VALUES(lastName), role=VALUES(role),
+            isSuperAdmin=VALUES(isSuperAdmin), status=VALUES(status), companyId=VALUES(companyId), companyCode=VALUES(companyCode), employeeId=VALUES(employeeId), employeeCode=VALUES(employeeCode),
+            permissions=VALUES(permissions), avatarUrl=VALUES(avatarUrl),
+            gender=VALUES(gender), dateOfBirth=VALUES(dateOfBirth), address=VALUES(address), joiningDate=VALUES(joiningDate), employmentType=VALUES(employmentType),
+            departmentId=VALUES(departmentId), departmentName=VALUES(departmentName), designationId=VALUES(designationId), designationTitle=VALUES(designationTitle),
+            reportingManagerId=VALUES(reportingManagerId), reportingManagerName=VALUES(reportingManagerName), workLocationId=VALUES(workLocationId), workLocationName=VALUES(workLocationName),
+            shift=VALUES(shift), emergencyContact=VALUES(emergencyContact), bankDetails=VALUES(bankDetails), taxInformation=VALUES(taxInformation), education=VALUES(education), previousExperience=VALUES(previousExperience), skills=VALUES(skills), salary=VALUES(salary),
+            updatedAt=VALUES(updatedAt)`,
           [
             u.id,
             u.email,
             u.phone || '',
             u.password || null,
-            u.firstName,
-            u.lastName,
-            u.role,
-            u.isSuperAdmin ? 1 : 0,
+            u.firstName || '',
+            u.lastName || '',
+            role,
+            isSuper ? 1 : 0,
             u.status || 'Active',
-            u.companyId || null,
-            u.companyCode || null,
-            u.employeeId || null,
+            isSuper ? null : (u.companyId || null),
+            isSuper ? null : (u.companyCode || null),
+            isSuper ? null : (u.employeeId || null),
+            isSuper ? null : employeeCode,
+            permissions,
             u.avatarUrl || '',
+            isSuper ? null : (u.gender || 'Other'),
+            isSuper ? null : (u.dateOfBirth || null),
+            isSuper ? null : (u.address || null),
+            isSuper ? null : (u.joiningDate || null),
+            isSuper ? null : (u.employmentType || null),
+            isSuper ? null : (u.departmentId || null),
+            isSuper ? null : (u.departmentName || null),
+            isSuper ? null : (u.designationId || null),
+            isSuper ? null : (u.designationTitle || null),
+            isSuper ? null : (u.reportingManagerId || null),
+            isSuper ? null : (u.reportingManagerName || null),
+            isSuper ? null : (u.workLocationId || null),
+            isSuper ? null : (u.workLocationName || null),
+            isSuper ? null : (u.shift || null),
+            isSuper ? null : (u.emergencyContact ? (typeof u.emergencyContact === 'string' ? u.emergencyContact : JSON.stringify(u.emergencyContact)) : null),
+            isSuper ? null : (u.bankDetails ? (typeof u.bankDetails === 'string' ? u.bankDetails : JSON.stringify(u.bankDetails)) : null),
+            isSuper ? null : (u.taxInformation ? (typeof u.taxInformation === 'string' ? u.taxInformation : JSON.stringify(u.taxInformation)) : null),
+            isSuper ? null : (u.education ? (typeof u.education === 'string' ? u.education : JSON.stringify(u.education)) : null),
+            isSuper ? null : (u.previousExperience ? (typeof u.previousExperience === 'string' ? u.previousExperience : JSON.stringify(u.previousExperience)) : null),
+            isSuper ? null : (u.skills ? (typeof u.skills === 'string' ? u.skills : JSON.stringify(u.skills)) : null),
+            isSuper ? null : (u.salary ? (typeof u.salary === 'string' ? u.salary : JSON.stringify(u.salary)) : null),
             u.createdAt || new Date().toISOString(),
             u.updatedAt || new Date().toISOString(),
-          ],
-        );
-      }
-
-      // 4.1 Sync Super Admins Table
-      const superAdmins = (data.users || []).filter(
-        (u: any) => u.isSuperAdmin === true || u.role === 'SUPER_ADMIN',
-      );
-      const activeSaIds = superAdmins.map((u: any) => `sa-${u.id}`);
-      if (activeSaIds.length > 0) {
-        await pool.query(`DELETE FROM super_admins WHERE id NOT IN (?)`, [activeSaIds]);
-      } else {
-        await pool.query(`DELETE FROM super_admins`);
-      }
-
-      for (const sa of superAdmins) {
-        await pool.query(
-          `INSERT INTO super_admins (id, userId, email, fullName, permissions, isRoot, status, createdAt, updatedAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE email=VALUES(email), fullName=VALUES(fullName), status=VALUES(status), updatedAt=VALUES(updatedAt)`,
-          [
-            `sa-${sa.id}`,
-            sa.id,
-            sa.email,
-            `${sa.firstName || ''} ${sa.lastName || ''}`.trim() || sa.email,
-            JSON.stringify(['*']),
-            1,
-            sa.status || 'Active',
-            sa.createdAt || new Date().toISOString(),
-            sa.updatedAt || new Date().toISOString(),
-          ],
-        );
-      }
-    }
-
-    // 5. Employees - ONLY real employees (exclude Super Admins and Admins)
-    if (data.employees !== undefined) {
-      const onlyEmployees = (data.employees || []).filter((emp: any) => {
-        const linkedUser = (data.users || []).find(
-          (u: any) => u.id === emp.userId || u.employeeId === emp.id || (u.email && emp.email && u.email.toLowerCase() === emp.email.toLowerCase()),
-        );
-        if (linkedUser) {
-          if (linkedUser.role === 'SUPER_ADMIN' || linkedUser.role === 'ADMIN' || linkedUser.isSuperAdmin) {
-            return false;
-          }
-          if (linkedUser.role === 'EMPLOYEE') {
-            return true;
-          }
-        }
-        if (emp.isSuperAdmin) return false;
-        const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.toLowerCase();
-        if (fullName.includes('super admin') || fullName.includes('superadmin') || fullName.includes('ravi admin')) return false;
-        if (emp.email?.toLowerCase().includes('superadmin')) return false;
-        if (emp.designationTitle?.toLowerCase().includes('super admin')) return false;
-        return true;
-      });
-
-      const activeEmpIds = onlyEmployees.map((e: any) => e.id);
-      if (activeEmpIds.length > 0) {
-        await pool.query(`DELETE FROM employees WHERE id NOT IN (?)`, [activeEmpIds]);
-      } else {
-        await pool.query(`DELETE FROM employees`);
-      }
-
-      for (const emp of onlyEmployees) {
-        await pool.query(
-          `INSERT INTO employees (
-            id, employeeCode, companyId, companyCode, firstName, lastName, email, phone, avatarUrl, gender, dateOfBirth, address,
-            joiningDate, employmentType, status, departmentId, departmentName, designationId, designationTitle,
-            reportingManagerId, reportingManagerName, workLocationId, workLocationName, shift,
-            emergencyContact, bankDetails, taxInformation, education, previousExperience, skills, salary,
-            createdAt, updatedAt
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE
-            employeeCode=VALUES(employeeCode), companyId=VALUES(companyId), companyCode=VALUES(companyCode), firstName=VALUES(firstName), lastName=VALUES(lastName), email=VALUES(email),
-            phone=VALUES(phone), avatarUrl=VALUES(avatarUrl), gender=VALUES(gender), dateOfBirth=VALUES(dateOfBirth),
-            address=VALUES(address), joiningDate=VALUES(joiningDate), employmentType=VALUES(employmentType), status=VALUES(status),
-            departmentId=VALUES(departmentId), departmentName=VALUES(departmentName), designationId=VALUES(designationId),
-            designationTitle=VALUES(designationTitle), reportingManagerId=VALUES(reportingManagerId), reportingManagerName=VALUES(reportingManagerName),
-            workLocationId=VALUES(workLocationId), workLocationName=VALUES(workLocationName), shift=VALUES(shift),
-            emergencyContact=VALUES(emergencyContact), bankDetails=VALUES(bankDetails), taxInformation=VALUES(taxInformation),
-            education=VALUES(education), previousExperience=VALUES(previousExperience), skills=VALUES(skills), salary=VALUES(salary),
-            updatedAt=VALUES(updatedAt)`,
-          [
-            emp.id, emp.employeeCode, emp.companyId || null, emp.companyCode || null, emp.firstName, emp.lastName, emp.email, emp.phone || '', emp.avatarUrl || '',
-            emp.gender || 'Other', emp.dateOfBirth || '', emp.address || '', emp.joiningDate || '', emp.employmentType || 'Full-time',
-            emp.status || 'Active', emp.departmentId || '', emp.departmentName || '', emp.designationId || '', emp.designationTitle || '',
-            emp.reportingManagerId || null, emp.reportingManagerName || null, emp.workLocationId || '', emp.workLocationName || '',
-            emp.shift || '', JSON.stringify(emp.emergencyContact || {}), JSON.stringify(emp.bankDetails || {}),
-            JSON.stringify(emp.taxInformation || {}), JSON.stringify(emp.education || []), JSON.stringify(emp.previousExperience || []),
-            JSON.stringify(emp.skills || []), JSON.stringify(emp.salary || {}),
-            emp.createdAt || new Date().toISOString(), emp.updatedAt || new Date().toISOString(),
           ],
         );
       }

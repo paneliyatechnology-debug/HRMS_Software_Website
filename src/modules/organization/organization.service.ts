@@ -11,18 +11,24 @@ export class OrganizationService {
 
   getDepartments(): Department[] {
     return this.db.departments.map((dept) => {
-      const count = this.db.employees.filter((e) => e.departmentId === dept.id).length;
+      const count = this.db.users.filter((u) => u.role === 'EMPLOYEE' && u.departmentId === dept.id).length;
       return { ...dept, employeeCount: count };
     });
   }
 
   createDepartment(data: CreateDepartmentDto): Department {
+    const user = data.headEmployeeId
+      ? this.db.users.find((u) => u.id === data.headEmployeeId || u.employeeId === data.headEmployeeId)
+      : null;
+    const realHeadId = user ? user.id : data.headEmployeeId;
+    const realHeadName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : data.headName;
+
     const newDept: Department = {
       id: `dept-${Date.now()}`,
       name: data.name || 'New Department',
       code: data.code || 'DEPT',
-      headEmployeeId: data.headEmployeeId,
-      headName: data.headName,
+      headEmployeeId: realHeadId,
+      headName: realHeadName,
       employeeCount: 0,
       description: data.description,
       createdAt: new Date().toISOString(),

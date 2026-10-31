@@ -16,6 +16,7 @@ export class CreateSuperAdminUserDto {
     example: 'superadmin.ops@paneliya.com',
     description: 'Corporate email address for the user',
   })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   @IsEmail()
   @IsNotEmpty()
   email: string;

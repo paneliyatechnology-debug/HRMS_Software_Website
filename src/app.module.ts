@@ -21,6 +21,7 @@ import { AuditLogsModule } from './modules/audit-logs/audit-logs.module.js';
 import { ReportsModule } from './modules/reports/reports.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module.js';
+import { AdminModule } from './modules/admin/admin.module.js';
 import { CompaniesModule } from './modules/companies/companies.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { AppController } from './app.controller.js';
@@ -33,6 +34,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
     EventsModule,
     AuthModule,
     SuperAdminModule,
+    AdminModule,
     CompaniesModule,
     EmployeesModule,
     OrganizationModule,

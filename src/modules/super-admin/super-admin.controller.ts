@@ -31,6 +31,9 @@ import { UpdateSystemSettingsDto } from './dto/system-settings.dto.js';
 import { LeaveOverrideDto } from './dto/leave-override.dto.js';
 import { CreateCompanyDto } from './dto/create-company.dto.js';
 import { UpdateCompanyDto } from './dto/update-company.dto.js';
+import { CreateAdminDto } from './dto/create-admin.dto.js';
+import { UpdateAdminDto } from './dto/update-admin.dto.js';
+import { QueryAdminsDto } from './dto/query-admins.dto.js';
 
 @ApiTags('Super Admin')
 @ApiBearerAuth()
@@ -152,6 +155,66 @@ export class SuperAdminController {
   @ApiResponse({ status: 404, description: 'Company not found' })
   deleteCompany(@Param('id') id: string, @Req() req: any) {
     return this.superAdminService.deleteCompany(id, req.user);
+  }
+
+  // -------------------------------------------------------------
+  // 1.2 COMPANY ADMINISTRATORS MANAGEMENT
+  // -------------------------------------------------------------
+  @Get('admins')
+  @ApiOperation({
+    summary: 'List all Company Administrators',
+    description: 'Retrieves all Company Admins with associated company metadata, status, and filtering options.',
+  })
+  @ApiResponse({ status: 200, description: 'Paginated administrator list' })
+  getAdmins(@Query() query: QueryAdminsDto) {
+    return this.superAdminService.getAdmins(query);
+  }
+
+  @Get('admins/:id')
+  @ApiOperation({
+    summary: 'Get Administrator details by ID or email',
+    description: 'Retrieves administrator record with company dossier.',
+  })
+  @ApiParam({ name: 'id', description: 'Admin ID or email' })
+  @ApiResponse({ status: 200, description: 'Administrator dossier' })
+  @ApiResponse({ status: 404, description: 'Administrator not found' })
+  getAdminById(@Param('id') id: string) {
+    return this.superAdminService.getAdminById(id);
+  }
+
+  @Post('admins')
+  @ApiOperation({
+    summary: 'Provision new Company Administrator',
+    description: 'Creates a new Company Administrator, assigns them to a company, and enforces global email uniqueness.',
+  })
+  @ApiBody({ type: CreateAdminDto })
+  @ApiResponse({ status: 201, description: 'Administrator created successfully' })
+  @ApiResponse({ status: 409, description: 'Email already registered' })
+  createAdmin(@Body() body: CreateAdminDto, @Req() req: any) {
+    return this.superAdminService.createAdmin(body, req.user);
+  }
+
+  @Put('admins/:id')
+  @ApiOperation({
+    summary: 'Update Administrator profile or assigned company',
+    description: 'Updates administrator details, password, status, or reassigns company.',
+  })
+  @ApiParam({ name: 'id', description: 'Admin ID' })
+  @ApiBody({ type: UpdateAdminDto })
+  @ApiResponse({ status: 200, description: 'Administrator updated successfully' })
+  updateAdmin(@Param('id') id: string, @Body() body: UpdateAdminDto, @Req() req: any) {
+    return this.superAdminService.updateAdmin(id, body, req.user);
+  }
+
+  @Delete('admins/:id')
+  @ApiOperation({
+    summary: 'Delete Company Administrator account',
+    description: 'Removes the administrator account.',
+  })
+  @ApiParam({ name: 'id', description: 'Admin ID' })
+  @ApiResponse({ status: 200, description: 'Administrator deleted successfully' })
+  deleteAdmin(@Param('id') id: string, @Req() req: any) {
+    return this.superAdminService.deleteAdmin(id, req.user);
   }
 
   // -------------------------------------------------------------

@@ -20,169 +20,197 @@ function matchPhone(phoneA?: string, phoneB?: string): boolean {
 export class AuthService {
   constructor(private readonly db: DatabaseService) {}
 
-  register(data: RegisterDto) {
-    const existing = this.db.users.find(
-      (u) => u.email.toLowerCase() === data.email.toLowerCase(),
-    );
+  async register(data: RegisterDto) {
+    const releaseLock = this.db.acquireEmailLock(data.email);
 
-    if (existing) {
-      throw new ConflictException('User with this email already exists.');
-    }
+    try {
+      const normalizedEmail = await this.db.assertEmailUnique(data.email, undefined, true);
+      const userId = `user-${Date.now()}`;
+      const employeeId = userId;
+      const role = data.role || Role.EMPLOYEE;
 
-    const userId = `user-${Date.now()}`;
-    const employeeId = `emp-${Date.now()}`;
-    const role = data.role || Role.EMPLOYEE;
+      const department = this.db.departments.find((d) => d.id === data.departmentId);
+      const designation = this.db.designations.find((d) => d.id === data.designationId);
+      const location = this.db.locations[0];
 
-    const department = this.db.departments.find((d) => d.id === data.departmentId);
-    const designation = this.db.designations.find((d) => d.id === data.designationId);
-    const location = this.db.locations[0];
+      const isSuperAdmin = role === Role.SUPER_ADMIN;
 
-    const isSuperAdmin = role === Role.SUPER_ADMIN;
-
-    // Determine target company:
-    let targetCompany: any;
-    if (data.companyId) {
-      targetCompany = this.db.companies.find(
-        (c) => c.id === data.companyId || c.companyCode === data.companyId,
-      );
-      if (!targetCompany) {
-        throw new NotFoundException(`Company with ID or code "${data.companyId}" not found.`);
-      }
-    } else if (role !== Role.SUPER_ADMIN && this.db.companies.length > 0) {
-      targetCompany = this.db.companies[0];
-    }
-
-    const hashedPassword = hashPassword(data.password);
-
-    // Create User record
-    const newUser: User = {
-      id: userId,
-      email: data.email,
-      phone: data.phone || '',
-      password: hashedPassword,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      role,
-      isSuperAdmin,
-      status: 'Active',
-      companyId: targetCompany?.id || null,
-      companyCode: targetCompany?.companyCode || null,
-      employeeId,
-      avatarUrl: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.db.users.push(newUser);
-
-    if (role === Role.ADMIN && targetCompany) {
-      targetCompany.adminUserId = userId;
-      targetCompany.updatedAt = new Date().toISOString();
-    }
-
-    // Create corresponding Employee record with auto-generated employeeCode ONLY for EMPLOYEE role
-    if (role === Role.EMPLOYEE) {
-      let maxEmpNum = 0;
-      const scopedList = targetCompany
-        ? this.db.employees.filter((e) => e.companyId === targetCompany.id)
-        : this.db.employees;
-
-      for (const emp of scopedList) {
-        if (emp.employeeCode) {
-          const match = emp.employeeCode.match(/(\d+)/);
-          if (match) {
-            const num = parseInt(match[1], 10);
-            if (!isNaN(num) && num > maxEmpNum) maxEmpNum = num;
-          }
+      // Determine target company:
+      let targetCompany: any;
+      if (data.companyId) {
+        targetCompany = this.db.companies.find(
+          (c) => c.id === data.companyId || c.companyCode === data.companyId,
+        );
+        if (!targetCompany) {
+          throw new NotFoundException(`Company with ID or code "${data.companyId}" not found.`);
         }
+      } else if (role !== Role.SUPER_ADMIN && this.db.companies.length > 0) {
+        targetCompany = this.db.companies[0];
       }
-      const autoEmployeeCode = `EMP-${String(maxEmpNum + 1).padStart(6, '0')}`;
 
-      const newEmployee: Employee = {
-        id: employeeId,
-        employeeCode: autoEmployeeCode,
-        companyId: targetCompany?.id || '',
-        companyCode: targetCompany?.companyCode || '',
-        userId,
+      const hashedPassword = hashPassword(data.password);
+
+      // Create User record with normalized email
+      const newUser: User = {
+        id: userId,
+        email: normalizedEmail,
+        phone: data.phone ? data.phone.trim() : '',
         password: hashedPassword,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone || '',
+        firstName: data.firstName ? data.firstName.trim() : '',
+        lastName: data.lastName ? data.lastName.trim() : '',
+        role,
+        isSuperAdmin,
+        status: 'Active',
+        companyId: targetCompany?.id || null,
+        companyCode: targetCompany?.companyCode || null,
+        employeeId,
         avatarUrl: '',
-        gender: 'Other',
-        dateOfBirth: '',
-        address: '',
-        emergencyContact: {} as any,
-        joiningDate: new Date().toISOString().split('T')[0],
-        employmentType: 'Full-time',
-        status: EmployeeStatus.ACTIVE,
-        departmentId: department?.id || data.departmentId || '',
-        departmentName: department?.name || '',
-        designationId: designation?.id || data.designationId || '',
-        designationTitle: designation?.title || '',
-        reportingManagerId: '',
-        reportingManagerName: '',
-        workLocationId: location?.id || '',
-        workLocationName: location?.name || '',
-        shift: '',
-        bankDetails: {} as any,
-        taxInformation: {} as any,
-        education: [],
-        previousExperience: [],
-        skills: [],
-        salary: {} as any,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      this.db.employees.unshift(newEmployee);
+      this.db.users.push(newUser);
 
-      // Initial leave balance
-      this.db.leaveBalances.push({
-        id: `bal-${newEmployee.id}`,
-        employeeId: newEmployee.id,
-        year: 2026,
-        casualLeave: { total: 12, used: 0, remaining: 12 },
-        sickLeave: { total: 10, used: 0, remaining: 10 },
-        paidLeave: { total: 15, used: 0, remaining: 15 },
-      });
-
-      if (department) {
-        department.employeeCount += 1;
+      if (role === Role.ADMIN && targetCompany) {
+        targetCompany.adminUserId = userId;
+        targetCompany.updatedAt = new Date().toISOString();
       }
-    } else {
-      newUser.employeeId = null as any;
+
+      // Create corresponding Employee record with auto-generated employeeCode ONLY for EMPLOYEE role
+      if (role === Role.EMPLOYEE) {
+        let maxEmpNum = 0;
+        const scopedList = targetCompany
+          ? this.db.employees.filter((e) => e.companyId === targetCompany.id)
+          : this.db.employees;
+
+        for (const emp of scopedList) {
+          if (emp.employeeCode) {
+            const match = emp.employeeCode.match(/(\d+)/);
+            if (match) {
+              const num = parseInt(match[1], 10);
+              if (!isNaN(num) && num > maxEmpNum) maxEmpNum = num;
+            }
+          }
+        }
+        const autoEmployeeCode = `EMP-${String(maxEmpNum + 1).padStart(6, '0')}`;
+
+        const newEmployee: Employee = {
+          id: employeeId,
+          employeeCode: autoEmployeeCode,
+          companyId: targetCompany?.id || '',
+          companyCode: targetCompany?.companyCode || '',
+          userId,
+          password: hashedPassword,
+          firstName: data.firstName ? data.firstName.trim() : '',
+          lastName: data.lastName ? data.lastName.trim() : '',
+          email: normalizedEmail,
+          phone: data.phone ? data.phone.trim() : '',
+          avatarUrl: '',
+          gender: 'Other',
+          dateOfBirth: '',
+          address: '',
+          emergencyContact: {} as any,
+          joiningDate: new Date().toISOString().split('T')[0],
+          employmentType: 'Full-time',
+          status: EmployeeStatus.ACTIVE,
+          departmentId: department?.id || data.departmentId || '',
+          departmentName: department?.name || '',
+          designationId: designation?.id || data.designationId || '',
+          designationTitle: designation?.title || '',
+          reportingManagerId: '',
+          reportingManagerName: '',
+          workLocationId: location?.id || '',
+          workLocationName: location?.name || '',
+          shift: '',
+          bankDetails: {} as any,
+          taxInformation: {} as any,
+          education: [],
+          previousExperience: [],
+          skills: [],
+          salary: {} as any,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        this.db.employees.unshift(newEmployee);
+
+        // Initial leave balance
+        this.db.leaveBalances.push({
+          id: `bal-${newEmployee.id}`,
+          employeeId: newEmployee.id,
+          year: 2026,
+          casualLeave: { total: 12, used: 0, remaining: 12 },
+          sickLeave: { total: 10, used: 0, remaining: 10 },
+          paidLeave: { total: 15, used: 0, remaining: 15 },
+        });
+
+        if (department) {
+          department.employeeCount += 1;
+        }
+        newUser.employeeId = newEmployee.id;
+        newUser.employeeCode = autoEmployeeCode;
+        newUser.gender = newEmployee.gender;
+        newUser.joiningDate = newEmployee.joiningDate;
+        newUser.employmentType = newEmployee.employmentType;
+        newUser.departmentId = newEmployee.departmentId;
+        newUser.departmentName = newEmployee.departmentName;
+        newUser.designationId = newEmployee.designationId;
+        newUser.designationTitle = newEmployee.designationTitle;
+        newUser.workLocationId = newEmployee.workLocationId;
+        newUser.workLocationName = newEmployee.workLocationName;
+        newUser.shift = newEmployee.shift;
+        newUser.bankDetails = newEmployee.bankDetails;
+        newUser.taxInformation = newEmployee.taxInformation;
+        newUser.salary = newEmployee.salary;
+        newUser.emergencyContact = newEmployee.emergencyContact;
+        newUser.education = newEmployee.education;
+        newUser.previousExperience = newEmployee.previousExperience;
+        newUser.skills = newEmployee.skills;
+      } else {
+        newUser.employeeId = null as any;
+        newUser.employeeCode = null as any;
+      }
+
+      if (isSuperAdmin) {
+        newUser.permissions = ['*'];
+        newUser.companyId = null;
+        newUser.companyCode = null;
+        newUser.employeeId = null;
+        newUser.employeeCode = null;
+      }
+
+      this.db.logAudit(
+        newUser.id,
+        `${newUser.firstName} ${newUser.lastName}`,
+        newUser.role,
+        'USER_REGISTERED',
+        'Authentication',
+        `User ${newUser.email} registered new account`,
+        newUser.id,
+      );
+
+      this.db.persist();
+
+      const token = `jwt_token_${newUser.id}_${Date.now()}`;
+      return {
+        message: 'User registered successfully',
+        accessToken: token,
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          role: newUser.role,
+          isSuperAdmin: newUser.isSuperAdmin ?? (newUser.role === Role.SUPER_ADMIN),
+          status: newUser.status || 'Active',
+          companyId: newUser.companyId || (this.db.companies[0]?.id || null),
+          companyCode: newUser.companyCode || (this.db.companies[0]?.companyCode || null),
+          employeeId: newUser.employeeId,
+          employeeCode: newUser.employeeCode,
+          avatarUrl: newUser.avatarUrl,
+        },
+      };
+    } finally {
+      releaseLock();
     }
-
-    this.db.logAudit(
-      newUser.id,
-      `${newUser.firstName} ${newUser.lastName}`,
-      newUser.role,
-      'USER_REGISTERED',
-      'Authentication',
-      `User ${newUser.email} registered new account`,
-      newUser.id,
-    );
-
-    this.db.persist();
-
-    const token = `jwt_token_${newUser.id}_${Date.now()}`;
-    return {
-      message: 'User registered successfully',
-      accessToken: token,
-      user: {
-        id: newUser.id,
-        email: newUser.email,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        role: newUser.role,
-        isSuperAdmin: newUser.isSuperAdmin ?? (newUser.role === Role.SUPER_ADMIN),
-        status: newUser.status || 'Active',
-        companyId: newUser.companyId || (this.db.companies[0]?.id || null),
-        companyCode: newUser.companyCode || (this.db.companies[0]?.companyCode || null),
-        employeeId: newUser.employeeId,
-        avatarUrl: newUser.avatarUrl,
-      },
-    };
   }
 
   login(identifier: string, password?: string) {
@@ -337,6 +365,7 @@ export class AuthService {
         companyId: user.companyId || null,
         companyCode: user.companyCode || null,
         employeeId: user.employeeId,
+        employeeCode: user.employeeCode,
         avatarUrl: user.avatarUrl,
       },
     };

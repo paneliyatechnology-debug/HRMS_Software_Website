@@ -43,8 +43,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
       )}`,
     );
 
+    const resolvedMessage =
+      typeof message === 'object' && message?.message
+        ? message.message
+        : typeof message === 'string'
+        ? message
+        : '';
+
     response.status(status).json({
       statusCode: status,
+      message: resolvedMessage,
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,

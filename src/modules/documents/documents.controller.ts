@@ -101,8 +101,10 @@ export class DocumentsController {
 
     const dynamicBaseUrl = `${req.protocol}://${req.get('host')}`;
 
+    const actorUser = (req as any).user;
     return this.documentsService.create({
-      employeeId: body.employeeId || 'emp-8',
+      employeeId: body.employeeId || actorUser?.id || (body as any).userId,
+      userId: (body as any).userId || body.employeeId || actorUser?.id,
       title: body.title || file.originalname,
       category: (body.category as any) || 'Other',
       fileUrl: `${dynamicBaseUrl}/uploads/documents/${file.filename}`,

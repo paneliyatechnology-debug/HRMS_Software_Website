@@ -3,10 +3,15 @@ import { IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-valid
 import { LeaveType } from '../../../common/types.js';
 
 export class ApplyLeaveDto {
-  @ApiProperty({ example: 'emp-1', description: 'Employee ID' })
+  @ApiPropertyOptional({ example: 'user-1793190505324', description: 'User ID or Employee ID' })
   @IsString()
-  @IsNotEmpty()
-  employeeId: string;
+  @IsOptional()
+  userId?: string;
+
+  @ApiPropertyOptional({ example: 'user-1793190505324', description: 'Employee ID' })
+  @IsString()
+  @IsOptional()
+  employeeId?: string;
 
   @ApiProperty({ enum: LeaveType, example: LeaveType.CASUAL, description: 'Type of leave applied' })
   @IsEnum(LeaveType)

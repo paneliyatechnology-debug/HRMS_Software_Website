@@ -32,21 +32,41 @@ export class TrainingService {
   }
 
   getEmployeeTrainings(employeeId?: string) {
+    let list = this.db.employeeTrainings;
     if (employeeId) {
-      return this.db.employeeTrainings.filter((t) => t.employeeId === employeeId);
+      const user = this.db.users.find((u) => u.id === employeeId || u.employeeId === employeeId);
+      const targetId = user ? user.id : employeeId;
+      list = list.filter((t) => t.employeeId === targetId || (t as any).userId === targetId || t.employeeId === employeeId);
     }
-    return this.db.employeeTrainings;
+    return list.map((t) => {
+      const user = this.db.users.find((u) => u.id === t.employeeId || u.employeeId === t.employeeId || (t as any).userId === u.id);
+      const realUserId = user ? user.id : t.employeeId;
+      return {
+        ...t,
+        userId: realUserId,
+        employeeId: realUserId,
+        role: user?.role || 'EMPLOYEE',
+      };
+    });
   }
 
   enroll(dto: EnrollTrainingDto) {
-    const { trainingId, employeeId } = dto;
+    const targetId = (dto as any).userId || dto.employeeId;
+    const { trainingId } = dto;
     const program = this.db.trainingPrograms.find((p) => p.id === trainingId);
     if (!program) throw new NotFoundException('Training program not found');
-    const employee = this.db.employees.find((e) => e.id === employeeId);
+
+    const user = this.db.users.find((u) => u.id === targetId || u.employeeId === targetId);
+    const employee = user || this.db.employees.find((e) => e.id === targetId || e.userId === targetId);
     if (!employee) throw new NotFoundException('Employee not found');
 
+    const realUserId = user ? user.id : employee.id;
+    const empName = user
+      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+      : `${employee.firstName} ${employee.lastName}`;
+
     const existing = this.db.employeeTrainings.find(
-      (t) => t.trainingId === trainingId && t.employeeId === employeeId,
+      (t) => t.trainingId === trainingId && (t.employeeId === realUserId || (t as any).userId === realUserId || t.employeeId === targetId),
     );
     if (existing) return existing;
 
@@ -54,11 +74,13 @@ export class TrainingService {
       id: `et-${Date.now()}`,
       trainingId,
       trainingTitle: program.title,
-      employeeId,
-      employeeName: `${employee.firstName} ${employee.lastName}`,
+      employeeId: realUserId,
+      employeeName: empName || 'Employee',
       status: TrainingStatus.ASSIGNED,
       progressPercent: 0,
     };
+    (newEnrollment as any).userId = realUserId;
+    (newEnrollment as any).role = user?.role || 'EMPLOYEE';
 
     this.db.employeeTrainings.unshift(newEnrollment);
     program.enrolledCount += 1;

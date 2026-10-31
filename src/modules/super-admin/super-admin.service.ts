@@ -26,6 +26,9 @@ import { UpdateSystemSettingsDto } from './dto/system-settings.dto.js';
 import { LeaveOverrideDto } from './dto/leave-override.dto.js';
 import { CreateCompanyDto } from './dto/create-company.dto.js';
 import { UpdateCompanyDto } from './dto/update-company.dto.js';
+import { CreateAdminDto } from './dto/create-admin.dto.js';
+import { UpdateAdminDto } from './dto/update-admin.dto.js';
+import { QueryAdminsDto } from './dto/query-admins.dto.js';
 import { hashPassword } from '../../common/utils/password.util.js';
 
 @Injectable()
@@ -239,18 +242,240 @@ export class SuperAdminService {
     };
   }
 
-  createUser(dto: CreateSuperAdminUserDto, actingAdmin?: User) {
-    const existing = this.db.users.find(
-      (u) => u.email.toLowerCase() === dto.email.toLowerCase(),
-    );
+  // -------------------------------------------------------------
+  // 2.1 COMPANY ADMIN MANAGEMENT (SUPER_ADMIN ONLY)
+  // -------------------------------------------------------------
+  getAdmins(query: QueryAdminsDto) {
+    let list = this.db.users.filter((u) => {
+      if (query.includeSuperAdmins) {
+        return u.role === Role.ADMIN || u.role === Role.SUPER_ADMIN || u.isSuperAdmin === true;
+      }
+      return u.role === Role.ADMIN;
+    });
 
-    if (existing) {
-      throw new ConflictException(`User with email "${dto.email}" already exists.`);
+    if (query.search) {
+      const q = query.search.toLowerCase();
+      list = list.filter(
+        (u) =>
+          u.firstName?.toLowerCase().includes(q) ||
+          u.lastName?.toLowerCase().includes(q) ||
+          u.email?.toLowerCase().includes(q),
+      );
     }
 
+    if (query.companyId) {
+      list = list.filter(
+        (u) =>
+          u.companyId === query.companyId ||
+          u.companyCode === query.companyId,
+      );
+    }
+
+    if (query.status) {
+      list = list.filter((u) => (u.status || 'Active').toLowerCase() === query.status?.toLowerCase());
+    }
+
+    const total = list.length;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
+    const startIndex = (page - 1) * limit;
+    const paginated = list.slice(startIndex, startIndex + limit);
+
+    const items = paginated.map((u) => {
+      const { password: _, ...safeUser } = u;
+      const company = this.db.companies.find((c) => c.id === u.companyId || c.companyCode === u.companyCode);
+      return {
+        ...safeUser,
+        companyName: company?.companyName || null,
+        companyCode: company?.companyCode || u.companyCode || null,
+      };
+    });
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      items,
+    };
+  }
+
+  getAdminById(id: string) {
+    const user = this.db.users.find(
+      (u) =>
+        (u.id.toLowerCase() === id.toLowerCase() || u.email.toLowerCase() === id.toLowerCase()) &&
+        (u.role === Role.ADMIN || u.role === Role.SUPER_ADMIN || u.isSuperAdmin === true),
+    );
+
+    if (!user) {
+      throw new NotFoundException(`Administrator with ID or email "${id}" not found.`);
+    }
+
+    const { password: _, ...safeUser } = user;
+    const company = this.db.companies.find((c) => c.id === user.companyId || c.companyCode === user.companyCode);
+
+    return {
+      ...safeUser,
+      company: company || null,
+    };
+  }
+
+  async createAdmin(dto: CreateAdminDto, actingAdmin?: User) {
+    const releaseLock = this.db.acquireEmailLock(dto.email);
+
+    try {
+      const normalizedEmail = await this.db.assertEmailUnique(dto.email, undefined, true);
+
+      const targetCompany = this.db.companies.find(
+        (c) => c.id === dto.companyId || c.companyCode === dto.companyId,
+      );
+      if (!targetCompany) {
+        throw new NotFoundException(
+          `Company with ID or code "${dto.companyId}" not found. Please provide an existing company.`,
+        );
+      }
+
+      const userId = `user-${Date.now()}`;
+      const hashedPassword = hashPassword(dto.password);
+
+      const newAdmin: User = {
+        id: userId,
+        email: normalizedEmail,
+        phone: dto.phone || '',
+        password: hashedPassword,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        role: Role.ADMIN,
+        isSuperAdmin: false,
+        status: dto.status || 'Active',
+        companyId: targetCompany.id,
+        companyCode: targetCompany.companyCode,
+        employeeId: null,
+        avatarUrl: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      this.db.users.unshift(newAdmin);
+
+      targetCompany.adminUserId = userId;
+      targetCompany.updatedAt = new Date().toISOString();
+
+      this.db.logAudit(
+        actingAdmin?.id || 'super-admin',
+        actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+        actingAdmin?.role || Role.SUPER_ADMIN,
+        'SUPER_ADMIN_CREATE_ADMIN',
+        'SuperAdmin',
+        `Super admin created Company Admin account for ${newAdmin.email} assigned to "${targetCompany.companyName}"`,
+        newAdmin.id,
+      );
+
+      this.db.persist();
+
+      const { password: _, ...safeUser } = newAdmin;
+      return {
+        message: 'Company Administrator created successfully',
+        admin: {
+          ...safeUser,
+          companyName: targetCompany.companyName,
+          companyCode: targetCompany.companyCode,
+        },
+      };
+    } finally {
+      releaseLock();
+    }
+  }
+
+  async updateAdmin(id: string, dto: UpdateAdminDto, actingAdmin?: User) {
+    const user = this.db.users.find(
+      (u) =>
+        (u.id === id || u.email.toLowerCase() === id.toLowerCase()) &&
+        (u.role === Role.ADMIN || u.role === Role.SUPER_ADMIN),
+    );
+
+    if (!user) {
+      throw new NotFoundException(`Administrator with ID "${id}" not found.`);
+    }
+
+    if (dto.email && dto.email.trim().toLowerCase() !== user.email.toLowerCase()) {
+      const normalizedEmail = await this.db.assertEmailUnique(dto.email, user.id);
+      user.email = normalizedEmail;
+    }
+
+    if (dto.firstName) user.firstName = dto.firstName;
+    if (dto.lastName) user.lastName = dto.lastName;
+    if (dto.phone !== undefined) user.phone = dto.phone;
+    if (dto.password) user.password = hashPassword(dto.password);
+    if (dto.status) user.status = dto.status;
+
+    if (dto.companyId) {
+      const company = this.db.companies.find((c) => c.id === dto.companyId || c.companyCode === dto.companyId);
+      if (!company) {
+        throw new NotFoundException(`Company "${dto.companyId}" not found.`);
+      }
+      user.companyId = company.id;
+      user.companyCode = company.companyCode;
+    }
+
+    user.updatedAt = new Date().toISOString();
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      actingAdmin?.role || Role.SUPER_ADMIN,
+      'SUPER_ADMIN_UPDATE_ADMIN',
+      'SuperAdmin',
+      `Super admin updated Administrator profile for ${user.email}`,
+      user.id,
+    );
+
+    this.db.persist();
+
+    const { password: _, ...safeUser } = user;
+    return {
+      message: 'Administrator updated successfully',
+      admin: safeUser,
+    };
+  }
+
+  deleteAdmin(id: string, actingAdmin?: User) {
+    const idx = this.db.users.findIndex(
+      (u) => (u.id === id || u.email.toLowerCase() === id.toLowerCase()) && u.role === Role.ADMIN,
+    );
+
+    if (idx === -1) {
+      throw new NotFoundException(`Company Administrator with ID "${id}" not found.`);
+    }
+
+    const admin = this.db.users[idx];
+    this.db.users.splice(idx, 1);
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      actingAdmin?.role || Role.SUPER_ADMIN,
+      'SUPER_ADMIN_DELETE_ADMIN',
+      'SuperAdmin',
+      `Super admin deleted Company Administrator ${admin.email}`,
+      admin.id,
+    );
+
+    this.db.persist();
+
+    return {
+      message: `Administrator "${admin.email}" deleted successfully.`,
+    };
+  }
+
+  async createUser(dto: CreateSuperAdminUserDto, actingAdmin?: User) {
+    const releaseLock = this.db.acquireEmailLock(dto.email);
+
+    try {
+      const normalizedEmail = await this.db.assertEmailUnique(dto.email, undefined, true);
+
     const userId = `user-${Date.now()}`;
-    const employeeId = `emp-${Date.now()}`;
     const role = dto.role || Role.SUPER_ADMIN;
+    const employeeId = role === Role.EMPLOYEE ? userId : null;
     const isSuperAdmin = dto.isSuperAdmin !== undefined ? dto.isSuperAdmin : role === Role.SUPER_ADMIN;
     const status = dto.status || 'Active';
 
@@ -281,7 +506,7 @@ export class SuperAdminService {
 
     const newUser: User = {
       id: userId,
-      email: dto.email,
+      email: normalizedEmail,
       phone: dto.phone || '',
       password: hashedPassword,
       firstName: dto.firstName,
@@ -327,7 +552,7 @@ export class SuperAdminService {
       const autoEmployeeCode = `EMP-${String(maxEmpNum + 1).padStart(6, '0')}`;
 
       const newEmployee: Employee = {
-        id: employeeId,
+        id: userId,
         employeeCode: autoEmployeeCode,
         companyId: targetCompany?.id || '',
         companyCode: targetCompany?.companyCode || '',
@@ -336,7 +561,7 @@ export class SuperAdminService {
         isSuperAdmin,
         firstName: dto.firstName,
         lastName: dto.lastName,
-        email: dto.email,
+        email: normalizedEmail,
         phone: dto.phone || '',
         avatarUrl: '',
         gender: 'Other',
@@ -374,8 +599,31 @@ export class SuperAdminService {
         sickLeave: { total: 10, used: 0, remaining: 10 },
         paidLeave: { total: 15, used: 0, remaining: 15 },
       });
+
+      newUser.employeeId = employeeId;
+      newUser.employeeCode = autoEmployeeCode;
+      newUser.departmentId = newEmployee.departmentId;
+      newUser.departmentName = newEmployee.departmentName;
+      newUser.designationId = newEmployee.designationId;
+      newUser.designationTitle = newEmployee.designationTitle;
+      newUser.workLocationId = newEmployee.workLocationId;
+      newUser.workLocationName = newEmployee.workLocationName;
+      newUser.shift = newEmployee.shift;
+      newUser.joiningDate = newEmployee.joiningDate;
+      newUser.employmentType = newEmployee.employmentType;
+      newUser.salary = newEmployee.salary;
+      newUser.bankDetails = newEmployee.bankDetails;
+      newUser.taxInformation = newEmployee.taxInformation;
+      newUser.emergencyContact = newEmployee.emergencyContact;
     } else {
       newUser.employeeId = null as any;
+      newUser.employeeCode = null as any;
+    }
+
+    if (isSuperAdmin) {
+      newUser.permissions = ['*'];
+      newUser.companyId = null;
+      newUser.companyCode = null;
     }
 
     this.db.logAudit(
@@ -395,22 +643,20 @@ export class SuperAdminService {
       message: 'Super Admin successfully created user account',
       user: safeUser,
     };
+    } finally {
+      releaseLock();
+    }
   }
 
-  updateUser(id: string, dto: UpdateSuperAdminUserDto, actingAdmin?: User) {
+  async updateUser(id: string, dto: UpdateSuperAdminUserDto, actingAdmin?: User) {
     const user = this.db.users.find((u) => u.id === id);
     if (!user) {
       throw new NotFoundException(`User with ID "${id}" not found.`);
     }
 
-    if (dto.email && dto.email.toLowerCase() !== user.email.toLowerCase()) {
-      const emailConflict = this.db.users.find(
-        (u) => u.email.toLowerCase() === dto.email!.toLowerCase() && u.id !== id,
-      );
-      if (emailConflict) {
-        throw new ConflictException(`Email "${dto.email}" is already taken by another user.`);
-      }
-      user.email = dto.email;
+    if (dto.email && dto.email.trim().toLowerCase() !== user.email.toLowerCase()) {
+      const normalizedEmail = await this.db.assertEmailUnique(dto.email, id);
+      user.email = normalizedEmail;
     }
 
     if (dto.firstName) user.firstName = dto.firstName;
@@ -436,7 +682,7 @@ export class SuperAdminService {
     if (employee) {
       if (dto.firstName) employee.firstName = dto.firstName;
       if (dto.lastName) employee.lastName = dto.lastName;
-      if (dto.email) employee.email = dto.email;
+      if (dto.email) employee.email = user.email;
       if (dto.isSuperAdmin !== undefined) employee.isSuperAdmin = dto.isSuperAdmin;
       employee.updatedAt = new Date().toISOString();
     }
@@ -1059,7 +1305,7 @@ export class SuperAdminService {
     };
   }
 
-  createCompany(dto: CreateCompanyDto, actingAdmin?: User) {
+  async createCompany(dto: CreateCompanyDto, actingAdmin?: User) {
     const companyName = (dto.companyName || dto.name || '').trim();
     if (!companyName) {
       throw new BadRequestException('Company name is required.');
@@ -1084,47 +1330,43 @@ export class SuperAdminService {
 
     // If initial admin credentials are provided, automatically create the company Admin
     if (dto.adminEmail && dto.adminPassword) {
-      const existingUser = this.db.users.find(
-        (u) => u.email.toLowerCase() === dto.adminEmail!.toLowerCase(),
-      );
-      if (existingUser) {
-        throw new ConflictException(`User with email "${dto.adminEmail}" already exists.`);
-      }
+      const releaseLock = this.db.acquireEmailLock(dto.adminEmail);
 
-      const adminUserId = `user-${Date.now()}`;
-      const adminEmpId = `emp-${Date.now()}`;
-      const hashedAdminPassword = hashPassword(dto.adminPassword);
-      const adminUser: User = {
-        id: adminUserId,
-        email: dto.adminEmail,
-        password: hashedAdminPassword,
-        firstName: dto.adminFirstName || 'Company',
-        lastName: dto.adminLastName || 'Admin',
-        role: Role.ADMIN,
-        isSuperAdmin: false,
-        status: 'Active',
-        companyId: newCompany.id,
-        companyCode: newCompany.companyCode,
-        employeeId: adminEmpId,
-        avatarUrl: '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      this.db.users.unshift(adminUser);
+      try {
+        const normalizedEmail = await this.db.assertEmailUnique(dto.adminEmail, undefined, true);
+        const adminUserId = `user-${Date.now()}`;
+        const hashedAdminPassword = hashPassword(dto.adminPassword);
+        const adminUser: User = {
+          id: adminUserId,
+          email: normalizedEmail,
+          password: hashedAdminPassword,
+          firstName: dto.adminFirstName || 'Company',
+          lastName: dto.adminLastName || 'Admin',
+          role: Role.ADMIN,
+          isSuperAdmin: false,
+          status: 'Active',
+          companyId: newCompany.id,
+          companyCode: newCompany.companyCode,
+          employeeId: null,
+          avatarUrl: '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        this.db.users.unshift(adminUser);
 
-      const adminEmp: Employee = {
-        id: adminEmpId,
-        employeeCode: 'EMP-000001',
-        companyId: newCompany.id,
-        companyCode: newCompany.companyCode,
-        userId: adminUserId,
-        password: hashedAdminPassword,
-        isSuperAdmin: false,
-        firstName: adminUser.firstName,
-        lastName: adminUser.lastName,
-        email: adminUser.email,
-        phone: dto.phone || '',
-        avatarUrl: '',
+        const adminEmp: Employee = {
+          id: adminUserId,
+          employeeCode: 'EMP-000001',
+          companyId: newCompany.id,
+          companyCode: newCompany.companyCode,
+          userId: adminUserId,
+          password: hashedAdminPassword,
+          isSuperAdmin: false,
+          firstName: adminUser.firstName,
+          lastName: adminUser.lastName,
+          email: normalizedEmail,
+          phone: dto.phone || '',
+          avatarUrl: '',
         gender: 'Other',
         dateOfBirth: '',
         address: dto.address || '',
@@ -1162,6 +1404,9 @@ export class SuperAdminService {
       });
 
       newCompany.adminUserId = adminUserId;
+      } finally {
+        releaseLock();
+      }
     }
 
     this.db.companies.push(newCompany);

@@ -10,10 +10,21 @@ export class AssetsService {
   constructor(private readonly db: DatabaseService) {}
 
   findAll(category?: string) {
+    let list = this.db.assets;
     if (category && category !== 'ALL') {
-      return this.db.assets.filter((a) => a.category === category);
+      list = list.filter((a) => a.category === category);
     }
-    return this.db.assets;
+    return list.map((a) => {
+      const user = a.assignedToEmployeeId
+        ? this.db.users.find((u) => u.id === a.assignedToEmployeeId || u.employeeId === a.assignedToEmployeeId)
+        : null;
+      const realUserId = user ? user.id : a.assignedToEmployeeId;
+      return {
+        ...a,
+        assignedToEmployeeId: realUserId,
+        assignedToUserId: realUserId,
+      };
+    });
   }
 
   create(data: CreateAssetDto): CompanyAsset {
@@ -37,12 +48,21 @@ export class AssetsService {
   assign(assetId: string, dto: AssignAssetDto) {
     const asset = this.db.assets.find((a) => a.id === assetId);
     if (!asset) throw new NotFoundException('Asset not found');
-    const employee = this.db.employees.find((e) => e.id === dto.employeeId);
+
+    const targetId = (dto as any).userId || dto.employeeId;
+    const user = this.db.users.find((u) => u.id === targetId || u.employeeId === targetId);
+    const employee = user || this.db.employees.find((e) => e.id === targetId || e.userId === targetId);
     if (!employee) throw new NotFoundException('Employee not found');
 
+    const realUserId = user ? user.id : employee.id;
+    const empName = user
+      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+      : `${employee.firstName} ${employee.lastName}`;
+
     const actorName = dto.actorName || 'IT Admin';
-    asset.assignedToEmployeeId = employee.id;
-    asset.assignedToEmployeeName = `${employee.firstName} ${employee.lastName}`;
+    asset.assignedToEmployeeId = realUserId;
+    (asset as any).assignedToUserId = realUserId;
+    asset.assignedToEmployeeName = empName;
     asset.assignedDate = new Date().toISOString().split('T')[0];
     asset.status = AssetStatus.ASSIGNED;
 

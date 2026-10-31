@@ -9,12 +9,26 @@ export class ResignationsService {
   constructor(private readonly db: DatabaseService) { }
 
   findAll() {
-    return this.db.resignations;
+    return this.db.resignations.map((r) => {
+      const user = this.db.users.find(
+        (u) => u.id === r.employeeId || u.employeeId === r.employeeId || (r as any).userId === u.id,
+      );
+      const realUserId = user ? user.id : r.employeeId;
+      return {
+        ...r,
+        userId: realUserId,
+        employeeId: realUserId,
+        role: user?.role || 'EMPLOYEE',
+      };
+    });
   }
 
   submit(data: SubmitResignationDto) {
-    const employee = this.db.employees.find((e) => e.id === data.employeeId);
+    const targetId = (data as any).userId || data.employeeId;
+    const user = this.db.users.find((u) => u.id === targetId || u.employeeId === targetId);
+    const employee = user || this.db.employees.find((e) => e.id === targetId || e.userId === targetId);
     if (!employee) throw new NotFoundException('Employee not found');
+    const realUserId = user ? user.id : employee.id;
 
     const noticeDays = data.noticePeriodDays || 30;
     const now = new Date();
@@ -22,10 +36,10 @@ export class ResignationsService {
 
     const newResignation: Resignation = {
       id: `res-${Date.now()}`,
-      employeeId: employee.id,
-      employeeName: `${employee.firstName} ${employee.lastName}`,
-      employeeCode: employee.employeeCode,
-      departmentName: employee.departmentName,
+      employeeId: realUserId,
+      employeeName: `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || 'Employee',
+      employeeCode: (employee as any).employeeCode || 'EMP-001',
+      departmentName: (employee as any).departmentName || 'General',
       resignationDate: now.toISOString().split('T')[0],
       lastWorkingDay: lDate.toISOString().split('T')[0],
       noticePeriodDays: noticeDays,
@@ -41,12 +55,14 @@ export class ResignationsService {
         exitInterviewCompleted: false,
       },
     };
+    (newResignation as any).userId = realUserId;
+    (newResignation as any).role = user?.role || 'EMPLOYEE';
 
     employee.status = EmployeeStatus.ON_NOTICE;
 
     this.db.resignations.unshift(newResignation);
     this.db.logAudit(
-      employee.id,
+      realUserId,
       `${employee.firstName} ${employee.lastName}`,
       'EMPLOYEE',
       'RESIGNATION_SUBMITTED',

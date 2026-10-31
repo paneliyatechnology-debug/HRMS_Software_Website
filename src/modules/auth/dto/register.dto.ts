@@ -15,6 +15,7 @@ export class RegisterDto {
     example: 'new.user@paneliya.com',
     description: 'Corporate or personal email address',
   })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   @IsEmail()
   @IsNotEmpty()
   email: string;

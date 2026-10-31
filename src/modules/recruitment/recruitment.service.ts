@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { JobOpening, Candidate, CandidateStatus, EmployeeStatus } from '../../common/types.js';
+import { JobOpening, Candidate, CandidateStatus, EmployeeStatus, Role } from '../../common/types.js';
 import { CreateJobOpeningDto } from './dto/create-job.dto.js';
 import { CreateCandidateDto } from './dto/create-candidate.dto.js';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto.js';
@@ -140,8 +140,11 @@ export class RecruitmentService {
     const lastName = rest.join(' ') || 'Employee';
     const actorName = dto?.actorName || 'HR Admin';
 
+    const userId = `user-${Date.now()}`;
+
     const newEmployee = {
-      id: `emp-${Date.now()}`,
+      id: userId,
+      userId,
       employeeCode,
       firstName,
       lastName,
@@ -201,7 +204,26 @@ export class RecruitmentService {
       updatedAt: new Date().toISOString(),
     };
 
-    this.db.employees.unshift(newEmployee);
+    this.db.employees.unshift(newEmployee as any);
+
+    // Also register unified User record in users table
+    this.db.users.unshift({
+      id: userId,
+      email: candidate.email.toLowerCase().trim(),
+      phone: candidate.phone || '',
+      firstName,
+      lastName,
+      role: Role.EMPLOYEE,
+      isSuperAdmin: false,
+      status: 'Active',
+      companyId: this.db.companies[0]?.id || 'cmp-1',
+      companyCode: this.db.companies[0]?.companyCode || 'CMP-000001',
+      employeeId: userId,
+      employeeCode,
+      avatarUrl: newEmployee.avatarUrl,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } as any);
 
     this.db.logAudit(
       'sys',
