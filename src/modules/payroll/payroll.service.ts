@@ -56,15 +56,26 @@ export class PayrollService {
             (p.employeeName || '').trim().toLowerCase(),
       );
       const realUserId = user ? user.id : p.employeeId;
-      return {
-        ...p,
+      const { employeeId: _, id: pId, employeeName: _empName, ...rest } = p;
+      const resObj: any = {
+        id: pId,
         userId: realUserId,
-        employeeId: realUserId,
         role: user?.role || 'EMPLOYEE',
+        userName: user
+          ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || p.employeeName
+          : p.employeeName,
         employeeName: user
           ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || p.employeeName
           : p.employeeName,
+        ...rest,
       };
+      Object.defineProperty(resObj, 'employeeId', {
+        value: realUserId,
+        enumerable: false,
+        configurable: true,
+        writable: true,
+      });
+      return resObj;
     });
   }
 

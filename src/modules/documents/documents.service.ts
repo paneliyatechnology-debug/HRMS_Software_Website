@@ -19,9 +19,20 @@ export class DocumentsService {
               (u.email && u.email.toLowerCase() === employeeId.toLowerCase()),
           );
       const targetId = user ? user.id : employeeId;
-      return this.db.documents.filter((d) => d.employeeId === targetId || (d as any).userId === targetId || d.employeeId === employeeId);
+      const list = this.db.documents.filter((d) => d.employeeId === targetId || (d as any).userId === targetId || d.employeeId === employeeId);
+      return list.map((d) => {
+        const { employeeId: _, id: docId, ...rest } = d;
+        const resObj: any = { id: docId, userId: (d as any).userId || d.employeeId, ...rest };
+        Object.defineProperty(resObj, 'employeeId', { value: resObj.userId, enumerable: false, configurable: true, writable: true });
+        return resObj;
+      });
     }
-    return this.db.documents;
+    return this.db.documents.map((d) => {
+      const { employeeId: _, id: docId, ...rest } = d;
+      const resObj: any = { id: docId, userId: (d as any).userId || d.employeeId, ...rest };
+      Object.defineProperty(resObj, 'employeeId', { value: resObj.userId, enumerable: false, configurable: true, writable: true });
+      return resObj;
+    });
   }
 
   create(data: Partial<CreateDocumentMetadataDto>): EmployeeDocument {
@@ -55,7 +66,11 @@ export class DocumentsService {
 
     this.db.documents.unshift(newDoc);
     this.db.persist();
-    return newDoc;
+
+    const { employeeId: _, id: docId, ...rest } = newDoc;
+    const resObj: any = { id: docId, userId: realUserId, ...rest };
+    Object.defineProperty(resObj, 'employeeId', { value: realUserId, enumerable: false, configurable: true, writable: true });
+    return resObj;
   }
 
   verify(id: string, dto: VerifyDocumentDto) {

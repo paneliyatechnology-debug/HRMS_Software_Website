@@ -588,12 +588,20 @@ export class AdminService {
           (u) => u.id === a.employeeId || u.employeeId === a.employeeId || (a as any).userId === u.id,
         );
         const realUserId = user ? user.id : a.employeeId;
-        return {
-          ...a,
+        const { employeeId: _, id: attId, ...rest } = a;
+        const resObj: any = {
+          id: attId,
           userId: realUserId,
-          employeeId: realUserId,
           role: user?.role || Role.EMPLOYEE,
+          ...rest,
         };
+        Object.defineProperty(resObj, 'employeeId', {
+          value: realUserId,
+          enumerable: false,
+          configurable: true,
+          writable: true,
+        });
+        return resObj;
       }),
     };
   }
@@ -650,9 +658,22 @@ export class AdminService {
 
     this.db.persist();
 
+    const { employeeId: _, id: recId, ...rest } = record;
+    const attObj: any = {
+      id: recId,
+      userId: realUserId,
+      ...rest,
+    };
+    Object.defineProperty(attObj, 'employeeId', {
+      value: realUserId,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
+
     return {
       message: 'Attendance regularized successfully',
-      attendance: record,
+      attendance: attObj,
     };
   }
 

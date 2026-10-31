@@ -588,9 +588,9 @@
       "companyId": "cmp-1793180626095",
       "companyCode": "CMP-000002",
       "employeeId": "user-test-company2-worker",
-      "status": "Active",
+      "status": "Inactive",
       "createdAt": "2026-10-28T11:11:24.093Z",
-      "updatedAt": "2026-10-28T13:20:58.871Z",
+      "updatedAt": "2026-10-31T06:04:41.498Z",
       "phone": "1234567890",
       "password": "$2b$10$DeGfThWFc9FyKYFvIEk3Xe6qcQNQskJU8Vm9NVNcVSZTGzA5XOIRK",
       "employeeCode": "EMP-000099",
@@ -1215,9 +1215,9 @@
       "companyId": "cmp-1793180626095",
       "companyCode": "CMP-000002",
       "employeeId": "user-test-company2-worker",
-      "status": "Active",
+      "status": "Inactive",
       "createdAt": "2026-10-28T11:11:24.093Z",
-      "updatedAt": "2026-10-28T13:20:58.871Z",
+      "updatedAt": "2026-10-31T06:04:41.498Z",
       "phone": "1234567890",
       "password": "$2b$10$DeGfThWFc9FyKYFvIEk3Xe6qcQNQskJU8Vm9NVNcVSZTGzA5XOIRK",
       "employeeCode": "EMP-000099",
@@ -1645,6 +1645,14 @@
       "dayOfWeek": "Friday",
       "type": "Public",
       "description": "Christmas"
+    },
+    {
+      "id": "hol-1793426912082",
+      "name": "cv",
+      "date": "2027-02-03",
+      "dayOfWeek": "Wednesday",
+      "type": "Company",
+      "description": "Official company holiday"
     }
   ],
   "leaveBalances": [
@@ -2729,9 +2737,89 @@
         "used": 0,
         "remaining": 15
       }
+    },
+    {
+      "id": "bal-1793422856291",
+      "employeeId": "1793422856291",
+      "year": 2026,
+      "casualLeave": {
+        "total": 12,
+        "used": 0,
+        "remaining": 12
+      },
+      "sickLeave": {
+        "total": 10,
+        "used": 0,
+        "remaining": 10
+      },
+      "paidLeave": {
+        "total": 15,
+        "used": 0,
+        "remaining": 15
+      }
     }
   ],
   "leaveRequests": [
+    {
+      "id": "lr-1793427030072",
+      "employeeId": "user-1793422856291",
+      "employeeName": "Ravi Shah",
+      "employeeAvatar": "",
+      "departmentName": "",
+      "leaveType": "Casual Leave",
+      "startDate": "2026-11-01",
+      "endDate": "2026-11-03",
+      "daysCount": 3,
+      "isHalfDay": false,
+      "reason": "Attending family function",
+      "status": "Pending",
+      "appliedDate": "2026-10-31",
+      "managerApproverId": "",
+      "managerApproverName": "Team Manager",
+      "comments": "Pending review",
+      "userId": "user-1793422856291",
+      "role": "EMPLOYEE"
+    },
+    {
+      "id": "lr-1793426192617",
+      "employeeId": "user-1793422856291",
+      "employeeName": "Ravi Shah",
+      "employeeAvatar": "",
+      "departmentName": "",
+      "leaveType": "Casual Leave",
+      "startDate": "2026-11-01",
+      "endDate": "2026-11-03",
+      "daysCount": 3,
+      "isHalfDay": false,
+      "reason": "Attending family function",
+      "status": "Pending",
+      "appliedDate": "2026-10-31",
+      "managerApproverId": "",
+      "managerApproverName": "Team Manager",
+      "comments": "Pending review",
+      "userId": "user-1793422856291",
+      "role": "EMPLOYEE"
+    },
+    {
+      "id": "lr-1793426128073",
+      "employeeId": "user-1793422856291",
+      "employeeName": "Ravi Shah",
+      "employeeAvatar": "",
+      "departmentName": "",
+      "leaveType": "Casual Leave",
+      "startDate": "2026-11-01",
+      "endDate": "2026-11-03",
+      "daysCount": 3,
+      "isHalfDay": false,
+      "reason": "Attending family function",
+      "status": "Pending",
+      "appliedDate": "2026-10-31",
+      "managerApproverId": "",
+      "managerApproverName": "Team Manager",
+      "comments": "Pending review",
+      "userId": "user-1793422856291",
+      "role": "EMPLOYEE"
+    },
     {
       "id": "lr-1793425844826",
       "employeeId": "user-1793009147556",
@@ -3418,6 +3506,33 @@
   ],
   "notifications": [
     {
+      "id": "notif-1793427030072",
+      "title": "New Leave Application",
+      "message": "Ravi Shah applied for Casual Leave (3 days).",
+      "type": "leave",
+      "isRead": false,
+      "createdAt": "2026-10-31T06:10:30.072Z",
+      "link": "/leaves"
+    },
+    {
+      "id": "notif-1793426192618",
+      "title": "New Leave Application",
+      "message": "Ravi Shah applied for Casual Leave (3 days).",
+      "type": "leave",
+      "isRead": false,
+      "createdAt": "2026-10-31T05:56:32.618Z",
+      "link": "/leaves"
+    },
+    {
+      "id": "notif-1793426128074",
+      "title": "New Leave Application",
+      "message": "Ravi Shah applied for Casual Leave (3 days).",
+      "type": "leave",
+      "isRead": false,
+      "createdAt": "2026-10-31T05:55:28.074Z",
+      "link": "/leaves"
+    },
+    {
       "id": "notif-1793425844826",
       "title": "New Leave Application",
       "message": "keyur sangani applied for Casual Leave (2 days).",
@@ -3501,6 +3616,102 @@
   ],
   "documents": [],
   "auditLogs": [
+    {
+      "id": "log-1793427060549-207",
+      "userId": "user-1792849567968",
+      "userName": "Super Admin",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1792849567968",
+      "details": "User superadmin@paneliya.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-31T06:11:00.549Z"
+    },
+    {
+      "id": "log-1793427050471-684",
+      "userId": "user-1792849567968",
+      "userName": "Super Admin",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1792849567968",
+      "details": "User superadmin@paneliya.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-31T06:10:50.471Z"
+    },
+    {
+      "id": "log-1793427040498-124",
+      "userId": "user-1792849567968",
+      "userName": "Super Admin",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1792849567968",
+      "details": "User superadmin@paneliya.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-31T06:10:40.498Z"
+    },
+    {
+      "id": "log-1793427030072-525",
+      "userId": "user-1793422856291",
+      "userName": "Ravi Shah",
+      "userRole": "EMPLOYEE",
+      "action": "LEAVE_APPLIED",
+      "module": "Leave Management",
+      "recordId": "lr-1793427030072",
+      "details": "Applied for 3 day(s) of Casual Leave (2026-11-01 to 2026-11-03)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-31T06:10:30.072Z"
+    },
+    {
+      "id": "log-1793427030038-157",
+      "userId": "user-1792849567968",
+      "userName": "Super Admin",
+      "userRole": "SUPER_ADMIN",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "recordId": "user-1792849567968",
+      "details": "User superadmin@paneliya.com logged in successfully via email",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-31T06:10:30.038Z"
+    },
+    {
+      "id": "log-1793426681499-171",
+      "userId": "sys",
+      "userName": "Ravi Admin",
+      "userRole": "ADMIN",
+      "action": "EMPLOYEE_DEACTIVATED",
+      "module": "Employee Management",
+      "recordId": "user-test-company2-worker",
+      "details": "Marked employee Worker Two as Inactive (EMP-000099)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-31T06:04:41.499Z"
+    },
+    {
+      "id": "log-1793426192618-635",
+      "userId": "user-1793422856291",
+      "userName": "Ravi Shah",
+      "userRole": "EMPLOYEE",
+      "action": "LEAVE_APPLIED",
+      "module": "Leave Management",
+      "recordId": "lr-1793426192617",
+      "details": "Applied for 3 day(s) of Casual Leave (2026-11-01 to 2026-11-03)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-31T05:56:32.618Z"
+    },
+    {
+      "id": "log-1793426128073-407",
+      "userId": "user-1793422856291",
+      "userName": "Ravi Shah",
+      "userRole": "EMPLOYEE",
+      "action": "LEAVE_APPLIED",
+      "module": "Leave Management",
+      "recordId": "lr-1793426128073",
+      "details": "Applied for 3 day(s) of Casual Leave (2026-11-01 to 2026-11-03)",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-10-31T05:55:28.073Z"
+    },
     {
       "id": "log-1793425844826-567",
       "userId": "user-1793009147556",

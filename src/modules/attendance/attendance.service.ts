@@ -96,15 +96,23 @@ export class AttendanceService {
               (a.employeeName || '').trim().toLowerCase(),
         );
         const realUserId = user ? user.id : a.employeeId;
-        return {
-          ...a,
+        const { employeeId: _, id: attId, ...rest } = a;
+        const resObj: any = {
+          id: attId,
           userId: realUserId,
-          employeeId: realUserId,
           role: user?.role || 'EMPLOYEE',
-          employeeName: user
+          userName: user
             ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || a.employeeName
             : a.employeeName,
+          ...rest,
         };
+        Object.defineProperty(resObj, 'employeeId', {
+          value: realUserId,
+          enumerable: false,
+          configurable: true,
+          writable: true,
+        });
+        return resObj;
       })
       .sort((a, b) => (b.date > a.date ? 1 : -1));
   }
@@ -125,9 +133,8 @@ export class AttendanceService {
     );
 
     if (!record) {
-      return {
+      const resObj: any = {
         userId: targetUserId,
-        employeeId: targetUserId,
         role: user?.role || 'EMPLOYEE',
         isCheckedIn: false,
         isCheckedOut: false,
@@ -136,11 +143,17 @@ export class AttendanceService {
         workingHours: 0,
         status: 'Not Checked In',
       };
+      Object.defineProperty(resObj, 'employeeId', {
+        value: targetUserId,
+        enumerable: false,
+        configurable: true,
+        writable: true,
+      });
+      return resObj;
     }
 
-    return {
+    const resObj: any = {
       userId: targetUserId,
-      employeeId: targetUserId,
       role: user?.role || 'EMPLOYEE',
       isCheckedIn: Boolean(record.checkIn),
       isCheckedOut: Boolean(record.checkOut),
@@ -150,6 +163,13 @@ export class AttendanceService {
       status: record.status,
       recordId: record.id,
     };
+    Object.defineProperty(resObj, 'employeeId', {
+      value: targetUserId,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
+    return resObj;
   }
 
   checkIn(dto: CheckInDto) {
@@ -221,7 +241,19 @@ export class AttendanceService {
       });
     }
 
-    return record;
+    const { employeeId: _, id: rId, ...rest } = record;
+    const resObj: any = {
+      id: rId,
+      userId: user.id,
+      ...rest,
+    };
+    Object.defineProperty(resObj, 'employeeId', {
+      value: user.id,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
+    return resObj;
   }
 
   checkOut(dto: CheckOutDto) {
@@ -292,7 +324,19 @@ export class AttendanceService {
       });
     }
 
-    return record;
+    const { employeeId: _, id: rId, ...rest } = record;
+    const resObj: any = {
+      id: rId,
+      userId: user.id,
+      ...rest,
+    };
+    Object.defineProperty(resObj, 'employeeId', {
+      value: user.id,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
+    return resObj;
   }
 
   manualEntry(data: RegularizeAttendanceDto, actorName = 'HR Admin') {
@@ -335,7 +379,19 @@ export class AttendanceService {
     );
 
     this.db.persist();
-    return newRecord;
+    const { employeeId: _, id: nId, ...rest } = newRecord;
+    const resObj: any = {
+      id: nId,
+      userId: realUserId,
+      ...rest,
+    };
+    Object.defineProperty(resObj, 'employeeId', {
+      value: realUserId,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
+    return resObj;
   }
 
   syncBiometricLogs(dto: BiometricSyncDto) {

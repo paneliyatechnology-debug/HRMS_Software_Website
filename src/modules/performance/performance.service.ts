@@ -21,12 +21,20 @@ export class PerformanceService {
     return list.map((r) => {
       const user = this.db.users.find((u) => u.id === r.employeeId || u.employeeId === r.employeeId || (r as any).userId === u.id);
       const realUserId = user ? user.id : r.employeeId;
-      return {
-        ...r,
+      const { employeeId: _, id: revId, ...rest } = r;
+      const resObj: any = {
+        id: revId,
         userId: realUserId,
-        employeeId: realUserId,
         role: user?.role || 'EMPLOYEE',
+        ...rest,
       };
+      Object.defineProperty(resObj, 'employeeId', {
+        value: realUserId,
+        enumerable: false,
+        configurable: true,
+        writable: true,
+      });
+      return resObj;
     });
   }
 

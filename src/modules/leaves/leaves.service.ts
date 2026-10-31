@@ -55,17 +55,28 @@ export class LeavesService {
               (l.employeeName || '').trim().toLowerCase(),
         );
         const realUserId = user ? user.id : l.employeeId;
-        return {
-          ...l,
+        const { employeeId: _, id, employeeName: _empName, departmentName: _deptName, ...rest } = l;
+        const resObj: any = {
+          id,
           userId: realUserId,
-          employeeId: realUserId,
           role: user?.role || 'EMPLOYEE',
+          userName: user
+            ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || l.employeeName
+            : l.employeeName,
           employeeName: user
             ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || l.employeeName
             : l.employeeName,
           employeeAvatar: user?.avatarUrl || l.employeeAvatar,
           departmentName: user?.departmentName || l.departmentName,
+          ...rest,
         };
+        Object.defineProperty(resObj, 'employeeId', {
+          value: realUserId,
+          enumerable: false,
+          configurable: true,
+          writable: true,
+        });
+        return resObj;
       })
       .sort((a, b) => (b.appliedDate > a.appliedDate ? 1 : -1));
   }
@@ -96,12 +107,20 @@ export class LeavesService {
       this.db.leaveBalances.push(balance);
       this.db.persist();
     }
-    return {
-      ...balance,
+    const { employeeId: _, id, ...rest } = balance;
+    const resObj: any = {
+      id,
       userId: targetUserId,
-      employeeId: targetUserId,
       role: user?.role || 'EMPLOYEE',
+      ...rest,
     };
+    Object.defineProperty(resObj, 'employeeId', {
+      value: targetUserId,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
+    return resObj;
   }
 
   apply(data: ApplyLeaveDto) {
@@ -194,12 +213,21 @@ export class LeavesService {
       });
     }
 
-    return {
-      ...newRequest,
+    const { employeeId: _, id, ...rest } = newRequest;
+    const responseObj: any = {
+      id,
       userId: realUserId,
-      employeeId: realUserId,
+      userName: fullName || 'Employee',
       role: userRole,
+      ...rest,
     };
+    Object.defineProperty(responseObj, 'employeeId', {
+      value: realUserId,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
+    return responseObj;
   }
 
   approve(id: string, dto: ApproveLeaveDto) {
@@ -269,12 +297,21 @@ export class LeavesService {
     const user = this.db.users.find(
       (u) => u.id === request.employeeId || u.employeeId === request.employeeId,
     );
-    return {
-      ...request,
-      userId: user ? user.id : request.employeeId,
-      employeeId: user ? user.id : request.employeeId,
+    const realUserId = user ? user.id : request.employeeId;
+    const { employeeId: _, id: reqId, ...rest } = request;
+    const resObj: any = {
+      id: reqId,
+      userId: realUserId,
       role: user?.role || 'EMPLOYEE',
+      ...rest,
     };
+    Object.defineProperty(resObj, 'employeeId', {
+      value: realUserId,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
+    return resObj;
   }
 
   reject(id: string, dto: RejectLeaveDto) {
@@ -310,11 +347,20 @@ export class LeavesService {
     const user = this.db.users.find(
       (u) => u.id === request.employeeId || u.employeeId === request.employeeId,
     );
-    return {
-      ...request,
-      userId: user ? user.id : request.employeeId,
-      employeeId: user ? user.id : request.employeeId,
+    const realUserId = user ? user.id : request.employeeId;
+    const { employeeId: _, id: reqId, ...rest } = request;
+    const resObj: any = {
+      id: reqId,
+      userId: realUserId,
       role: user?.role || 'EMPLOYEE',
+      ...rest,
     };
+    Object.defineProperty(resObj, 'employeeId', {
+      value: realUserId,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
+    return resObj;
   }
 }

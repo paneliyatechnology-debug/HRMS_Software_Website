@@ -41,12 +41,20 @@ export class TrainingService {
     return list.map((t) => {
       const user = this.db.users.find((u) => u.id === t.employeeId || u.employeeId === t.employeeId || (t as any).userId === u.id);
       const realUserId = user ? user.id : t.employeeId;
-      return {
-        ...t,
+      const { employeeId: _, id: tId, ...rest } = t;
+      const resObj: any = {
+        id: tId,
         userId: realUserId,
-        employeeId: realUserId,
         role: user?.role || 'EMPLOYEE',
+        ...rest,
       };
+      Object.defineProperty(resObj, 'employeeId', {
+        value: realUserId,
+        enumerable: false,
+        configurable: true,
+        writable: true,
+      });
+      return resObj;
     });
   }
 
@@ -82,7 +90,20 @@ export class TrainingService {
     this.db.employeeTrainings.unshift(newEnrollment);
     program.enrolledCount += 1;
     this.db.persist();
-    return newEnrollment;
+
+    const { employeeId: _, id: etId, ...rest } = newEnrollment;
+    const resObj: any = {
+      id: etId,
+      userId: realUserId,
+      ...rest,
+    };
+    Object.defineProperty(resObj, 'employeeId', {
+      value: realUserId,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
+    return resObj;
   }
 
   updateProgress(enrollmentId: string, dto: UpdateTrainingProgressDto) {
