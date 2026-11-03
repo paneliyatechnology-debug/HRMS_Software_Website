@@ -166,6 +166,28 @@ export class AttendanceController {
     return this.attendanceService.stopWork(body, req.user, file, ip);
   }
 
+  @Post('work/break/start')
+  @ApiOperation({
+    summary: 'Start employee work break',
+    description: 'Pauses active work timer and starts break timer for the authenticated employee.',
+  })
+  @ApiResponse({ status: 201, description: 'Break started successfully' })
+  @ApiResponse({ status: 400, description: 'No active session or break already in progress' })
+  startBreak(@Req() req: any) {
+    return this.attendanceService.startBreak(req.user);
+  }
+
+  @Post('work/break/resume')
+  @ApiOperation({
+    summary: 'Resume employee work after break',
+    description: 'Concludes active break, records break duration, and resumes active work session.',
+  })
+  @ApiResponse({ status: 201, description: 'Work resumed successfully' })
+  @ApiResponse({ status: 400, description: 'No active break in progress' })
+  resumeBreak(@Req() req: any) {
+    return this.attendanceService.resumeBreak(req.user);
+  }
+
   @Get('work/history')
   @ApiOperation({
     summary: 'Get paginated work timer session history',

@@ -88,36 +88,14 @@ export interface Company {
   state?: string;
   gstin?: string;
   industrySector?: string;
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'Pending' | 'Rejected' | string;
   adminUserId?: string;
+  rejectionReason?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface CompanyRegistrationRequest {
-  id: string;
-  companyLegalName: string;
-  gstin?: string;
-  industrySector?: string;
-  officeAddress?: string;
-  city?: string;
-  state?: string;
-  firstName: string;
-  lastName: string;
-  officialEmail: string;
-  mobileNumber: string;
-  passwordHash: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  rejectionReason?: string;
-  approvedCompanyId?: string;
-  approvedCompanyCode?: string;
-  approvedAdminUserId?: string;
-  approvedBy?: string;
-  approvedAt?: string;
-  rejectedAt?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export type CompanyRegistrationRequest = Company;
 
 export interface User {
   id: string;
@@ -230,6 +208,7 @@ export interface Location {
   longitude?: number;
   radiusMeters?: number;
   companyId?: string;
+  companyCode?: string;
   isActive?: boolean;
 }
 
@@ -322,8 +301,22 @@ export interface AttendanceRecord {
 
 export enum WorkSessionStatus {
   ACTIVE = 'ACTIVE',
+  ON_BREAK = 'ON_BREAK',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
+}
+
+export interface AttendanceBreak {
+  id: string;
+  attendanceSessionId: string;
+  userId: string;
+  companyId: string;
+  companyCode?: string;
+  breakStartTime: string;
+  breakEndTime?: string | null;
+  durationSeconds?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface WorkSession {

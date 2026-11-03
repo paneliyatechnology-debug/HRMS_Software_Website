@@ -37,7 +37,7 @@ import { hashPassword } from '../../common/utils/password.util.js';
 @Injectable()
 export class SuperAdminService {
   private readonly logger = new Logger(SuperAdminService.name);
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly db: DatabaseService) { }
 
   // -------------------------------------------------------------
   // 1. MASTER SYSTEM DASHBOARD & METRICS (Badhu access kari sake)
@@ -335,7 +335,7 @@ export class SuperAdminService {
     }
 
     const releaseEmailLock = this.db.acquireEmailLock(dto.email, targetCompany.id);
-    let releasePhoneLock = () => {};
+    let releasePhoneLock = () => { };
     if (dto.phone) {
       releasePhoneLock = this.db.acquirePhoneLock(dto.phone, targetCompany.id);
     }
@@ -346,7 +346,7 @@ export class SuperAdminService {
         ? await this.db.assertPhoneUnique(dto.phone, targetCompany.id, undefined, true)
         : '';
 
-      const userId = `user-${Date.now()}`;
+      const userId = `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       const hashedPassword = hashPassword(dto.password);
 
       const newAdmin: User = {
@@ -514,7 +514,7 @@ export class SuperAdminService {
 
     const companyScopeId = targetCompany ? targetCompany.id : null;
     const releaseEmailLock = this.db.acquireEmailLock(dto.email, companyScopeId);
-    let releasePhoneLock = () => {};
+    let releasePhoneLock = () => { };
     if (dto.phone) {
       releasePhoneLock = this.db.acquirePhoneLock(dto.phone, companyScopeId);
     }
@@ -525,152 +525,182 @@ export class SuperAdminService {
         ? await this.db.assertPhoneUnique(dto.phone, companyScopeId, undefined, true)
         : '';
 
-      const userId = `user-${Date.now()}`;
+      const userId = `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       const employeeId = role === Role.EMPLOYEE ? userId : null;
       const isSuperAdmin = dto.isSuperAdmin !== undefined ? dto.isSuperAdmin : role === Role.SUPER_ADMIN;
       const status = dto.status || 'Active';
 
       const hashedPassword = hashPassword(dto.password);
 
-    const newUser: User = {
-      id: userId,
-      email: normalizedEmail,
-      phone: normalizedPhone,
-      password: hashedPassword,
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      role,
-      isSuperAdmin,
-      status,
-      companyId: targetCompany?.id || null,
-      companyCode: targetCompany?.companyCode || undefined,
-      employeeId,
-      avatarUrl: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.db.users.unshift(newUser);
-
-    if (role === Role.ADMIN && targetCompany) {
-      targetCompany.adminUserId = userId;
-      targetCompany.updatedAt = new Date().toISOString();
-    }
-
-    // Also create matching employee record ONLY for EMPLOYEE role
-    if (role === Role.EMPLOYEE) {
-      const department = this.db.departments.find((d) => d.id === dto.departmentId) || this.db.departments[0];
-      const designation = this.db.designations.find((d) => d.id === dto.designationId) || this.db.designations[0];
-      const location = this.db.locations[0];
-
-      // Scoped employee code generation
-      let maxEmpNum = 0;
-      const scopedList = targetCompany
-        ? this.db.employees.filter((e) => e.companyId === targetCompany?.id)
-        : this.db.employees;
-
-      for (const emp of scopedList) {
-        if (emp.employeeCode) {
-          const match = emp.employeeCode.match(/(\d+)/);
-          if (match) {
-            const num = parseInt(match[1], 10);
-            if (!isNaN(num) && num > maxEmpNum) maxEmpNum = num;
-          }
-        }
-      }
-      const autoEmployeeCode = `EMP-${String(maxEmpNum + 1).padStart(6, '0')}`;
-
-      const newEmployee: Employee = {
+      const newUser: User = {
         id: userId,
-        employeeCode: autoEmployeeCode,
-        companyId: targetCompany?.id || '',
-        companyCode: targetCompany?.companyCode || '',
-        userId,
+        email: normalizedEmail,
+        phone: normalizedPhone,
         password: hashedPassword,
-        isSuperAdmin,
         firstName: dto.firstName,
         lastName: dto.lastName,
-        email: normalizedEmail,
-        phone: dto.phone || '',
+        role,
+        isSuperAdmin,
+        status,
+        companyId: targetCompany?.id || null,
+        companyCode: targetCompany?.companyCode || undefined,
+        employeeId,
         avatarUrl: '',
-        gender: 'Other',
-        dateOfBirth: '',
-        address: '',
-        emergencyContact: {} as any,
-        joiningDate: new Date().toISOString().split('T')[0],
-        employmentType: 'Full-time',
-        status: EmployeeStatus.ACTIVE,
-        departmentId: department?.id || '',
-        departmentName: department?.name || '',
-        designationId: designation?.id || '',
-        designationTitle: designation?.title || '',
-        reportingManagerId: '',
-        reportingManagerName: '',
-        workLocationId: location?.id || '',
-        workLocationName: location?.name || '',
-        shift: 'General Shift (9 AM - 6 PM)',
-        bankDetails: {} as any,
-        taxInformation: {} as any,
-        education: [],
-        previousExperience: [],
-        skills: [],
-        salary: {} as any,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      this.db.employees.unshift(newEmployee);
+      this.db.users.unshift(newUser);
 
-      this.db.leaveBalances.push({
-        id: `bal-${newEmployee.id}`,
-        employeeId: newEmployee.id,
-        year: 2026,
-        casualLeave: { total: 12, used: 0, remaining: 12 },
-        sickLeave: { total: 10, used: 0, remaining: 10 },
-        paidLeave: { total: 15, used: 0, remaining: 15 },
-      });
+      if (role === Role.ADMIN && targetCompany) {
+        targetCompany.adminUserId = userId;
+        targetCompany.updatedAt = new Date().toISOString();
+      }
 
-      newUser.employeeId = employeeId;
-      newUser.employeeCode = autoEmployeeCode;
-      newUser.departmentId = newEmployee.departmentId;
-      newUser.departmentName = newEmployee.departmentName;
-      newUser.designationId = newEmployee.designationId;
-      newUser.designationTitle = newEmployee.designationTitle;
-      newUser.workLocationId = newEmployee.workLocationId;
-      newUser.workLocationName = newEmployee.workLocationName;
-      newUser.shift = newEmployee.shift;
-      newUser.joiningDate = newEmployee.joiningDate;
-      newUser.employmentType = newEmployee.employmentType;
-      newUser.salary = newEmployee.salary;
-      newUser.bankDetails = newEmployee.bankDetails;
-      newUser.taxInformation = newEmployee.taxInformation;
-      newUser.emergencyContact = newEmployee.emergencyContact;
-    } else {
-      newUser.employeeId = null as any;
-      newUser.employeeCode = null as any;
-    }
+      // Also create matching employee record ONLY for EMPLOYEE role
+      if (role === Role.EMPLOYEE) {
+        const department = this.db.departments.find((d) => d.id === dto.departmentId) || this.db.departments[0];
+        const designation = this.db.designations.find((d) => d.id === dto.designationId) || this.db.designations[0];
+        const location = this.db.locations[0];
 
-    if (isSuperAdmin) {
-      newUser.permissions = ['*'];
-      newUser.companyId = null;
-      newUser.companyCode = null;
-    }
+        // Scoped employee code generation
+        let maxEmpNum = 0;
+        const scopedList = targetCompany
+          ? this.db.employees.filter((e) => e.companyId === targetCompany?.id)
+          : this.db.employees;
 
-    this.db.logAudit(
-      actingAdmin?.id || 'super-admin',
-      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
-      actingAdmin?.role || Role.SUPER_ADMIN,
-      'SUPER_ADMIN_CREATE_USER',
-      'SuperAdmin',
-      `Super admin created account for ${newUser.email} with role ${newUser.role} (isSuperAdmin: ${isSuperAdmin})`,
-      newUser.id,
-    );
+        for (const emp of scopedList) {
+          if (emp.employeeCode) {
+            const match = emp.employeeCode.match(/(\d+)/);
+            if (match) {
+              const num = parseInt(match[1], 10);
+              if (!isNaN(num) && num > maxEmpNum) maxEmpNum = num;
+            }
+          }
+        }
+        const autoEmployeeCode = `EMP-${String(maxEmpNum + 1).padStart(6, '0')}`;
 
-    this.db.persist();
+        const newEmployee: Employee = {
+          id: userId,
+          employeeCode: autoEmployeeCode,
+          companyId: targetCompany?.id || '',
+          companyCode: targetCompany?.companyCode || '',
+          userId,
+          password: hashedPassword,
+          isSuperAdmin,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          email: normalizedEmail,
+          phone: dto.phone || '',
+          avatarUrl: '',
+          gender: 'Other',
+          dateOfBirth: '',
+          address: '',
+          emergencyContact: {} as any,
+          joiningDate: new Date().toISOString().split('T')[0],
+          employmentType: 'Full-time',
+          status: EmployeeStatus.ACTIVE,
+          departmentId: department?.id || '',
+          departmentName: department?.name || '',
+          designationId: designation?.id || '',
+          designationTitle: designation?.title || '',
+          reportingManagerId: '',
+          reportingManagerName: '',
+          workLocationId: location?.id || '',
+          workLocationName: location?.name || '',
+          shift: 'General Shift (9 AM - 6 PM)',
+          bankDetails: {} as any,
+          taxInformation: {} as any,
+          education: [],
+          previousExperience: [],
+          skills: [],
+          salary: {} as any,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        this.db.employees.unshift(newEmployee);
 
-    const { password: _, ...safeUser } = newUser;
-    return {
-      message: 'Super Admin successfully created user account',
-      user: safeUser,
-    };
+        this.db.leaveBalances.push({
+          id: `bal-${newEmployee.id}`,
+          employeeId: newEmployee.id,
+          year: 2026,
+          casualLeave: { total: 12, used: 0, remaining: 12 },
+          sickLeave: { total: 10, used: 0, remaining: 10 },
+          paidLeave: { total: 15, used: 0, remaining: 15 },
+        });
+
+        newUser.employeeId = employeeId;
+        newUser.employeeCode = autoEmployeeCode;
+        newUser.departmentId = newEmployee.departmentId;
+        newUser.departmentName = newEmployee.departmentName;
+        newUser.designationId = newEmployee.designationId;
+        newUser.designationTitle = newEmployee.designationTitle;
+        newUser.workLocationId = newEmployee.workLocationId;
+        newUser.workLocationName = newEmployee.workLocationName;
+        newUser.shift = newEmployee.shift;
+        newUser.joiningDate = newEmployee.joiningDate;
+        newUser.employmentType = newEmployee.employmentType;
+        newUser.salary = newEmployee.salary;
+        newUser.bankDetails = newEmployee.bankDetails;
+        newUser.taxInformation = newEmployee.taxInformation;
+        newUser.emergencyContact = newEmployee.emergencyContact;
+      } else {
+        newUser.employeeId = null as any;
+        newUser.employeeCode = null as any;
+      }
+
+      if (isSuperAdmin) {
+        newUser.permissions = ['*'];
+        newUser.companyId = null;
+        newUser.companyCode = null;
+      }
+
+      try {
+        const pool = this.db.getMysqlPool();
+        if (pool && this.db.isConnectedToMysql) {
+          await pool.query(
+            `INSERT INTO users (
+              id, email, phone, password, firstName, lastName, role, isSuperAdmin, status, companyId, companyCode, employeeId, employeeCode, createdAt, updatedAt
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              newUser.id,
+              newUser.email,
+              newUser.phone || null,
+              newUser.password,
+              newUser.firstName,
+              newUser.lastName,
+              newUser.role,
+              newUser.isSuperAdmin ? 1 : 0,
+              newUser.status,
+              newUser.companyId || null,
+              newUser.companyCode || null,
+              newUser.employeeId || null,
+              newUser.employeeCode || null,
+              newUser.createdAt,
+              newUser.updatedAt,
+            ],
+          );
+        }
+      } catch (err: any) {
+        this.logger.warn(`Could not sync created user to MySQL: ${err.message}`);
+      }
+
+      this.db.logAudit(
+        actingAdmin?.id || 'super-admin',
+        actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+        actingAdmin?.role || Role.SUPER_ADMIN,
+        'SUPER_ADMIN_CREATE_USER',
+        'SuperAdmin',
+        `Super admin created account for ${newUser.email} with role ${newUser.role} (isSuperAdmin: ${isSuperAdmin})`,
+        newUser.id,
+      );
+
+      this.db.persist();
+
+      const { password: _, ...safeUser } = newUser;
+      return {
+        message: 'Super Admin successfully created user account',
+        user: safeUser,
+      };
     } finally {
       releaseEmailLock();
       releasePhoneLock();
@@ -1287,7 +1317,8 @@ export class SuperAdminService {
   // -------------------------------------------------------------
   // MULTI-COMPANY MANAGEMENT (SuperAdmin only)
   // -------------------------------------------------------------
-  getCompanies() {
+  async getCompanies() {
+    await this.db.refreshFromMysql();
     return this.db.companies.map((c) => {
       const companyEmployees = this.db.employees.filter((e) => e.companyId === c.id);
       const companyAdmins = this.db.users.filter(
@@ -1299,13 +1330,13 @@ export class SuperAdminService {
 
       const safeAdmin = adminUser
         ? {
-            id: adminUser.id,
-            email: adminUser.email,
-            firstName: adminUser.firstName,
-            lastName: adminUser.lastName,
-            role: adminUser.role,
-            status: adminUser.status || 'Active',
-          }
+          id: adminUser.id,
+          email: adminUser.email,
+          firstName: adminUser.firstName,
+          lastName: adminUser.lastName,
+          role: adminUser.role,
+          status: adminUser.status || 'Active',
+        }
         : null;
 
       return {
@@ -1317,7 +1348,8 @@ export class SuperAdminService {
     });
   }
 
-  getCompanyById(id: string) {
+  async getCompanyById(id: string) {
+    await this.db.refreshFromMysql();
     const company = this.db.companies.find(
       (c) =>
         c.id.toLowerCase() === id.toLowerCase() ||
@@ -1343,11 +1375,11 @@ export class SuperAdminService {
       admins: companyAdmins,
       adminUser: adminUser
         ? {
-            id: adminUser.id,
-            email: adminUser.email,
-            firstName: adminUser.firstName,
-            lastName: adminUser.lastName,
-          }
+          id: adminUser.id,
+          email: adminUser.email,
+          firstName: adminUser.firstName,
+          lastName: adminUser.lastName,
+        }
         : null,
     };
   }
@@ -1385,7 +1417,7 @@ export class SuperAdminService {
     // If initial admin credentials are provided, automatically create the company Admin
     if (dto.adminEmail && dto.adminPassword) {
       const releaseEmailLock = this.db.acquireEmailLock(dto.adminEmail, newCompany.id);
-      let releasePhoneLock = () => {};
+      let releasePhoneLock = () => { };
       if (dto.phone) {
         releasePhoneLock = this.db.acquirePhoneLock(dto.phone, newCompany.id);
       }
@@ -1429,43 +1461,43 @@ export class SuperAdminService {
           email: normalizedEmail,
           phone: normalizedPhone,
           avatarUrl: '',
-        gender: 'Other',
-        dateOfBirth: '',
-        address: dto.address || '',
-        emergencyContact: {} as any,
-        joiningDate: new Date().toISOString().split('T')[0],
-        employmentType: 'Full-time',
-        status: EmployeeStatus.ACTIVE,
-        departmentId: this.db.departments[0]?.id || '',
-        departmentName: this.db.departments[0]?.name || '',
-        designationId: this.db.designations[0]?.id || '',
-        designationTitle: 'Administrator',
-        reportingManagerId: '',
-        reportingManagerName: '',
-        workLocationId: this.db.locations[0]?.id || '',
-        workLocationName: this.db.locations[0]?.name || '',
-        shift: 'General Shift (9 AM - 6 PM)',
-        bankDetails: {} as any,
-        taxInformation: {} as any,
-        education: [],
-        previousExperience: [],
-        skills: ['Management'],
-        salary: {} as any,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      this.db.employees.unshift(adminEmp);
+          gender: 'Other',
+          dateOfBirth: '',
+          address: dto.address || '',
+          emergencyContact: {} as any,
+          joiningDate: new Date().toISOString().split('T')[0],
+          employmentType: 'Full-time',
+          status: EmployeeStatus.ACTIVE,
+          departmentId: this.db.departments[0]?.id || '',
+          departmentName: this.db.departments[0]?.name || '',
+          designationId: this.db.designations[0]?.id || '',
+          designationTitle: 'Administrator',
+          reportingManagerId: '',
+          reportingManagerName: '',
+          workLocationId: this.db.locations[0]?.id || '',
+          workLocationName: this.db.locations[0]?.name || '',
+          shift: 'General Shift (9 AM - 6 PM)',
+          bankDetails: {} as any,
+          taxInformation: {} as any,
+          education: [],
+          previousExperience: [],
+          skills: ['Management'],
+          salary: {} as any,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        this.db.employees.unshift(adminEmp);
 
-      this.db.leaveBalances.push({
-        id: `bal-${adminEmp.id}`,
-        employeeId: adminEmp.id,
-        year: 2026,
-        casualLeave: { total: 12, used: 0, remaining: 12 },
-        sickLeave: { total: 10, used: 0, remaining: 10 },
-        paidLeave: { total: 15, used: 0, remaining: 15 },
-      });
+        this.db.leaveBalances.push({
+          id: `bal-${adminEmp.id}`,
+          employeeId: adminEmp.id,
+          year: 2026,
+          casualLeave: { total: 12, used: 0, remaining: 12 },
+          sickLeave: { total: 10, used: 0, remaining: 10 },
+          paidLeave: { total: 15, used: 0, remaining: 15 },
+        });
 
-      newCompany.adminUserId = adminUserId;
+        newCompany.adminUserId = adminUserId;
       } finally {
         releaseEmailLock();
         releasePhoneLock();
@@ -1473,6 +1505,11 @@ export class SuperAdminService {
     }
 
     this.db.companies.push(newCompany);
+    await this.db.saveCompanyToMysql(newCompany);
+    if (newCompany.adminUserId) {
+      const adminUser = this.db.users.find((u) => u.id === newCompany.adminUserId);
+      if (adminUser) await this.db.saveUserToMysql(adminUser);
+    }
 
     this.db.logAudit(
       actingAdmin?.id || 'super-admin',
@@ -1640,7 +1677,7 @@ export class SuperAdminService {
             companyCode = rows[0].companyCode;
             companyName = rows[0].companyName;
           }
-        } catch {}
+        } catch { }
       }
     }
 
@@ -1709,151 +1746,42 @@ export class SuperAdminService {
       );
     }
 
-    // Check for duplicate pending requests
-    const duplicatePending = this.db.companyRegistrationRequests.find(
-      (r) =>
-        r.status === 'PENDING' &&
-        (r.officialEmail.toLowerCase() === officialEmail ||
-          r.companyLegalName.toLowerCase() === companyLegalName.toLowerCase() ||
-          r.mobileNumber === mobileNumber),
-    );
-    if (duplicatePending) {
-      throw new ConflictException(
-        'A registration request for this company name, email, or mobile number is already pending Super Admin approval.',
-      );
-    }
-
-    const requestId = `req-${Date.now()}`;
-    const passwordHash = hashPassword(dto.password);
     const now = new Date().toISOString();
-
-    const requestRecord: CompanyRegistrationRequest = {
-      id: requestId,
-      companyLegalName,
-      gstin: (dto.gstin || '').trim(),
-      industrySector: (dto.industrySector || '').trim(),
-      officeAddress: (dto.officeAddress || '').trim(),
-      city: (dto.city || '').trim(),
-      state: (dto.state || '').trim(),
-      firstName: (dto.firstName || '').trim(),
-      lastName: (dto.lastName || '').trim(),
-      officialEmail,
-      mobileNumber,
-      passwordHash,
-      status: 'PENDING',
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    // Store in MySQL table
-    try {
-      const pool = this.db.getMysqlPool();
-      if (pool && this.db.isConnectedToMysql) {
-        await pool.query(
-          `INSERT INTO company_registration_requests (
-            id, companyLegalName, gstin, industrySector, officeAddress, city, state,
-            firstName, lastName, officialEmail, mobileNumber, passwordHash, status, createdAt, updatedAt
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            requestRecord.id,
-            requestRecord.companyLegalName,
-            requestRecord.gstin || null,
-            requestRecord.industrySector || null,
-            requestRecord.officeAddress || null,
-            requestRecord.city || null,
-            requestRecord.state || null,
-            requestRecord.firstName,
-            requestRecord.lastName,
-            requestRecord.officialEmail,
-            requestRecord.mobileNumber,
-            requestRecord.passwordHash,
-            requestRecord.status,
-            requestRecord.createdAt,
-            requestRecord.updatedAt,
-          ],
-        );
-      }
-    } catch (err: any) {
-      this.logger.warn(`Could not save company_registration_request to MySQL: ${err.message}`);
-    }
-
-    this.db.companyRegistrationRequests.unshift(requestRecord);
-
-    this.db.logAudit(
-      'guest-registration',
-      `${requestRecord.firstName} ${requestRecord.lastName}`,
-      'GUEST',
-      'COMPANY_REGISTRATION_REQUEST_SUBMITTED',
-      'Companies',
-      `New company registration request submitted for "${companyLegalName}" (${officialEmail}). Pending Super Admin approval.`,
-      requestId,
-    );
-
-    return {
-      statusCode: 201,
-      message:
-        'Company registration request submitted successfully! Your workspace will be created and activated once the Super Admin approves it.',
-      requestId: requestRecord.id,
-      companyLegalName: requestRecord.companyLegalName,
-      officialEmail: requestRecord.officialEmail,
-      status: requestRecord.status,
-      submittedAt: requestRecord.createdAt,
-    };
-  }
-
-  getCompanyRegistrationRequests(status?: string) {
-    let list = [...this.db.companyRegistrationRequests];
-    if (status) {
-      list = list.filter((r) => r.status.toUpperCase() === status.toUpperCase());
-    }
-    // Mask passwordHash before returning
-    return list.map(({ passwordHash: _, ...safe }) => safe);
-  }
-
-  async approveCompanyRegistrationRequest(requestId: string, actingAdmin?: User) {
-    const matched = this.db.companyRegistrationRequests.find((r) => r.id === requestId);
-    if (!matched) {
-      throw new NotFoundException(`Company registration request with ID "${requestId}" not found.`);
-    }
-
-    if (matched.status !== 'PENDING') {
-      throw new BadRequestException(
-        `Registration request has already been ${matched.status.toLowerCase()} and cannot be approved again.`,
-      );
-    }
-
-    const now = new Date().toISOString();
-    const companyId = `cmp-${Date.now()}`;
+    const companyId = `cmp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const companyCode = this.db.generateNextCompanyCode();
+    const adminUserId = `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const passwordHash = hashPassword(dto.password);
 
+    // Create Company directly in companies table with status 'Pending'
     const newCompany: Company = {
       id: companyId,
       companyCode,
-      companyName: matched.companyLegalName,
-      name: matched.companyLegalName,
-      email: matched.officialEmail,
-      phone: matched.mobileNumber,
-      address: matched.officeAddress || '',
-      city: matched.city || '',
-      state: matched.state || '',
-      gstin: matched.gstin || '',
-      industrySector: matched.industrySector || '',
-      status: 'Active',
+      companyName: companyLegalName,
+      name: companyLegalName,
+      email: officialEmail,
+      phone: mobileNumber,
+      address: (dto.officeAddress || '').trim(),
+      city: (dto.city || '').trim(),
+      state: (dto.state || '').trim(),
+      gstin: (dto.gstin || '').trim(),
+      industrySector: (dto.industrySector || '').trim(),
+      status: 'Pending',
+      adminUserId,
       createdAt: now,
       updatedAt: now,
     };
 
-    const adminUserId = `user-${Date.now()}`;
+    // Create Owner / Admin user in users table with status 'Pending'
     const adminUser: User = {
       id: adminUserId,
-      email: matched.officialEmail,
-      phone: matched.mobileNumber,
-      password: matched.passwordHash,
-      firstName: matched.firstName,
-      lastName: matched.lastName,
+      email: officialEmail,
+      phone: mobileNumber,
+      password: passwordHash,
+      firstName: (dto.firstName || '').trim(),
+      lastName: (dto.lastName || '').trim(),
       role: Role.ADMIN,
       isSuperAdmin: false,
-      status: 'Active',
+      status: 'Pending',
       companyId: newCompany.id,
       companyCode: newCompany.companyCode,
       employeeId: null,
@@ -1862,154 +1790,282 @@ export class SuperAdminService {
       updatedAt: now,
     };
 
-    const adminEmp: Employee = {
-      id: adminUserId,
-      employeeCode: 'EMP-000001',
-      companyId: newCompany.id,
-      companyCode: newCompany.companyCode,
-      userId: adminUserId,
-      password: matched.passwordHash,
-      isSuperAdmin: false,
-      firstName: adminUser.firstName,
-      lastName: adminUser.lastName,
-      email: matched.officialEmail,
-      phone: matched.mobileNumber,
-      avatarUrl: '',
-      gender: 'Other',
-      dateOfBirth: '',
-      address: matched.officeAddress || '',
-      emergencyContact: {} as any,
-      joiningDate: now.split('T')[0],
-      employmentType: 'Full-time',
-      status: EmployeeStatus.ACTIVE,
-      departmentId: this.db.departments[0]?.id || '',
-      departmentName: this.db.departments[0]?.name || 'Management',
-      designationId: this.db.designations[0]?.id || '',
-      designationTitle: 'Company Owner & Administrator',
-      reportingManagerId: '',
-      reportingManagerName: '',
-      workLocationId: this.db.locations[0]?.id || '',
-      workLocationName: this.db.locations[0]?.name || '',
-      shift: 'General Shift (9 AM - 6 PM)',
-      bankDetails: {} as any,
-      taxInformation: {} as any,
-      education: [],
-      previousExperience: [],
-      skills: ['Leadership'],
-      salary: {} as any,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    newCompany.adminUserId = adminUserId;
-
-    // Update registration request status
-    matched.status = 'APPROVED';
-    matched.approvedCompanyId = newCompany.id;
-    matched.approvedCompanyCode = newCompany.companyCode;
-    matched.approvedAdminUserId = adminUserId;
-    matched.approvedBy = actingAdmin?.id || 'super-admin';
-    matched.approvedAt = now;
-    matched.updatedAt = now;
-
-    // Update in MySQL
+    // Save directly to MySQL
     try {
       const pool = this.db.getMysqlPool();
       if (pool && this.db.isConnectedToMysql) {
         await pool.query(
-          `UPDATE company_registration_requests
-           SET status = 'APPROVED', approvedCompanyId = ?, approvedCompanyCode = ?, approvedAdminUserId = ?, approvedBy = ?, approvedAt = ?, updatedAt = ?
-           WHERE id = ?`,
+          `INSERT INTO companies (
+            id, companyCode, companyName, email, phone, address, city, state, gstin, industrySector, status, adminUserId, createdAt, updatedAt
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?)`,
           [
-            matched.approvedCompanyId,
-            matched.approvedCompanyCode,
-            matched.approvedAdminUserId,
-            matched.approvedBy,
-            matched.approvedAt,
-            matched.updatedAt,
-            matched.id,
+            newCompany.id,
+            newCompany.companyCode,
+            newCompany.companyName,
+            newCompany.email || null,
+            newCompany.phone || null,
+            newCompany.address || null,
+            newCompany.city || null,
+            newCompany.state || null,
+            newCompany.gstin || null,
+            newCompany.industrySector || null,
+            newCompany.adminUserId,
+            newCompany.createdAt,
+            newCompany.updatedAt,
+          ],
+        );
+
+        await pool.query(
+          `INSERT INTO users (
+            id, email, phone, password, firstName, lastName, role, isSuperAdmin, status, companyId, companyCode, createdAt, updatedAt
+          ) VALUES (?, ?, ?, ?, ?, ?, 'ADMIN', 0, 'Pending', ?, ?, ?, ?)`,
+          [
+            adminUser.id,
+            adminUser.email,
+            adminUser.phone || null,
+            adminUser.password,
+            adminUser.firstName,
+            adminUser.lastName,
+            adminUser.companyId,
+            adminUser.companyCode,
+            adminUser.createdAt,
+            adminUser.updatedAt,
           ],
         );
       }
     } catch (err: any) {
-      this.logger.warn(`Could not update company_registration_requests in MySQL: ${err.message}`);
+      console.error('CRITICAL MYSQL ERROR in createCompanyRegistrationRequest:', err);
+      this.logger.warn(`Could not save company or admin user to MySQL: ${err.message}`);
     }
 
-    this.db.companies.push(newCompany);
+    this.db.companies.unshift(newCompany);
     this.db.users.unshift(adminUser);
-    this.db.employees.unshift(adminEmp);
-
-    await this.db.flushPersist();
 
     this.db.logAudit(
-      actingAdmin?.id || 'super-admin',
-      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
-      Role.SUPER_ADMIN,
-      'COMPANY_REGISTRATION_APPROVED',
-      'SuperAdmin',
-      `Super Admin approved company registration request ${matched.id}. Created company "${newCompany.companyName}" (${newCompany.companyCode}) and Admin user "${adminUser.email}".`,
-      newCompany.id,
+      'guest-registration',
+      `${adminUser.firstName} ${adminUser.lastName}`,
+      'GUEST',
+      'COMPANY_REGISTRATION_REQUEST_SUBMITTED',
+      'Companies',
+      `New company registration submitted for "${companyLegalName}" (${officialEmail}). Saved in companies table with status "Pending".`,
+      companyId,
     );
 
-    const { password: _, ...safeAdmin } = adminUser;
     return {
-      statusCode: 200,
-      message: `Company registration request approved successfully! Company "${newCompany.companyName}" (${newCompany.companyCode}) and Admin account "${adminUser.email}" have been created and activated.`,
-      company: newCompany,
-      adminUser: safeAdmin,
-      approvedAt: now,
+      statusCode: 201,
+      message:
+        'Company registered successfully! Your company is pending Super Admin approval. Once approved, the status will change to Active and you will be able to log in.',
+      requestId: newCompany.id,
+      companyId: newCompany.id,
+      companyCode: newCompany.companyCode,
+      companyLegalName: newCompany.companyName,
+      officialEmail: newCompany.email,
+      status: newCompany.status,
+      submittedAt: newCompany.createdAt,
     };
   }
 
-  async rejectCompanyRegistrationRequest(requestId: string, reason?: string, actingAdmin?: User) {
-    const matched = this.db.companyRegistrationRequests.find((r) => r.id === requestId);
-    if (!matched) {
-      throw new NotFoundException(`Company registration request with ID "${requestId}" not found.`);
+  async getCompanyRegistrationRequests(status?: string) {
+    await this.db.refreshFromMysql();
+    const targetStatus = status || 'Pending';
+    const pool = this.db.getMysqlPool();
+    if (pool && this.db.isConnectedToMysql) {
+      try {
+        let query = 'SELECT * FROM companies WHERE LOWER(status) = LOWER(?) ORDER BY createdAt DESC';
+        const [rows]: any = await pool.query(query, [targetStatus]);
+        if (rows) {
+          return rows;
+        }
+      } catch (err: any) {
+        this.logger.warn(`Could not fetch companies from MySQL: ${err.message}`);
+      }
+    }
+    return this.db.companies.filter((c) => (c.status || '').toLowerCase() === targetStatus.toLowerCase());
+  }
+
+  async approveCompanyRegistrationRequest(identifier: string, actingAdmin?: User) {
+    let company = this.db.companies.find(
+      (c) => c.id === identifier || c.companyCode?.toLowerCase() === identifier.toLowerCase(),
+    );
+
+    const pool = this.db.getMysqlPool();
+    if (!company && pool && this.db.isConnectedToMysql) {
+      try {
+        const [rows]: any = await pool.query(
+          `SELECT * FROM companies WHERE id = ? OR companyCode = ? LIMIT 1`,
+          [identifier, identifier],
+        );
+        if (rows && rows.length > 0) {
+          company = rows[0];
+          this.db.companies.push(company!);
+        }
+      } catch (err: any) {
+        this.logger.warn(`Could not query companies in MySQL: ${err.message}`);
+      }
     }
 
-    if (matched.status !== 'PENDING') {
-      throw new BadRequestException(
-        `Registration request has already been ${matched.status.toLowerCase()} and cannot be rejected.`,
-      );
+    if (!company) {
+      throw new NotFoundException(`Company with ID or Code "${identifier}" not found.`);
+    }
+
+    if (company.status === 'Active') {
+      throw new BadRequestException(`Company "${company.companyName}" is already Active.`);
     }
 
     const now = new Date().toISOString();
-    matched.status = 'REJECTED';
-    matched.rejectionReason = reason || 'Rejected by Super Admin.';
-    matched.rejectedAt = now;
-    matched.updatedAt = now;
+    company.status = 'Active';
+    company.updatedAt = now;
 
+    // Update in MySQL
     try {
-      const pool = this.db.getMysqlPool();
       if (pool && this.db.isConnectedToMysql) {
         await pool.query(
-          `UPDATE company_registration_requests
-           SET status = 'REJECTED', rejectionReason = ?, rejectedAt = ?, updatedAt = ?
-           WHERE id = ?`,
-          [matched.rejectionReason, matched.rejectedAt, matched.updatedAt, matched.id],
+          `UPDATE companies SET status = 'Active', updatedAt = ? WHERE id = ?`,
+          [now, company.id],
+        );
+        await pool.query(
+          `UPDATE users SET status = 'Active', updatedAt = ? WHERE (companyId = ? OR companyCode = ? OR id = ?) AND role != 'SUPER_ADMIN'`,
+          [now, company.id, company.companyCode || '', company.adminUserId || ''],
         );
       }
     } catch (err: any) {
-      this.logger.warn(`Could not update company_registration_requests in MySQL: ${err.message}`);
+      this.logger.warn(`Could not update company or user status in MySQL: ${err.message}`);
     }
+
+    // Update in memory
+    this.db.users.forEach((u) => {
+      if (
+        (u.companyId === company!.id ||
+          (company!.companyCode && u.companyCode === company!.companyCode) ||
+          (company!.adminUserId && u.id === company!.adminUserId)) &&
+        u.role !== Role.SUPER_ADMIN &&
+        !u.isSuperAdmin
+      ) {
+        u.status = 'Active';
+        u.updatedAt = now;
+      }
+    });
 
     this.db.logAudit(
       actingAdmin?.id || 'super-admin',
       actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
       Role.SUPER_ADMIN,
-      'COMPANY_REGISTRATION_REJECTED',
+      'COMPANY_APPROVED',
       'SuperAdmin',
-      `Super Admin rejected company registration request ${matched.id}. Reason: ${matched.rejectionReason}`,
-      matched.id,
+      `Super Admin approved company ${company.companyName} (${company.companyCode}). Status updated to Active.`,
+      company.id,
     );
 
     return {
       statusCode: 200,
-      message: `Company registration request ${matched.id} has been rejected.`,
-      requestId: matched.id,
-      status: 'REJECTED',
-      rejectionReason: matched.rejectionReason,
-      rejectedAt: now,
+      message: `Company ${company.companyName} (${company.companyCode}) approved successfully. Status updated to Active.`,
+      requestId: company.id,
+      companyId: company.id,
+      companyCode: company.companyCode,
+      status: 'Active',
+      company,
     };
+  }
+
+  async rejectCompanyRegistrationRequest(identifier: string, reason?: string, actingAdmin?: User) {
+    let company = this.db.companies.find(
+      (c) => c.id === identifier || c.companyCode?.toLowerCase() === identifier.toLowerCase(),
+    );
+
+    const pool = this.db.getMysqlPool();
+    if (!company && pool && this.db.isConnectedToMysql) {
+      try {
+        const [rows]: any = await pool.query(
+          `SELECT * FROM companies WHERE id = ? OR companyCode = ? LIMIT 1`,
+          [identifier, identifier],
+        );
+        if (rows && rows.length > 0) {
+          company = rows[0];
+          this.db.companies.push(company!);
+        }
+      } catch (err: any) {
+        this.logger.warn(`Could not query companies in MySQL: ${err.message}`);
+      }
+    }
+
+    if (!company) {
+      throw new NotFoundException(`Company with ID or Code "${identifier}" not found.`);
+    }
+
+    const now = new Date().toISOString();
+    company.status = 'Rejected';
+    company.rejectionReason = reason || 'Rejected by Super Admin.';
+    company.updatedAt = now;
+
+    try {
+      if (pool && this.db.isConnectedToMysql) {
+        await pool.query(
+          `UPDATE companies SET status = 'Rejected', rejectionReason = ?, updatedAt = ? WHERE id = ?`,
+          [company.rejectionReason, now, company.id],
+        );
+        await pool.query(
+          `UPDATE users SET status = 'Rejected', updatedAt = ? WHERE (companyId = ? OR companyCode = ? OR id = ?) AND role != 'SUPER_ADMIN'`,
+          [now, company.id, company.companyCode || '', company.adminUserId || ''],
+        );
+        await pool.query(
+          `UPDATE refresh_tokens SET isRevoked = 1, updatedAt = ? WHERE companyId = ? OR companyCode = ?`,
+          [now, company.id, company.companyCode || ''],
+        );
+      }
+    } catch (err: any) {
+      this.logger.warn(`Could not update company status in MySQL: ${err.message}`);
+    }
+
+    this.db.users.forEach((u) => {
+      if (
+        (u.companyId === company!.id ||
+          (company!.companyCode && u.companyCode === company!.companyCode) ||
+          (company!.adminUserId && u.id === company!.adminUserId)) &&
+        u.role !== Role.SUPER_ADMIN &&
+        !u.isSuperAdmin
+      ) {
+        u.status = 'Rejected';
+        u.updatedAt = now;
+      }
+    });
+
+    if (this.db.refreshTokens && Array.isArray(this.db.refreshTokens)) {
+      this.db.refreshTokens.forEach((rt) => {
+        if (
+          rt.companyId === company!.id ||
+          (company!.companyCode && rt.companyCode === company!.companyCode)
+        ) {
+          rt.isRevoked = true;
+          rt.updatedAt = now;
+        }
+      });
+    }
+
+    this.db.persist();
+
+    this.db.logAudit(
+      actingAdmin?.id || 'super-admin',
+      actingAdmin ? `${actingAdmin.firstName} ${actingAdmin.lastName}` : 'Super Admin',
+      Role.SUPER_ADMIN,
+      'COMPANY_REJECTED',
+      'SuperAdmin',
+      `Super Admin rejected company ${company.companyName} (${company.companyCode}). Reason: ${company.rejectionReason}`,
+      company.id,
+    );
+
+    return {
+      statusCode: 200,
+      message: `Company ${company.companyName} has been rejected.`,
+      requestId: company.id,
+      companyId: company.id,
+      companyCode: company.companyCode,
+      status: 'Rejected',
+      rejectionReason: company.rejectionReason,
+      company,
+    };
+  }
+
+  async deleteCompanyRegistrationRequest(identifier: string, actingAdmin?: User) {
+    return this.deleteCompany(identifier, actingAdmin);
   }
 }

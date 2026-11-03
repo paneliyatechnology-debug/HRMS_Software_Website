@@ -21,6 +21,8 @@ async function bootstrap() {
     'http://127.0.0.1:3001',
     'http://localhost:4000',
     'http://127.0.0.1:4000',
+    'http://192.168.1.109:3000',
+    'http://192.168.1.104:3000',
   ];
   const envOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
@@ -74,10 +76,16 @@ async function bootstrap() {
     res.redirect('/api/docs');
   });
 
-  // Automatically normalize redundant slashes (e.g. /api//auth/login -> /api/auth/login)
+  // Automatically normalize redundant slashes and common URL typos/prefix duplications
   app.use((req: any, _res: any, next: any) => {
     if (req.url) {
       req.url = req.url.replace(/\/{2,}/g, '/');
+      // Normalize duplicate /api/api/ (e.g. when {{baseUrl}} already includes /api)
+      req.url = req.url.replace(/^\/api\/api\//i, '/api/');
+      req.url = req.url.replace(/^\/as\/api\//i, '/api/');
+      // Normalize case for action endpoints (/Reject -> /reject, /Approve -> /approve)
+      req.url = req.url.replace(/\/Reject(\?|$)/i, '/reject$1');
+      req.url = req.url.replace(/\/Approve(\?|$)/i, '/approve$1');
     }
     next();
   });

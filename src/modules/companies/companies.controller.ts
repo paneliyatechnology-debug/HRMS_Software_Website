@@ -73,7 +73,8 @@ export class CompaniesController {
     description: 'Retrieves current company information for the authenticated user.',
   })
   @ApiResponse({ status: 200, description: 'User assigned company' })
-  getMyCompany(@Req() req: any) {
+  async getMyCompany(@Req() req: any) {
+    await this.db.refreshFromMysql();
     const user = req.user;
     if (!user) {
       throw new ForbiddenException('User is not authenticated.');
@@ -102,7 +103,8 @@ export class CompaniesController {
   })
   @ApiParam({ name: 'id', description: 'Company ID or Company Code' })
   @ApiResponse({ status: 200, description: 'Company details' })
-  getCompanyById(@Param('id') id: string, @Req() req: any) {
+  async getCompanyById(@Param('id') id: string, @Req() req: any) {
+    await this.db.refreshFromMysql();
     const user = req.user;
     const company = this.db.companies.find(
       (c) =>

@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -106,7 +107,7 @@ export class SuperAdminController {
     return this.superAdminService.getCompanyRegistrationRequests(status);
   }
 
-  @Post('company-requests/:id/approve')
+  @Post(['company-requests/:id/approve', 'company-requests/:id/Approve'])
   @ApiOperation({
     summary: 'Approve company registration request',
     description: 'Approves request, officially creates company tenant with CMP code, and provisions Admin user account.',
@@ -117,7 +118,7 @@ export class SuperAdminController {
     return this.superAdminService.approveCompanyRegistrationRequest(id, req.user);
   }
 
-  @Post('company-requests/:id/reject')
+  @Post(['company-requests/:id/reject', 'company-requests/:id/Reject'])
   @ApiOperation({
     summary: 'Reject company registration request',
     description: 'Rejects request with optional reason. Company is not created.',
@@ -130,6 +131,42 @@ export class SuperAdminController {
     @Req() req: any,
   ) {
     return this.superAdminService.rejectCompanyRegistrationRequest(id, reason, req.user);
+  }
+
+  @Post('company-requests/:id')
+  @Patch('company-requests/:id')
+  @Put('company-requests/:id')
+  @ApiOperation({
+    summary: 'Update / Reject / Approve company registration request',
+    description: 'Handles registration request update. If body has reason or status=Rejected, rejects request. If status=Active/Approved, approves request.',
+  })
+  @ApiParam({ name: 'id', description: 'Registration Request ID or Company ID' })
+  @ApiResponse({ status: 200, description: 'Company registration request processed successfully' })
+  updateCompanyRequest(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Req() req: any,
+  ) {
+    const status = (body?.status || '').toString().toLowerCase();
+    const reason = body?.reason || body?.rejectionReason || '';
+    if (reason || status === 'rejected') {
+      return this.superAdminService.rejectCompanyRegistrationRequest(id, reason, req.user);
+    }
+    if (status === 'active' || status === 'approved') {
+      return this.superAdminService.approveCompanyRegistrationRequest(id, req.user);
+    }
+    return this.superAdminService.updateCompany(id, body, req.user);
+  }
+
+  @Delete('company-requests/:id')
+  @ApiOperation({
+    summary: 'Delete company registration request',
+    description: 'Permanently deletes a company registration request (pending, approved, or rejected) from database.',
+  })
+  @ApiParam({ name: 'id', description: 'Registration Request ID' })
+  @ApiResponse({ status: 200, description: 'Company registration request deleted successfully' })
+  deleteCompanyRequest(@Param('id') id: string, @Req() req: any) {
+    return this.superAdminService.deleteCompanyRegistrationRequest(id, req.user);
   }
 
   @Get('companies/:id')
@@ -157,6 +194,56 @@ export class SuperAdminController {
     @Body() body: UpdateCompanyDto,
     @Req() req: any,
   ) {
+    return this.superAdminService.updateCompany(id, body, req.user);
+  }
+
+  @Post(['companies/:id/approve', 'companies/:id/Approve'])
+  @ApiOperation({
+    summary: 'Approve company registration request (changes status to Active)',
+    description: 'Approves pending company directly in companies table, updating status to Active.',
+  })
+  @ApiParam({ name: 'id', description: 'Company ID or Company Code' })
+  @ApiResponse({ status: 200, description: 'Company approved and activated successfully' })
+  approveCompany(@Param('id') id: string, @Req() req: any) {
+    return this.superAdminService.approveCompanyRegistrationRequest(id, req.user);
+  }
+
+  @Post(['companies/:id/reject', 'companies/:id/Reject'])
+  @ApiOperation({
+    summary: 'Reject company registration request',
+    description: 'Rejects pending company directly in companies table, updating status to Rejected.',
+  })
+  @ApiParam({ name: 'id', description: 'Company ID or Company Code' })
+  @ApiResponse({ status: 200, description: 'Company rejected' })
+  rejectCompany(
+    @Param('id') id: string,
+    @Body('reason') reason: string,
+    @Req() req: any,
+  ) {
+    return this.superAdminService.rejectCompanyRegistrationRequest(id, reason, req.user);
+  }
+
+  @Post('companies/:id')
+  @Patch('companies/:id')
+  @ApiOperation({
+    summary: 'Update / Reject / Approve company by ID',
+    description: 'Handles company update. If body has reason or status=Rejected, rejects company. If status=Active/Approved, approves company.',
+  })
+  @ApiParam({ name: 'id', description: 'Company ID or Company Code' })
+  @ApiResponse({ status: 200, description: 'Company processed successfully' })
+  updateOrRejectCompany(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Req() req: any,
+  ) {
+    const status = (body?.status || '').toString().toLowerCase();
+    const reason = body?.reason || body?.rejectionReason || '';
+    if (reason || status === 'rejected') {
+      return this.superAdminService.rejectCompanyRegistrationRequest(id, reason, req.user);
+    }
+    if (status === 'active' || status === 'approved') {
+      return this.superAdminService.approveCompanyRegistrationRequest(id, req.user);
+    }
     return this.superAdminService.updateCompany(id, body, req.user);
   }
 

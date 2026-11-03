@@ -42,6 +42,11 @@ export async function getMysqlPool() {
 }
 
 export async function initializeMysqlTables(pool: mysql.Pool) {
+  // Drop legacy company_registration_requests table if it exists (all requests now live in companies table)
+  try {
+    await pool.query(`DROP TABLE IF EXISTS company_registration_requests`);
+  } catch {}
+
   const tableDefinitions = [
     `CREATE TABLE IF NOT EXISTS companies (
       id VARCHAR(64) PRIMARY KEY,
@@ -54,33 +59,9 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
       state VARCHAR(100),
       gstin VARCHAR(50),
       industrySector VARCHAR(100),
-      status VARCHAR(50) DEFAULT 'Active',
+      status VARCHAR(50) DEFAULT 'Pending',
       adminUserId VARCHAR(64),
-      createdAt VARCHAR(50),
-      updatedAt VARCHAR(50)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
-
-    `CREATE TABLE IF NOT EXISTS company_registration_requests (
-      id VARCHAR(64) PRIMARY KEY,
-      companyLegalName VARCHAR(255) NOT NULL,
-      gstin VARCHAR(50),
-      industrySector VARCHAR(100),
-      officeAddress TEXT,
-      city VARCHAR(100),
-      state VARCHAR(100),
-      firstName VARCHAR(100) NOT NULL,
-      lastName VARCHAR(100) NOT NULL,
-      officialEmail VARCHAR(255) NOT NULL,
-      mobileNumber VARCHAR(50) NOT NULL,
-      passwordHash VARCHAR(255) NOT NULL,
-      status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
       rejectionReason TEXT,
-      approvedCompanyId VARCHAR(64),
-      approvedCompanyCode VARCHAR(50),
-      approvedAdminUserId VARCHAR(64),
-      approvedBy VARCHAR(64),
-      approvedAt VARCHAR(50),
-      rejectedAt VARCHAR(50),
       createdAt VARCHAR(50),
       updatedAt VARCHAR(50)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
@@ -259,6 +240,22 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
       INDEX idx_employee_status (employeeId, status),
       INDEX idx_company (companyId),
       INDEX idx_office (officeLocationId)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS attendance_breaks (
+      id VARCHAR(64) PRIMARY KEY,
+      attendanceSessionId VARCHAR(64) NOT NULL,
+      userId VARCHAR(64) NOT NULL,
+      companyId VARCHAR(64) NOT NULL,
+      companyCode VARCHAR(50),
+      breakStartTime VARCHAR(50) NOT NULL,
+      breakEndTime VARCHAR(50),
+      durationSeconds INT DEFAULT 0,
+      createdAt VARCHAR(50),
+      updatedAt VARCHAR(50),
+      INDEX idx_break_session (attendanceSessionId),
+      INDEX idx_break_user (userId),
+      INDEX idx_break_company (companyId)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
     `CREATE TABLE IF NOT EXISTS payroll_records (
@@ -562,6 +559,7 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
         DELETE FROM leave_requests WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
         DELETE FROM attendance_records WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
         DELETE FROM work_sessions WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM attendance_breaks WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
         DELETE FROM payroll_records WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
         DELETE FROM job_openings WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
         DELETE FROM candidates WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
@@ -577,7 +575,6 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
         DELETE FROM audit_logs WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
         DELETE FROM employee_invitations WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
         DELETE FROM refresh_tokens WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
-        DELETE FROM company_registration_requests WHERE approvedCompanyId = OLD.id OR approvedCompanyCode = OLD.companyCode;
       END;
     `);
   } catch (trgErr) {
@@ -630,7 +627,7 @@ export async function purgeOrphanedData(pool: mysql.Pool) {
     // 2. Cascade delete from all child tables
     const tablesWithCompanyCols = [
       'departments', 'designations', 'locations', 'holidays', 'leave_balances',
-      'leave_requests', 'attendance_records', 'work_sessions', 'payroll_records',
+      'leave_requests', 'attendance_records', 'work_sessions', 'attendance_breaks', 'payroll_records',
       'job_openings', 'candidates', 'company_assets', 'training_programs',
       'employee_trainings', 'performance_cycles', 'performance_reviews',
       'resignations', 'announcements', 'notifications', 'documents',
@@ -664,6 +661,13 @@ export async function purgeOrphanedData(pool: mysql.Pool) {
 }
 
 export async function syncDataToMysql(pool: mysql.Pool, data: any) {
+  // Disabled bulk memory-to-MySQL overwrite.
+  // MySQL (XAMPP) is the single source of truth. All CRUD operations execute direct SQL.
+  // If a table is truncated or rows are deleted in phpMyAdmin/MySQL, they MUST NEVER be resurrected!
+  return;
+}
+
+export async function legacySyncDataToMysql(pool: mysql.Pool, data: any) {
   try {
     // 0. Companies
     if (data.companies !== undefined) {

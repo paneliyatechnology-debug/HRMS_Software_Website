@@ -385,6 +385,435 @@
       ]
     },
     {
+      "name": "☕ Attendance & Break Flow (Step-by-Step)",
+      "description": "Sequential workflow: Login -> Status -> Start Work -> Take Break -> Resume Work -> Stop Work -> History. Tokens and session IDs are auto-captured in tests.",
+      "item": [
+        {
+          "name": "Step 1: Login Employee (Auto-saves authToken)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"sk@gmail.com\",\n  \"password\": \"your_password_here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Logs in employee/admin and automatically sets pm.environment.set('authToken', res.accessToken)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.accessToken) {",
+                  "    pm.environment.set('authToken', res.accessToken);",
+                  "    pm.collectionVariables.set('authToken', res.accessToken);",
+                  "    console.log('authToken updated successfully');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Step 2: Check Initial Work Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "status"
+              ]
+            },
+            "description": "Returns current work status: hasActiveSession, isOnBreak, elapsedSeconds, assignedOffice."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 3: Start Work / Clock-In",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceInfo\": \"Web Browser\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "start"
+              ]
+            },
+            "description": "Starts a geo-fenced work session. Auto-saves sessionId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.sessionId) {",
+                  "    pm.environment.set('sessionId', res.sessionId);",
+                  "    pm.collectionVariables.set('sessionId', res.sessionId);",
+                  "    console.log('sessionId updated:', res.sessionId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Step 4: Check Status - Working",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "status"
+              ]
+            },
+            "description": "Returns hasActiveSession: true, isOnBreak: false, elapsed working seconds."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 5: Take a Break (Start Break)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/break/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "break",
+                "start"
+              ]
+            },
+            "description": "Pauses active work timer and transitions work session status to ON_BREAK.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.breakId) {",
+                  "    pm.environment.set('breakId', res.breakId);",
+                  "    pm.collectionVariables.set('breakId', res.breakId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Step 6: Check Status - On Break",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "status"
+              ]
+            },
+            "description": "Returns hasActiveSession: true, isOnBreak: true, currentBreak details and live ticking break elapsed seconds."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 7: Resume Work from Break",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/break/resume",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "break",
+                "resume"
+              ]
+            },
+            "description": "Ends active break, calculates authoritative duration, and resumes active work session.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Step 8: Check Status - Work Resumed",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "status"
+              ]
+            },
+            "description": "Returns hasActiveSession: true, isOnBreak: false. Working timer resumes from accumulated value."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 9: Stop Work / Clock-Out",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"remarks\": \"Shift completed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/stop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "stop"
+              ]
+            },
+            "description": "Calculates authoritative duration (Total Session - Total Breaks) and marks session COMPLETED. If on break, this call is blocked."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 10: View Work & Break History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/history?limit=10&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Lists past work sessions with start time, end time, accurate working duration, and geofence verification details."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "System Health",
       "description": "API status and system vitality",
       "item": [
@@ -447,6 +876,47 @@
       "name": "Authentication",
       "description": "JWT authentication, RBAC session switching, user accounts",
       "item": [
+        {
+          "name": "Register new company (Public - No Token Required, Awaiting Super Admin Approval)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register-company",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register-company"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Submits company information and owner account details. Company is created once Super Admin approves."
+          },
+          "response": []
+        },
         {
           "name": "Register new user account",
           "request": {
@@ -927,7 +1397,7 @@
           "response": []
         },
         {
-          "name": "Create and register a new company (auto-generates CMP-000001 code)",
+          "name": "Create and register a new company (Public - No Token Required)",
           "request": {
             "method": "POST",
             "header": [
@@ -963,7 +1433,173 @@
               "query": [],
               "variable": []
             },
-            "description": "Registers a new enterprise client company with auto-generated unique Company Code."
+            "description": "Registers a new enterprise client company without requiring an authentication token."
+          },
+          "response": []
+        },
+        {
+          "name": "List company registration requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/company-requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "company-requests"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true,
+                  "description": ""
+                }
+              ],
+              "variable": []
+            },
+            "description": "Lists all submitted company registration requests (filter by ?status=PENDING/APPROVED/REJECTED)."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve company registration request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/company-requests/{id}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "company-requests",
+                "{id}",
+                "approve"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Registration Request ID"
+                }
+              ]
+            },
+            "description": "Approves request, officially creates company tenant with CMP code, and provisions Admin user account."
+          },
+          "response": []
+        },
+        {
+          "name": "Reject company registration request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/company-requests/{id}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "company-requests",
+                "{id}",
+                "reject"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Registration Request ID"
+                }
+              ]
+            },
+            "description": "Rejects request with optional reason. Company is not created."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete company registration request",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/company-requests/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "company-requests",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Registration Request ID"
+                }
+              ]
+            },
+            "description": "Permanently deletes a company registration request (pending, approved, or rejected) from database."
           },
           "response": []
         },
@@ -1080,6 +1716,104 @@
               ]
             },
             "description": "Permanently removes a company and cleans up associated users/employees."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve company registration request (changes status to Active)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/companies/{id}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "companies",
+                "{id}",
+                "approve"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Company ID or Company Code"
+                }
+              ]
+            },
+            "description": "Approves pending company directly in companies table, updating status to Active."
+          },
+          "response": []
+        },
+        {
+          "name": "Reject company registration request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/companies/{id}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "companies",
+                "{id}",
+                "reject"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Company ID or Company Code"
+                }
+              ]
+            },
+            "description": "Rejects pending company directly in companies table, updating status to Rejected."
           },
           "response": []
         },
@@ -1781,7 +2515,7 @@
               "query": [],
               "variable": []
             },
-            "description": "Bulk deletes all user entries from both memory, database.json, and MySQL."
+            "description": "Bulk deletes all user entries from both memory and MySQL."
           },
           "response": []
         },
@@ -2190,7 +2924,7 @@
               "query": [],
               "variable": []
             },
-            "description": "Creates a complete timestamped JSON snapshot of all 22 database collections in data/backups/ directory."
+            "description": "Creates a live database snapshot and records it directly in MySQL database with zero disk file writes."
           },
           "response": []
         }
@@ -3058,7 +3792,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"deviceInfo\": \"Web Browser\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3100,7 +3834,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"remarks\": \"Shift completed\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3121,6 +3855,92 @@
               "variable": []
             },
             "description": "Validates employee is inside assigned office geofence, verifies fresh stop selfie, computes authoritative duration on server, and marks session completed."
+          },
+          "response": []
+        },
+        {
+          "name": "Take a Break (Start Break)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/break/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "break",
+                "start"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Pauses active work timer and starts break timer for the authenticated employee.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Resume Work from Break",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/work/break/resume",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "work",
+                "break",
+                "resume"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Concludes active break, records break duration, and resumes active work session.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "response": []
         },
@@ -5621,6 +6441,55 @@
           "response": []
         },
         {
+          "name": "Resend password setup email invitation to employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/employees/{id}/resend-invitation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "employees",
+                "{id}",
+                "resend-invitation"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Employee ID, code, or registered email"
+                }
+              ]
+            },
+            "description": "Generates a new secure 30-minute one-time token, revokes previous invitations, and dispatches email via SMTP."
+          },
+          "response": []
+        },
+        {
           "name": "Get attendance logs for company employees",
           "request": {
             "method": "GET",
@@ -5918,6 +6787,128 @@
       "description": "",
       "item": [
         {
+          "name": "Register a new company (Public - No Token Required)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/companies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Submits company registration request. Created once Super Admin approves."
+          },
+          "response": []
+        },
+        {
+          "name": "Register a new company (Public - No Token Required, Awaiting Super Admin Approval)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/companies/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                "register"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Submits company information and owner account details. Company is created once Super Admin approves."
+          },
+          "response": []
+        },
+        {
+          "name": "Submit company registration request for Super Admin approval",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/companies/registration-request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                "registration-request"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Submits company information and owner account details. Company is created once Super Admin approves."
+          },
+          "response": []
+        },
+        {
           "name": "Get assigned company profile for current logged-in user",
           "request": {
             "method": "GET",
@@ -6021,6 +7012,39 @@
               ]
             },
             "description": "Admin can update their own company contact info. Admin cannot modify another company."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete company and cascade delete all associated users, employees, and data",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Company ID or Company Code"
+                }
+              ]
+            },
+            "description": "Permanently deletes company and cascades deletion across all tables in MySQL and runtime memory."
           },
           "response": []
         }

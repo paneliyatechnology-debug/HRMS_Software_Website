@@ -427,6 +427,17 @@ export class AdminService {
         updatedAt: new Date().toISOString(),
       };
       this.db.users.unshift(newUser);
+      await this.db.saveUserToMysql(newUser);
+      await this.db.saveLeaveBalanceToMysql({
+        id: `bal-${userId}`,
+        companyId: company.id,
+        companyCode: company.companyCode,
+        employeeId: userId,
+        year: 2026,
+        casualLeave: { total: 12, used: 0, remaining: 12 },
+        sickLeave: { total: 10, used: 0, remaining: 10 },
+        paidLeave: { total: 15, used: 0, remaining: 15 },
+      });
 
       // 5. Initialize leave balances
       this.db.leaveBalances.push({
@@ -582,6 +593,7 @@ export class AdminService {
       user.shift = employee.shift;
       user.salary = employee.salary;
       user.updatedAt = new Date().toISOString();
+      await this.db.saveUserToMysql(user);
     }
 
     this.db.logAudit(

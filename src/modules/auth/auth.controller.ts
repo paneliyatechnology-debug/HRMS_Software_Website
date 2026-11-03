@@ -28,6 +28,7 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Company registration request submitted successfully (Pending Approval)' })
   registerCompany(@Body() body: RegisterCompanyRequestDto) {
     return this.superAdminService.createCompanyRegistrationRequest(body);
+  
   }
 
   @Public()
@@ -189,6 +190,25 @@ export class AuthController {
       req?.headers?.token ||
       req?.query?.token;
     return this.authService.getCurrentUser(rawToken);
+  }
+
+  @Get('session-status')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Check session status and validate company access',
+    description: 'Lightweight heartbeat endpoint to detect company rejection or session invalidation in real time.',
+  })
+  @ApiResponse({ status: 200, description: 'Session is active and company access is verified' })
+  @ApiResponse({ status: 403, description: 'Company access revoked' })
+  sessionStatus(@Req() req: any) {
+    return {
+      active: true,
+      userId: req.user?.id,
+      companyId: req.user?.companyId,
+      companyCode: req.user?.companyCode,
+      role: req.user?.role,
+      status: req.user?.status,
+    };
   }
 
   @Public()

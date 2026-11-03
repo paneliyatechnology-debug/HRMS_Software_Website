@@ -312,6 +312,19 @@ export class EmployeesService {
       };
       this.db.users.push(newUser);
 
+      // Persist directly and immediately to live MySQL
+      await this.db.saveUserToMysql(newUser);
+      await this.db.saveLeaveBalanceToMysql({
+        id: `bal-${newEmployee.id}`,
+        companyId: targetCompany.id,
+        companyCode: targetCompany.companyCode,
+        employeeId: newEmployee.id,
+        year: 2026,
+        casualLeave: { total: 12, used: 0, remaining: 12 },
+        sickLeave: { total: 10, used: 0, remaining: 10 },
+        paidLeave: { total: 15, used: 0, remaining: 15 },
+      });
+
       // Create initial leave balance
       this.db.leaveBalances.push({
         id: `bal-${newEmployee.id}`,
@@ -465,6 +478,7 @@ export class EmployeesService {
       user.salary = updated.salary;
       if (data.status) user.status = data.status;
       user.updatedAt = new Date().toISOString();
+      void this.db.saveUserToMysql(user);
     }
 
     this.db.logAudit(
@@ -506,6 +520,7 @@ export class EmployeesService {
     if (user) {
       user.status = 'Inactive';
       user.updatedAt = new Date().toISOString();
+      void this.db.saveUserToMysql(user);
     }
 
     this.db.logAudit(

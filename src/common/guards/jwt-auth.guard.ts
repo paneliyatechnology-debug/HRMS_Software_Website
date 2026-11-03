@@ -3,6 +3,7 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import jwt from 'jsonwebtoken';
@@ -110,17 +111,34 @@ export class JwtAuthGuard implements CanActivate {
       );
     }
 
-    if (user.status && user.status.toLowerCase() === 'inactive') {
-      throw new UnauthorizedException(
-        'Your user account is deactivated. Please contact your company administrator.',
-      );
+    if (user.status) {
+      const lowerStatus = user.status.toLowerCase();
+      if (lowerStatus === 'rejected') {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'COMPANY_ACCESS_REVOKED',
+          message: "Your company's access has been revoked. Please contact your administrator.",
+        });
+      }
+      if (lowerStatus === 'pending') {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'COMPANY_ACCESS_REVOKED',
+          message: 'Please wait untill Super-admin approve your company request',
+        });
+      }
+      if (lowerStatus === 'inactive') {
+        throw new UnauthorizedException(
+          'Your user account is deactivated. Please contact your company administrator.',
+        );
+      }
     }
 
-    // Verify user still exists in live MySQL if connected
+    // Verify user still exists and check live status in MySQL if connected
     if (this.db.getMysqlPool() && this.db.isConnectedToMysql) {
       try {
         const [userRows]: any = await this.db.getMysqlPool()!.query(
-          'SELECT id FROM users WHERE id = ? LIMIT 1',
+          'SELECT id, status, companyId, companyCode FROM users WHERE id = ? LIMIT 1',
           [user.id],
         );
         if (!userRows || userRows.length === 0) {
@@ -129,38 +147,75 @@ export class JwtAuthGuard implements CanActivate {
             'Invalid or expired session token. User not found. Please login again.',
           );
         }
+        const liveUser = userRows[0];
+        if (liveUser.status && liveUser.status.toLowerCase() === 'rejected') {
+          user.status = 'Rejected';
+          throw new ForbiddenException({
+            statusCode: 403,
+            code: 'COMPANY_ACCESS_REVOKED',
+            message: "Your company's access has been revoked. Please contact your administrator.",
+          });
+        }
       } catch (err) {
-        if (err instanceof UnauthorizedException) throw err;
+        if (err instanceof UnauthorizedException || err instanceof ForbiddenException) throw err;
       }
     }
 
-    // Verify company existence for non-super-admin users in live MySQL
+    // Verify company existence and active approval status for non-super-admin users
     if (user.role !== Role.SUPER_ADMIN && !user.isSuperAdmin) {
       const compId = (user.companyId || '').trim();
       const compCode = (user.companyCode || '').trim();
 
-      let companyExists = false;
+      let company: any = this.db.companies.find(
+        (c) =>
+          (compId && c.id.toLowerCase() === compId.toLowerCase()) ||
+          (compCode && c.companyCode?.toLowerCase() === compCode.toLowerCase()),
+      );
+
       if (this.db.getMysqlPool() && this.db.isConnectedToMysql) {
         try {
           const [compRows]: any = await this.db.getMysqlPool()!.query(
-            'SELECT id FROM companies WHERE id = ? OR companyCode = ? LIMIT 1',
+            'SELECT id, companyCode, companyName, status, rejectionReason FROM companies WHERE id = ? OR companyCode = ? LIMIT 1',
             [compId || '___none___', compCode || '___none___'],
           );
-          companyExists = compRows && compRows.length > 0;
+          if (compRows && compRows.length > 0) {
+            company = compRows[0];
+          } else {
+            company = null;
+          }
         } catch {}
-      } else {
-        companyExists = this.db.companies.some(
-          (c) =>
-            (compId && c.id.toLowerCase() === compId.toLowerCase()) ||
-            (compCode && c.companyCode?.toLowerCase() === compCode.toLowerCase()),
-        );
       }
 
-      if (!companyExists) {
+      if (!company) {
         void this.db.purgeCompanyCompletely(compId, compCode);
         throw new UnauthorizedException(
           'Your company account no longer exists or has been deleted. Access denied.',
         );
+      }
+
+      const compStatus = (company.status || '').toLowerCase();
+      if (compStatus === 'rejected') {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'COMPANY_ACCESS_REVOKED',
+          message: "Your company's access has been revoked. Please contact your administrator.",
+        });
+      }
+
+      if (compStatus === 'pending') {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'COMPANY_ACCESS_REVOKED',
+          message: 'Please wait untill Super-admin approve your company request',
+        });
+      }
+
+      if (compStatus === 'inactive') {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'COMPANY_ACCESS_REVOKED',
+          message: 'Your company account is inactive. Please contact Super Admin.',
+        });
       }
     }
 

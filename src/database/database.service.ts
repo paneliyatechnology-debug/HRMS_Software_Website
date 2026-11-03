@@ -35,9 +35,9 @@ import {
   Company,
   Role,
   WorkSession,
+  AttendanceBreak,
   RefreshToken,
   EmployeeInvitation,
-  CompanyRegistrationRequest,
 } from '../common/types.js';
 import { getMysqlPool, initializeMysqlTables, syncDataToMysql, purgeOrphanedData } from './mysql-sync.js';
 import { hashPassword } from '../common/utils/password.util.js';
@@ -67,6 +67,7 @@ interface DatabaseSchema {
   documents: EmployeeDocument[];
   auditLogs: AuditLog[];
   workSessions?: WorkSession[];
+  attendanceBreaks?: AttendanceBreak[];
   refreshTokens?: RefreshToken[];
   employeeInvitations?: EmployeeInvitation[];
 }
@@ -90,6 +91,7 @@ export class DatabaseService implements OnModuleInit {
   public leaveRequests: LeaveRequest[] = [];
   public attendanceRecords: AttendanceRecord[] = [];
   public workSessions: WorkSession[] = [];
+  public attendanceBreaks: AttendanceBreak[] = [];
   public payrollRecords: PayrollRecord[] = [];
   public jobs: JobOpening[] = [];
   public candidates: Candidate[] = [];
@@ -105,7 +107,9 @@ export class DatabaseService implements OnModuleInit {
   public auditLogs: AuditLog[] = [];
   public refreshTokens: RefreshToken[] = [];
   public employeeInvitations: EmployeeInvitation[] = [];
-  public companyRegistrationRequests: CompanyRegistrationRequest[] = [];
+  public get companyRegistrationRequests(): any[] {
+    return this.companies.filter((c) => c.status === 'Pending' || c.status === 'PENDING');
+  }
 
   async onModuleInit() {
     this.initDatabase();
@@ -134,9 +138,22 @@ export class DatabaseService implements OnModuleInit {
       // Automatically purge any residual orphaned data in MySQL whose company was deleted
       await purgeOrphanedData(this.mysqlPool);
 
+      await this.refreshFromMysql();
+    } catch (err) {
+      this.logger.warn(
+        'MySQL connection to "hrms" failed or not reachable.',
+        err,
+      );
+      this.isMysqlConnected = false;
+    }
+  }
+
+  public async refreshFromMysql() {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
       // Load companies
       try {
-        const [mysqlCompanies]: any = await this.mysqlPool.query(`SELECT * FROM companies`);
+        const [mysqlCompanies]: any = await this.mysqlPool.query(`SELECT * FROM companies ORDER BY createdAt DESC`);
         this.companies = (mysqlCompanies || []).map((c: any) => ({
           id: c.id,
           companyCode: c.companyCode,
@@ -145,12 +162,16 @@ export class DatabaseService implements OnModuleInit {
           email: c.email || '',
           phone: c.phone || '',
           address: c.address || '',
+          city: c.city || '',
+          state: c.state || '',
+          gstin: c.gstin || '',
+          industrySector: c.industrySector || '',
           status: c.status || 'Active',
           adminUserId: c.adminUserId || null,
+          rejectionReason: c.rejectionReason || null,
           createdAt: c.createdAt,
           updatedAt: c.updatedAt,
         }));
-        this.logger.log(`Synced ${this.companies.length} companies from live MySQL.`);
       } catch (loadErr) {
         this.logger.warn('Could not read existing companies from MySQL:', loadErr);
       }
@@ -239,10 +260,57 @@ export class DatabaseService implements OnModuleInit {
             createdAt: u.createdAt,
             updatedAt: u.updatedAt,
           }));
-
-        this.logger.log(`Loaded ${this.users.length} users and ${this.employees.length} employees directly from live MySQL.`);
       } catch (userLoadErr: any) {
         this.logger.warn('Could not read existing users from MySQL:', userLoadErr.message);
+      }
+
+      // Ensure Super Admin paneliya@gmail.com exists in MySQL and memory if missing
+      const hasSuperAdmin = this.users.some(
+        (u) => u.isSuperAdmin || u.role === Role.SUPER_ADMIN,
+      );
+      if (!hasSuperAdmin) {
+        try {
+          const saPassword = hashPassword('Paneliya@123');
+          const now = new Date().toISOString();
+          const saUser: User = {
+            id: 'user-super-admin-paneliya',
+            email: 'paneliya@gmail.com',
+            phone: '9876543210',
+            password: saPassword,
+            firstName: 'Ravi',
+            lastName: 'Paneliya',
+            role: Role.SUPER_ADMIN,
+            isSuperAdmin: true,
+            status: 'Active',
+            permissions: ['*'],
+            companyId: null,
+            companyCode: null,
+            employeeId: null,
+            avatarUrl: '',
+            createdAt: now,
+            updatedAt: now,
+          };
+          await this.mysqlPool.query(
+            `INSERT INTO users (id, email, phone, password, firstName, lastName, role, isSuperAdmin, status, permissions, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, 'SUPER_ADMIN', 1, 'Active', ?, ?, ?)
+             ON DUPLICATE KEY UPDATE role='SUPER_ADMIN', isSuperAdmin=1, status='Active', permissions=VALUES(permissions), updatedAt=VALUES(updatedAt)`,
+            [
+              saUser.id,
+              saUser.email,
+              saUser.phone,
+              saUser.password,
+              saUser.firstName,
+              saUser.lastName,
+              JSON.stringify(['*']),
+              now,
+              now,
+            ],
+          );
+          this.users.unshift(saUser);
+          this.logger.log('Super Admin user verified and available: paneliya@gmail.com');
+        } catch (saErr: any) {
+          this.logger.warn('Could not auto-seed Super Admin user:', saErr.message);
+        }
       }
 
       // Load all other collections directly from live MySQL (strictly no static seed data)
@@ -254,6 +322,7 @@ export class DatabaseService implements OnModuleInit {
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM leave_requests`); this.leaveRequests = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM attendance_records`); this.attendanceRecords = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM work_sessions`); this.workSessions = rows || []; } catch {}
+      try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM attendance_breaks`); this.attendanceBreaks = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM payroll_records`); this.payrollRecords = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM job_openings`); this.jobs = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM candidates`); this.candidates = rows || []; } catch {}
@@ -267,9 +336,32 @@ export class DatabaseService implements OnModuleInit {
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM notifications`); this.notifications = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM documents`); this.documents = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM audit_logs`); this.auditLogs = rows || []; } catch {}
-      try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM refresh_tokens`); this.refreshTokens = rows || []; } catch {}
+      try {
+        const [rows]: any = await this.mysqlPool.query(`SELECT * FROM refresh_tokens`);
+        const dbMap = new Map<string, RefreshToken>();
+        for (const r of rows || []) {
+          dbMap.set(r.id, {
+            id: r.id,
+            userId: r.userId,
+            companyId: r.companyId,
+            companyCode: r.companyCode,
+            tokenHash: r.tokenHash,
+            familyId: r.familyId,
+            isRevoked: r.isRevoked === 1 || r.isRevoked === true || r.isRevoked === '1',
+            expiresAt: r.expiresAt,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
+          });
+        }
+        // Preserve any newly created in-memory tokens that haven't synced yet
+        for (const localRt of this.refreshTokens) {
+          if (!dbMap.has(localRt.id) && !localRt.isRevoked) {
+            dbMap.set(localRt.id, localRt);
+          }
+        }
+        this.refreshTokens = Array.from(dbMap.values());
+      } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM employee_invitations`); this.employeeInvitations = rows || []; } catch {}
-      try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM company_registration_requests`); this.companyRegistrationRequests = rows || []; } catch {}
 
       // Sanitize runtime memory: purge any orphaned data whose company does not exist (preserving SUPER_ADMIN)
       const validCompanyIds = new Set(this.companies.map((c) => (c.id || '').toLowerCase()));
@@ -303,6 +395,7 @@ export class DatabaseService implements OnModuleInit {
       this.leaveRequests = this.leaveRequests.filter(belongsToExistingCompany);
       this.attendanceRecords = this.attendanceRecords.filter(belongsToExistingCompany);
       this.workSessions = this.workSessions.filter(belongsToExistingCompany);
+      this.attendanceBreaks = this.attendanceBreaks.filter(belongsToExistingCompany);
       this.payrollRecords = this.payrollRecords.filter(belongsToExistingCompany);
       this.jobs = this.jobs.filter(belongsToExistingCompany);
       this.candidates = this.candidates.filter(belongsToExistingCompany);
@@ -317,39 +410,17 @@ export class DatabaseService implements OnModuleInit {
       this.documents = this.documents.filter(belongsToExistingCompany);
       this.refreshTokens = this.refreshTokens.filter((rt) => rt.userId ? validUserIds.has(rt.userId) : false);
       this.employeeInvitations = this.employeeInvitations.filter(belongsToExistingCompany);
-
-      this.logger.log('Live MySQL state loaded and validated. Zero orphaned company data.');
     } catch (err) {
-      this.logger.warn(
-        'MySQL connection to "hrms" failed or not reachable.',
-        err,
-      );
-      this.isMysqlConnected = false;
+      this.logger.warn('Failed to refresh live data from MySQL:', err);
     }
   }
 
   private isReconnecting = false;
   private async syncToMysql(data: any) {
-    if (!this.mysqlPool || !this.isMysqlConnected) {
-      if (!this.isReconnecting) {
-        this.isReconnecting = true;
-        try {
-          await this.initMysqlSync();
-        } catch {
-          // Fallback
-        } finally {
-          this.isReconnecting = false;
-        }
-      }
-    }
-
-    if (this.mysqlPool && this.isMysqlConnected) {
-      try {
-        await syncDataToMysql(this.mysqlPool, data);
-      } catch (err) {
-        this.logger.error('Failed to sync changes to MySQL "hrms":', err);
-      }
-    }
+    // When live MySQL is connected, individual actions execute direct SQL queries.
+    // We intentionally DO NOT dump in-memory state back to MySQL,
+    // so if a user deletes or truncates tables in phpMyAdmin, MySQL stays clean and nothing recovers!
+    return;
   }
 
   public generateNextCompanyCode(): string {
@@ -419,6 +490,9 @@ export class DatabaseService implements OnModuleInit {
     this.workSessions = this.workSessions.filter(
       (ws) => !matchesTargetCompany(ws) && (!ws.employeeId || !purgedUserIds.has(ws.employeeId)),
     );
+    this.attendanceBreaks = this.attendanceBreaks.filter(
+      (ab) => !matchesTargetCompany(ab) && (!ab.userId || !purgedUserIds.has(ab.userId)),
+    );
     this.payrollRecords = this.payrollRecords.filter(
       (pr) => !matchesTargetCompany(pr) && (!pr.employeeId || !purgedUserIds.has(pr.employeeId)),
     );
@@ -450,11 +524,6 @@ export class DatabaseService implements OnModuleInit {
       (rt) => !matchesTargetCompany(rt) && (!rt.userId || !purgedUserIds.has(rt.userId)),
     );
     this.employeeInvitations = this.employeeInvitations.filter((ei) => !matchesTargetCompany(ei));
-    this.companyRegistrationRequests = this.companyRegistrationRequests.filter(
-      (cr) =>
-        (cleanId ? cr.approvedCompanyId?.toLowerCase() !== cleanId.toLowerCase() : true) &&
-        (cleanCode ? cr.approvedCompanyCode?.toLowerCase() !== cleanCode.toLowerCase() : true),
-    );
   }
 
   /**
@@ -508,13 +577,6 @@ export class DatabaseService implements OnModuleInit {
 
         try {
           await pool.query(
-            `DELETE FROM company_registration_requests WHERE approvedCompanyId = ? OR approvedCompanyCode = ?`,
-            [targetId, targetCode],
-          );
-        } catch {}
-
-        try {
-          await pool.query(
             `DELETE FROM companies WHERE id = ? OR companyCode = ?`,
             [targetId, targetCode],
           );
@@ -525,6 +587,350 @@ export class DatabaseService implements OnModuleInit {
       } catch (sqlErr) {
         this.logger.error('Error during MySQL complete company purge:', sqlErr);
       }
+    }
+  }
+
+  /**
+   * Persists a single User record directly to live MySQL users table.
+   * Ensures instant visibility in MySQL/phpMyAdmin and prevents race conditions.
+   */
+  public async saveUserToMysql(u: User): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO users (
+          id, email, phone, password, firstName, lastName, role, isSuperAdmin, status, companyId, companyCode,
+          employeeId, employeeCode, permissions, avatarUrl, gender, dateOfBirth, address, joiningDate, employmentType,
+          departmentId, departmentName, designationId, designationTitle, reportingManagerId, reportingManagerName,
+          workLocationId, workLocationName, shift, emergencyContact, bankDetails, taxInformation, education,
+          previousExperience, skills, salary, createdAt, updatedAt
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?
+        ) ON DUPLICATE KEY UPDATE
+          email=VALUES(email), phone=VALUES(phone), password=VALUES(password), firstName=VALUES(firstName),
+          lastName=VALUES(lastName), role=VALUES(role), isSuperAdmin=VALUES(isSuperAdmin), status=VALUES(status),
+          companyId=VALUES(companyId), companyCode=VALUES(companyCode), employeeId=VALUES(employeeId),
+          employeeCode=VALUES(employeeCode), permissions=VALUES(permissions), avatarUrl=VALUES(avatarUrl),
+          gender=VALUES(gender), dateOfBirth=VALUES(dateOfBirth), address=VALUES(address),
+          joiningDate=VALUES(joiningDate), employmentType=VALUES(employmentType), departmentId=VALUES(departmentId),
+          departmentName=VALUES(departmentName), designationId=VALUES(designationId),
+          designationTitle=VALUES(designationTitle), reportingManagerId=VALUES(reportingManagerId),
+          reportingManagerName=VALUES(reportingManagerName), workLocationId=VALUES(workLocationId),
+          workLocationName=VALUES(workLocationName), shift=VALUES(shift),
+          emergencyContact=VALUES(emergencyContact), bankDetails=VALUES(bankDetails),
+          taxInformation=VALUES(taxInformation), education=VALUES(education),
+          previousExperience=VALUES(previousExperience), skills=VALUES(skills), salary=VALUES(salary),
+          updatedAt=VALUES(updatedAt)`,
+        [
+          u.id,
+          u.email,
+          u.phone || null,
+          u.password,
+          u.firstName || '',
+          u.lastName || '',
+          u.role || 'EMPLOYEE',
+          u.isSuperAdmin ? 1 : 0,
+          u.status || 'Active',
+          u.companyId || null,
+          u.companyCode || null,
+          u.employeeId || u.id,
+          u.employeeCode || null,
+          typeof u.permissions === 'object' ? JSON.stringify(u.permissions) : u.permissions || null,
+          u.avatarUrl || null,
+          u.gender || null,
+          u.dateOfBirth || null,
+          u.address || null,
+          u.joiningDate || null,
+          u.employmentType || null,
+          u.departmentId || null,
+          u.departmentName || null,
+          u.designationId || null,
+          u.designationTitle || null,
+          u.reportingManagerId || null,
+          u.reportingManagerName || null,
+          u.workLocationId || null,
+          u.workLocationName || null,
+          u.shift || null,
+          typeof u.emergencyContact === 'object' ? JSON.stringify(u.emergencyContact) : u.emergencyContact || null,
+          typeof u.bankDetails === 'object' ? JSON.stringify(u.bankDetails) : u.bankDetails || null,
+          typeof u.taxInformation === 'object' ? JSON.stringify(u.taxInformation) : u.taxInformation || null,
+          typeof u.education === 'object' ? JSON.stringify(u.education) : u.education || null,
+          typeof u.previousExperience === 'object' ? JSON.stringify(u.previousExperience) : u.previousExperience || null,
+          typeof u.skills === 'object' ? JSON.stringify(u.skills) : u.skills || null,
+          typeof u.salary === 'object' ? JSON.stringify(u.salary) : u.salary || null,
+          u.createdAt || new Date().toISOString(),
+          u.updatedAt || new Date().toISOString(),
+        ],
+      );
+      this.logger.log(`Persisted user ${u.id} (${u.email}) directly to live MySQL.`);
+    } catch (err: any) {
+      this.logger.error(`Error saving user ${u.id} (${u.email}) to MySQL:`, err);
+      throw err;
+    }
+  }
+
+  /**
+   * Persists a single Company record directly to live MySQL companies table.
+   */
+  public async saveCompanyToMysql(c: Company): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO companies (
+          id, companyCode, companyName, email, phone, address, city, state, gstin, industrySector, status, adminUserId, rejectionReason, createdAt, updatedAt
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ) ON DUPLICATE KEY UPDATE
+          companyCode=VALUES(companyCode), companyName=VALUES(companyName), email=VALUES(email), phone=VALUES(phone),
+          address=VALUES(address), city=VALUES(city), state=VALUES(state), gstin=VALUES(gstin),
+          industrySector=VALUES(industrySector), status=VALUES(status), adminUserId=VALUES(adminUserId),
+          rejectionReason=VALUES(rejectionReason), updatedAt=VALUES(updatedAt)`,
+        [
+          c.id,
+          c.companyCode,
+          c.companyName || c.name || '',
+          c.email || null,
+          c.phone || null,
+          c.address || null,
+          c.city || null,
+          c.state || null,
+          c.gstin || null,
+          c.industrySector || null,
+          c.status || 'Active',
+          c.adminUserId || null,
+          c.rejectionReason || null,
+          c.createdAt || new Date().toISOString(),
+          c.updatedAt || new Date().toISOString(),
+        ],
+      );
+      this.logger.log(`Persisted company ${c.id} (${c.companyCode}) directly to live MySQL.`);
+    } catch (err: any) {
+      this.logger.error(`Error saving company ${c.id} to MySQL:`, err);
+      throw err;
+    }
+  }
+
+  /**
+   * Persists leave balance record directly to MySQL.
+   */
+  public async saveLeaveBalanceToMysql(lb: LeaveBalance): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO leave_balances (id, companyId, companyCode, employeeId, year, casualLeave, sickLeave, paidLeave)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE casualLeave=VALUES(casualLeave), sickLeave=VALUES(sickLeave), paidLeave=VALUES(paidLeave)`,
+        [
+          lb.id,
+          lb.companyId || null,
+          lb.companyCode || null,
+          lb.employeeId,
+          lb.year,
+          typeof lb.casualLeave === 'object' ? JSON.stringify(lb.casualLeave) : lb.casualLeave || null,
+          typeof lb.sickLeave === 'object' ? JSON.stringify(lb.sickLeave) : lb.sickLeave || null,
+          typeof lb.paidLeave === 'object' ? JSON.stringify(lb.paidLeave) : lb.paidLeave || null,
+        ],
+      );
+    } catch (err: any) {
+      this.logger.warn(`Could not save leave balance for employee ${lb.employeeId}: ${err.message}`);
+    }
+  }
+
+  /**
+   * Persists work session record directly to MySQL.
+   */
+  public async saveWorkSessionToMysql(ws: WorkSession): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO work_sessions (
+          id, employeeId, employeeName, companyId, companyCode, officeLocationId,
+          officeLocationName, status, startTime, endTime, durationSeconds, durationFormatted,
+          startLatitude, startLongitude, startAccuracy, startDistanceMeters, startSelfieUrl,
+          stopLatitude, stopLongitude, stopAccuracy, stopDistanceMeters, stopSelfieUrl,
+          deviceInfo, ipAddress, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          status=VALUES(status), endTime=VALUES(endTime), durationSeconds=VALUES(durationSeconds),
+          durationFormatted=VALUES(durationFormatted), stopLatitude=VALUES(stopLatitude),
+          stopLongitude=VALUES(stopLongitude), stopAccuracy=VALUES(stopAccuracy),
+          stopDistanceMeters=VALUES(stopDistanceMeters), stopSelfieUrl=VALUES(stopSelfieUrl),
+          updatedAt=VALUES(updatedAt)`,
+        [
+          ws.id,
+          ws.employeeId,
+          ws.employeeName || '',
+          ws.companyId,
+          ws.companyCode || '',
+          ws.officeLocationId,
+          ws.officeLocationName || '',
+          ws.status,
+          ws.startTime,
+          ws.endTime || null,
+          ws.durationSeconds || 0,
+          ws.durationFormatted || '',
+          ws.startLatitude,
+          ws.startLongitude,
+          ws.startAccuracy || null,
+          ws.startDistanceMeters || null,
+          ws.startSelfieUrl,
+          ws.stopLatitude || null,
+          ws.stopLongitude || null,
+          ws.stopAccuracy || null,
+          ws.stopDistanceMeters || null,
+          ws.stopSelfieUrl || null,
+          ws.deviceInfo || '',
+          ws.ipAddress || '',
+          ws.createdAt || new Date().toISOString(),
+          ws.updatedAt || new Date().toISOString(),
+        ],
+      );
+    } catch (err: any) {
+      this.logger.error(`Error saving work session ${ws.id} to MySQL:`, err);
+    }
+  }
+
+  /**
+   * Persists attendance break record directly to MySQL.
+   */
+  public async saveAttendanceBreakToMysql(ab: AttendanceBreak): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO attendance_breaks (
+          id, attendanceSessionId, userId, companyId, companyCode,
+          breakStartTime, breakEndTime, durationSeconds, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          breakEndTime=VALUES(breakEndTime), durationSeconds=VALUES(durationSeconds), updatedAt=VALUES(updatedAt)`,
+        [
+          ab.id,
+          ab.attendanceSessionId,
+          ab.userId,
+          ab.companyId,
+          ab.companyCode || null,
+          ab.breakStartTime,
+          ab.breakEndTime || null,
+          ab.durationSeconds || 0,
+          ab.createdAt || new Date().toISOString(),
+          ab.updatedAt || new Date().toISOString(),
+        ],
+      );
+    } catch (err: any) {
+      this.logger.error(`Error saving attendance break ${ab.id} to MySQL:`, err);
+    }
+  }
+
+  /**
+   * Persists or updates a refresh token record in live MySQL.
+   */
+  public async saveRefreshTokenToMysql(rt: RefreshToken): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO refresh_tokens (
+          id, userId, companyId, companyCode,
+          tokenHash, familyId, isRevoked, expiresAt, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          isRevoked=VALUES(isRevoked),
+          expiresAt=VALUES(expiresAt),
+          updatedAt=VALUES(updatedAt)`,
+        [
+          rt.id,
+          rt.userId,
+          rt.companyId || 'cmp-1',
+          rt.companyCode || 'CMP-000001',
+          rt.tokenHash,
+          rt.familyId,
+          rt.isRevoked ? 1 : 0,
+          rt.expiresAt,
+          rt.createdAt,
+          rt.updatedAt,
+        ],
+      );
+    } catch (err: any) {
+      this.logger.error(`Error saving refresh token ${rt.id} to MySQL:`, err);
+    }
+  }
+
+  /**
+   * Persists attendance summary record directly to MySQL.
+   */
+  public async saveAttendanceRecordToMysql(att: AttendanceRecord): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO attendance_records (
+          id, companyId, companyCode, employeeId, employeeName, date,
+          checkIn, checkOut, breakDurationMinutes, workingHours, overtimeHours,
+          status, remarks, createdAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          companyId=VALUES(companyId), companyCode=VALUES(companyCode),
+          checkIn=VALUES(checkIn), checkOut=VALUES(checkOut),
+          breakDurationMinutes=VALUES(breakDurationMinutes),
+          workingHours=VALUES(workingHours), overtimeHours=VALUES(overtimeHours),
+          status=VALUES(status), remarks=VALUES(remarks)`,
+        [
+          att.id,
+          (att as any).companyId || null,
+          (att as any).companyCode || null,
+          att.employeeId,
+          att.employeeName,
+          att.date,
+          att.checkIn || '',
+          att.checkOut || '',
+          att.breakDurationMinutes || 0,
+          att.workingHours || 0,
+          att.overtimeHours || 0,
+          att.status,
+          att.remarks || '',
+          att.createdAt || new Date().toISOString(),
+        ],
+      );
+    } catch (err: any) {
+      this.logger.error(`Error saving attendance record ${att.id} to MySQL:`, err);
+    }
+  }
+
+  /**
+   * Persists location record directly to MySQL locations table.
+   */
+  public async saveLocationToMysql(loc: Location): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO locations (
+          id, name, city, country, address, isHeadquarter, latitude, longitude, radiusMeters, companyId, companyCode, isActive
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          name=VALUES(name), city=VALUES(city), country=VALUES(country), address=VALUES(address),
+          isHeadquarter=VALUES(isHeadquarter), latitude=VALUES(latitude), longitude=VALUES(longitude),
+          radiusMeters=VALUES(radiusMeters), companyId=VALUES(companyId), companyCode=VALUES(companyCode),
+          isActive=VALUES(isActive)`,
+        [
+          loc.id,
+          loc.name,
+          loc.city || null,
+          loc.country || null,
+          loc.address || null,
+          loc.isHeadquarter ? 1 : 0,
+          loc.latitude || 21.1702401,
+          loc.longitude || 72.8310607,
+          loc.radiusMeters || 500,
+          loc.companyId || null,
+          loc.companyCode || null,
+          loc.isActive !== false ? 1 : 0,
+        ],
+      );
+      this.logger.log(`Saved location "${loc.id}" (${loc.name}) directly to live MySQL.`);
+    } catch (err: any) {
+      this.logger.error(`Error saving location ${loc.id} to MySQL:`, err);
     }
   }
 
@@ -859,8 +1265,8 @@ export class DatabaseService implements OnModuleInit {
           params = excludeUserId ? [normalized, companyId, excludeUserId] : [normalized, companyId];
         } else {
           query = excludeUserId
-            ? `SELECT id FROM users WHERE LOWER(TRIM(email)) = ? AND (companyId IS NULL OR companyId = '') AND id != ? LIMIT 1`
-            : `SELECT id FROM users WHERE LOWER(TRIM(email)) = ? AND (companyId IS NULL OR companyId = '') LIMIT 1`;
+            ? `SELECT id FROM users WHERE LOWER(TRIM(email)) = ? AND id != ? LIMIT 1`
+            : `SELECT id FROM users WHERE LOWER(TRIM(email)) = ? LIMIT 1`;
           params = excludeUserId ? [normalized, excludeUserId] : [normalized];
         }
 
@@ -970,8 +1376,8 @@ export class DatabaseService implements OnModuleInit {
           params = excludeUserId ? [companyId, excludeUserId] : [companyId];
         } else {
           query = excludeUserId
-            ? `SELECT id, phone FROM users WHERE phone IS NOT NULL AND phone != '' AND (companyId IS NULL OR companyId = '') AND id != ?`
-            : `SELECT id, phone FROM users WHERE phone IS NOT NULL AND phone != '' AND (companyId IS NULL OR companyId = '')`;
+            ? `SELECT id, phone FROM users WHERE phone IS NOT NULL AND phone != '' AND id != ?`
+            : `SELECT id, phone FROM users WHERE phone IS NOT NULL AND phone != ''`;
           params = excludeUserId ? [excludeUserId] : [];
         }
 

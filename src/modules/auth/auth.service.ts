@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 import { DatabaseService } from '../../database/database.service.js';
@@ -67,6 +67,7 @@ export class AuthService {
     };
 
     this.db.refreshTokens.push(record);
+    await this.db.saveRefreshTokenToMysql(record);
     this.db.persist();
     return { rawToken, record };
   }
@@ -103,11 +104,28 @@ export class AuthService {
       targetCompany = this.db.companies.find(
         (c) => c.id === data.companyId || c.companyCode === data.companyId,
       );
+      if (!targetCompany && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+        try {
+          const [rows]: any = await this.db.getMysqlPool()!.query(
+            `SELECT * FROM companies WHERE id = ? OR companyCode = ? LIMIT 1`,
+            [data.companyId, data.companyId],
+          );
+          if (rows && rows.length > 0) targetCompany = rows[0];
+        } catch {}
+      }
       if (!targetCompany) {
         throw new NotFoundException(`Company with ID or code "${data.companyId}" not found.`);
       }
-    } else if (role !== Role.SUPER_ADMIN && this.db.companies.length > 0) {
-      targetCompany = this.db.companies[0];
+    } else if (role !== Role.SUPER_ADMIN) {
+      targetCompany = this.db.companies.find((c) => c.status === 'Active') || this.db.companies[0];
+      if (!targetCompany && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+        try {
+          const [rows]: any = await this.db.getMysqlPool()!.query(
+            `SELECT * FROM companies WHERE status = 'Active' ORDER BY createdAt ASC LIMIT 1`,
+          );
+          if (rows && rows.length > 0) targetCompany = rows[0];
+        } catch {}
+      }
     }
 
     const companyScopeId = targetCompany ? targetCompany.id : null;
@@ -156,6 +174,8 @@ export class AuthService {
         targetCompany.updatedAt = new Date().toISOString();
       }
 
+      let newEmployee: Employee | undefined;
+
       // Create corresponding Employee record with auto-generated employeeCode ONLY for EMPLOYEE role
       if (role === Role.EMPLOYEE) {
         let maxEmpNum = 0;
@@ -174,7 +194,7 @@ export class AuthService {
         }
         const autoEmployeeCode = `EMP-${String(maxEmpNum + 1).padStart(6, '0')}`;
 
-        const newEmployee: Employee = {
+        newEmployee = {
           id: employeeId,
           employeeCode: autoEmployeeCode,
           companyId: targetCompany?.id || '',
@@ -258,6 +278,26 @@ export class AuthService {
         newUser.employeeCode = null;
       }
 
+      // Persist directly and immediately to live MySQL
+      await this.db.saveUserToMysql(newUser);
+
+      if (role === Role.EMPLOYEE && newEmployee) {
+        await this.db.saveLeaveBalanceToMysql({
+          id: `bal-${newEmployee.id}`,
+          companyId: newEmployee.companyId,
+          companyCode: newEmployee.companyCode,
+          employeeId: newEmployee.id,
+          year: 2026,
+          casualLeave: { total: 12, used: 0, remaining: 12 },
+          sickLeave: { total: 10, used: 0, remaining: 10 },
+          paidLeave: { total: 15, used: 0, remaining: 15 },
+        });
+      }
+
+      if (role === Role.ADMIN && targetCompany) {
+        await this.db.saveCompanyToMysql(targetCompany);
+      }
+
       this.db.logAudit(
         newUser.id,
         `${newUser.firstName} ${newUser.lastName}`,
@@ -275,9 +315,8 @@ export class AuthService {
 
       return {
         message: 'User registered successfully',
-        requestToken: token,
-        refreshToken,
         accessToken: token,
+        refreshToken,
         user: {
           id: newUser.id,
           userId: newUser.id,
@@ -355,6 +394,71 @@ export class AuthService {
 
       // Fallback: match by email string without @
       if (matchingUsers.length === 0) {
+      // Query live MySQL database before concluding user does not exist
+      if (this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+        try {
+          const pool = this.db.getMysqlPool()!;
+          const [dbUsers]: any = await pool.query(
+            `SELECT * FROM users WHERE LOWER(email) = ? OR (phone = ? AND phone != '') LIMIT 5`,
+            [cleanInput.toLowerCase(), cleanInput],
+          );
+          if (dbUsers && dbUsers.length > 0) {
+            for (const u of dbUsers) {
+              const mappedUser: User = {
+                id: u.id,
+                email: u.email,
+                phone: u.phone || '',
+                password: u.password,
+                firstName: u.firstName || '',
+                lastName: u.lastName || '',
+                role: u.role || 'EMPLOYEE',
+                isSuperAdmin: u.isSuperAdmin === 1 || u.isSuperAdmin === true || u.role === 'SUPER_ADMIN',
+                status: u.status || 'Active',
+                companyId: u.companyId || null,
+                companyCode: u.companyCode || null,
+                employeeId: u.employeeId || u.id,
+                employeeCode: u.employeeCode || null,
+                permissions: typeof u.permissions === 'string' ? JSON.parse(u.permissions) : u.permissions || [],
+                avatarUrl: u.avatarUrl || '',
+                gender: u.gender || 'Other',
+                dateOfBirth: u.dateOfBirth || '',
+                address: u.address || '',
+                joiningDate: u.joiningDate || '',
+                employmentType: u.employmentType || 'Full-time',
+                departmentId: u.departmentId || '',
+                departmentName: u.departmentName || '',
+                designationId: u.designationId || '',
+                designationTitle: u.designationTitle || '',
+                reportingManagerId: u.reportingManagerId || '',
+                reportingManagerName: u.reportingManagerName || '',
+                workLocationId: u.workLocationId || '',
+                workLocationName: u.workLocationName || '',
+                shift: u.shift || 'General Shift (9 AM - 6 PM)',
+                emergencyContact: typeof u.emergencyContact === 'string' ? JSON.parse(u.emergencyContact) : u.emergencyContact || {},
+                bankDetails: typeof u.bankDetails === 'string' ? JSON.parse(u.bankDetails) : u.bankDetails || {},
+                taxInformation: typeof u.taxInformation === 'string' ? JSON.parse(u.taxInformation) : u.taxInformation || {},
+                education: typeof u.education === 'string' ? JSON.parse(u.education) : u.education || [],
+                previousExperience: typeof u.previousExperience === 'string' ? JSON.parse(u.previousExperience) : u.previousExperience || [],
+                skills: typeof u.skills === 'string' ? JSON.parse(u.skills) : u.skills || [],
+                salary: typeof u.salary === 'string' ? JSON.parse(u.salary) : u.salary || {},
+                createdAt: u.createdAt || new Date().toISOString(),
+                updatedAt: u.updatedAt || new Date().toISOString(),
+              };
+
+              const idx = this.db.users.findIndex((x) => x.id === mappedUser.id);
+              if (idx !== -1) {
+                this.db.users[idx] = mappedUser;
+              } else {
+                this.db.users.push(mappedUser);
+              }
+              matchingUsers.push(mappedUser);
+            }
+          }
+        } catch {}
+      }
+    }
+
+    if (matchingUsers.length === 0) {
         matchingUsers = this.db.users.filter(
           (u) => u.email.toLowerCase() === cleanInput.toLowerCase(),
         );
@@ -362,64 +466,129 @@ export class AuthService {
     }
 
     if (matchingUsers.length === 0) {
-      // Check if this email or phone belongs to a pending company registration request
+      // Query live MySQL database before concluding user does not exist
+      if (this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+        try {
+          const pool = this.db.getMysqlPool()!;
+          const [dbUsers]: any = await pool.query(
+            `SELECT * FROM users WHERE LOWER(email) = ? OR (phone = ? AND phone != '') LIMIT 5`,
+            [cleanInput.toLowerCase(), cleanInput],
+          );
+          if (dbUsers && dbUsers.length > 0) {
+            for (const u of dbUsers) {
+              const mappedUser: User = {
+                id: u.id,
+                email: u.email,
+                phone: u.phone || '',
+                password: u.password,
+                firstName: u.firstName || '',
+                lastName: u.lastName || '',
+                role: u.role || 'EMPLOYEE',
+                isSuperAdmin: u.isSuperAdmin === 1 || u.isSuperAdmin === true || u.role === 'SUPER_ADMIN',
+                status: u.status || 'Active',
+                companyId: u.companyId || null,
+                companyCode: u.companyCode || null,
+                employeeId: u.employeeId || u.id,
+                employeeCode: u.employeeCode || null,
+                permissions: typeof u.permissions === 'string' ? JSON.parse(u.permissions) : u.permissions || [],
+                avatarUrl: u.avatarUrl || '',
+                gender: u.gender || 'Other',
+                dateOfBirth: u.dateOfBirth || '',
+                address: u.address || '',
+                joiningDate: u.joiningDate || '',
+                employmentType: u.employmentType || 'Full-time',
+                departmentId: u.departmentId || '',
+                departmentName: u.departmentName || '',
+                designationId: u.designationId || '',
+                designationTitle: u.designationTitle || '',
+                reportingManagerId: u.reportingManagerId || '',
+                reportingManagerName: u.reportingManagerName || '',
+                workLocationId: u.workLocationId || '',
+                workLocationName: u.workLocationName || '',
+                shift: u.shift || 'General Shift (9 AM - 6 PM)',
+                emergencyContact: typeof u.emergencyContact === 'string' ? JSON.parse(u.emergencyContact) : u.emergencyContact || {},
+                bankDetails: typeof u.bankDetails === 'string' ? JSON.parse(u.bankDetails) : u.bankDetails || {},
+                taxInformation: typeof u.taxInformation === 'string' ? JSON.parse(u.taxInformation) : u.taxInformation || {},
+                education: typeof u.education === 'string' ? JSON.parse(u.education) : u.education || [],
+                previousExperience: typeof u.previousExperience === 'string' ? JSON.parse(u.previousExperience) : u.previousExperience || [],
+                skills: typeof u.skills === 'string' ? JSON.parse(u.skills) : u.skills || [],
+                salary: typeof u.salary === 'string' ? JSON.parse(u.salary) : u.salary || {},
+                createdAt: u.createdAt || new Date().toISOString(),
+                updatedAt: u.updatedAt || new Date().toISOString(),
+              };
+
+              const idx = this.db.users.findIndex((x) => x.id === mappedUser.id);
+              if (idx !== -1) {
+                this.db.users[idx] = mappedUser;
+              } else {
+                this.db.users.push(mappedUser);
+              }
+              matchingUsers.push(mappedUser);
+            }
+          }
+        } catch {}
+      }
+    }
+
+    if (matchingUsers.length === 0) {
+      // Check if this email or phone belongs to a pending company in companies table
       const cleanPhone = cleanInput.replace(/\D/g, '');
-      let pendingReq = this.db.companyRegistrationRequests.find(
-        (r) =>
-          r.status === 'PENDING' &&
-          (r.officialEmail.toLowerCase() === cleanInput.toLowerCase() ||
-            (cleanPhone && r.mobileNumber && r.mobileNumber.replace(/\D/g, '') === cleanPhone)),
+      let pendingComp = this.db.companies.find(
+        (c) =>
+          (c.status === 'Pending' || c.status === 'PENDING') &&
+          ((c.email && c.email.toLowerCase() === cleanInput.toLowerCase()) ||
+            (cleanPhone && c.phone && c.phone.replace(/\D/g, '') === cleanPhone)),
       );
 
-      if (!pendingReq && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+      if (!pendingComp && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
         try {
           const pool = this.db.getMysqlPool();
           if (pool) {
             const [rows]: any = await pool.query(
-              `SELECT * FROM company_registration_requests 
-               WHERE (LOWER(officialEmail) = ? OR (mobileNumber = ? AND mobileNumber != '')) 
-               AND status = 'PENDING' LIMIT 1`,
+              `SELECT * FROM companies 
+               WHERE (LOWER(email) = ? OR (phone = ? AND phone != '')) 
+               AND (status = 'Pending' OR status = 'PENDING') LIMIT 1`,
               [cleanInput.toLowerCase(), cleanPhone || '___none___'],
             );
             if (rows && rows.length > 0) {
-              pendingReq = rows[0];
+              pendingComp = rows[0];
             }
           }
         } catch {}
       }
 
-      if (pendingReq) {
+      if (pendingComp) {
         throw new UnauthorizedException('Please wait untill Super-admin approve your company request');
       }
 
       // Check if rejected
-      let rejectedReq = this.db.companyRegistrationRequests.find(
-        (r) =>
-          r.status === 'REJECTED' &&
-          (r.officialEmail.toLowerCase() === cleanInput.toLowerCase() ||
-            (cleanPhone && r.mobileNumber && r.mobileNumber.replace(/\D/g, '') === cleanPhone)),
+      let rejectedComp = this.db.companies.find(
+        (c) =>
+          (c.status === 'Rejected' || c.status === 'REJECTED') &&
+          ((c.email && c.email.toLowerCase() === cleanInput.toLowerCase()) ||
+            (cleanPhone && c.phone && c.phone.replace(/\D/g, '') === cleanPhone)),
       );
 
-      if (!rejectedReq && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+      if (!rejectedComp && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
         try {
           const pool = this.db.getMysqlPool();
           if (pool) {
             const [rows]: any = await pool.query(
-              `SELECT * FROM company_registration_requests 
-               WHERE (LOWER(officialEmail) = ? OR (mobileNumber = ? AND mobileNumber != '')) 
-               AND status = 'REJECTED' LIMIT 1`,
+              `SELECT * FROM companies 
+               WHERE (LOWER(email) = ? OR (phone = ? AND phone != '')) 
+               AND (status = 'Rejected' OR status = 'REJECTED') LIMIT 1`,
               [cleanInput.toLowerCase(), cleanPhone || '___none___'],
             );
             if (rows && rows.length > 0) {
-              rejectedReq = rows[0];
+              rejectedComp = rows[0];
             }
           }
         } catch {}
       }
 
-      if (rejectedReq) {
+      if (rejectedComp) {
         throw new UnauthorizedException(
-          `Your company registration request was rejected: ${rejectedReq.rejectionReason || 'Please contact Super Admin.'}`,
+          `Your company registration request was rejected: ${rejectedComp.rejectionReason || 'Please contact Super Admin.'}`,
         );
       }
 
@@ -510,40 +679,55 @@ export class AuthService {
       }
     }
 
-    // Strict Company Existence Verification:
-    // If the user is NOT a Super Admin, their company MUST exist in live MySQL.
-    // If their company was deleted (via API or phpMyAdmin), deny login immediately and purge memory!
+    // Strict Company Existence & Status Verification:
+    // If the user is NOT a Super Admin, their company MUST exist in live MySQL and be Active.
     const isSuper = user.role === Role.SUPER_ADMIN || user.isSuperAdmin === true;
     if (!isSuper) {
       const compId = (user.companyId || '').trim();
       const compCode = (user.companyCode || '').trim();
 
-      let companyExistsInDb = false;
+      let company: any = this.db.companies.find(
+        (c) =>
+          (compId && c.id.toLowerCase() === compId.toLowerCase()) ||
+          (compCode && c.companyCode?.toLowerCase() === compCode.toLowerCase()),
+      );
+
       if (this.db.getMysqlPool() && this.db.isConnectedToMysql) {
         try {
           const [compRows]: any = await this.db.getMysqlPool()!.query(
-            `SELECT id FROM companies WHERE id = ? OR companyCode = ? LIMIT 1`,
+            `SELECT * FROM companies WHERE id = ? OR companyCode = ? LIMIT 1`,
             [compId || '___none___', compCode || '___none___'],
           );
-          companyExistsInDb = compRows && compRows.length > 0;
-        } catch {
-          companyExistsInDb = false;
-        }
-      } else {
-        companyExistsInDb = this.db.companies.some(
-          (c) =>
-            (compId && c.id.toLowerCase() === compId.toLowerCase()) ||
-            (compCode && c.companyCode?.toLowerCase() === compCode.toLowerCase()),
-        );
+          if (compRows && compRows.length > 0) {
+            company = compRows[0];
+          }
+        } catch {}
       }
 
-      if (!companyExistsInDb) {
+      if (!company) {
         // The company was deleted from backend or phpMyAdmin!
         // Immediately purge the company data completely from DB & memory
         await this.db.purgeCompanyCompletely(compId, compCode);
         throw new UnauthorizedException(
           'Your company account no longer exists or has been deleted. Access denied.',
         );
+      }
+
+      // Check if company is Pending approval
+      if (company.status === 'Pending' || company.status === 'PENDING' || user.status === 'Pending') {
+        throw new UnauthorizedException('Please wait untill Super-admin approve your company request');
+      }
+
+      // Check if company was Rejected
+      if (company.status === 'Rejected' || company.status === 'REJECTED' || user.status === 'Rejected') {
+        throw new UnauthorizedException(
+          `Your company registration request was rejected: ${company.rejectionReason || 'Please contact Super Admin.'}`,
+        );
+      }
+
+      // Check if company is Inactive
+      if (company.status === 'Inactive' || user.status === 'Inactive') {
+        throw new UnauthorizedException('Your company account is inactive. Please contact Super Admin.');
       }
     }
 
@@ -559,7 +743,7 @@ export class AuthService {
       let isValid = comparePassword(password, user.password);
       // Fallback for standard demo passwords on Super Admin & Admin accounts
       if (!isValid && (user.role === Role.SUPER_ADMIN || user.role === Role.ADMIN || user.isSuperAdmin)) {
-        if (password === 'Password123!' || password === 'Admin@123' || password === 'Ravi@123') {
+        if (password === 'Paneliya@123' || password === 'Password123!' || password === 'Admin@123' || password === 'Ravi@123') {
           isValid = true;
           user.password = hashPassword(password);
           user.updatedAt = new Date().toISOString();
@@ -602,9 +786,8 @@ export class AuthService {
     );
 
     return {
-      requestToken: token,
-      refreshToken,
       accessToken: token,
+      refreshToken,
       user: {
         id: user.id,
         userId: user.id,
@@ -715,9 +898,8 @@ export class AuthService {
     const token = this.generateAccessToken(matchedUser);
     const { rawToken: refreshToken } = await this.createRefreshToken(matchedUser);
     return {
-      requestToken: token,
-      refreshToken,
       accessToken: token,
+      refreshToken,
       user: {
         ...safeUser,
         id: matchedUser.id,
@@ -736,7 +918,32 @@ export class AuthService {
     const cleanToken = rawRefreshToken.trim();
     const tokenHash = crypto.createHash('sha256').update(cleanToken).digest('hex');
 
-    const matched = this.db.refreshTokens.find((rt) => rt.tokenHash === tokenHash);
+    let matched = this.db.refreshTokens.find((rt) => rt.tokenHash === tokenHash);
+    if (!matched && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+      try {
+        const [rows]: any = await this.db.getMysqlPool()!.query(
+          'SELECT * FROM refresh_tokens WHERE tokenHash = ? LIMIT 1',
+          [tokenHash],
+        );
+        if (rows && rows.length > 0) {
+          const r = rows[0];
+          matched = {
+            id: r.id,
+            userId: r.userId,
+            companyId: r.companyId,
+            companyCode: r.companyCode,
+            tokenHash: r.tokenHash,
+            familyId: r.familyId,
+            isRevoked: r.isRevoked === 1 || r.isRevoked === true || r.isRevoked === '1',
+            expiresAt: r.expiresAt,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
+          };
+          this.db.refreshTokens.push(matched);
+        }
+      } catch {}
+    }
+
     if (!matched) {
       throw new UnauthorizedException('Invalid or unknown refresh token');
     }
@@ -749,6 +956,15 @@ export class AuthService {
           rt.updatedAt = new Date().toISOString();
         }
       }
+      try {
+        const pool = this.db.getMysqlPool();
+        if (pool && this.db.isConnectedToMysql) {
+          await pool.query('UPDATE refresh_tokens SET isRevoked = 1, updatedAt = ? WHERE familyId = ?', [
+            new Date().toISOString(),
+            matched.familyId,
+          ]);
+        }
+      } catch {}
       this.db.persist();
       throw new UnauthorizedException('Refresh token reuse detected. All sessions in this family have been revoked.');
     }
@@ -757,17 +973,42 @@ export class AuthService {
     if (new Date(matched.expiresAt).getTime() <= Date.now()) {
       matched.isRevoked = true;
       matched.updatedAt = new Date().toISOString();
+      await this.db.saveRefreshTokenToMysql(matched);
       this.db.persist();
       throw new UnauthorizedException('Refresh token has expired. Please login again.');
     }
 
     // Find associated user
     const user = this.db.users.find((u) => u.id === matched.userId);
-    if (!user || (user.status && user.status.toLowerCase() !== 'active')) {
+    if (!user) {
       matched.isRevoked = true;
       matched.updatedAt = new Date().toISOString();
       this.db.persist();
-      throw new UnauthorizedException('User account is inactive, suspended, or terminated.');
+      throw new UnauthorizedException('User account not found.');
+    }
+
+    if (user.status) {
+      const lowerUserStatus = user.status.toLowerCase();
+      if (lowerUserStatus === 'rejected') {
+        for (const rt of this.db.refreshTokens) {
+          if (rt.familyId === matched.familyId) {
+            rt.isRevoked = true;
+            rt.updatedAt = new Date().toISOString();
+          }
+        }
+        this.db.persist();
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'COMPANY_ACCESS_REVOKED',
+          message: "Your company's access has been revoked. Please contact your administrator.",
+        });
+      }
+      if (lowerUserStatus !== 'active') {
+        matched.isRevoked = true;
+        matched.updatedAt = new Date().toISOString();
+        this.db.persist();
+        throw new UnauthorizedException('User account is inactive, suspended, or terminated.');
+      }
     }
 
     // Verify company context matches
@@ -775,17 +1016,33 @@ export class AuthService {
       throw new UnauthorizedException('Company context mismatch during token renewal.');
     }
 
-    // Verify company still exists (for non-SuperAdmin users)
+    // Verify company still exists and has Active approval status (for non-SuperAdmin users)
     const isSuperUser = user.role === Role.SUPER_ADMIN || user.isSuperAdmin === true;
     if (!isSuperUser) {
       const compId = (user.companyId || '').trim();
       const compCode = (user.companyCode || '').trim();
-      const companyExists = this.db.companies.some(
+
+      let company: any = this.db.companies.find(
         (c) =>
           (compId && c.id.toLowerCase() === compId.toLowerCase()) ||
           (compCode && c.companyCode?.toLowerCase() === compCode.toLowerCase()),
       );
-      if (!companyExists) {
+
+      if (this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+        try {
+          const [compRows]: any = await this.db.getMysqlPool()!.query(
+            'SELECT id, companyCode, companyName, status, rejectionReason FROM companies WHERE id = ? OR companyCode = ? LIMIT 1',
+            [compId || '___none___', compCode || '___none___'],
+          );
+          if (compRows && compRows.length > 0) {
+            company = compRows[0];
+          } else {
+            company = undefined;
+          }
+        } catch {}
+      }
+
+      if (!company) {
         matched.isRevoked = true;
         matched.updatedAt = new Date().toISOString();
         this.db.persist();
@@ -793,15 +1050,59 @@ export class AuthService {
           'Your company account no longer exists or has been deleted. Access denied.',
         );
       }
+
+      const compStatus = (company.status || '').toLowerCase();
+      if (compStatus === 'rejected') {
+        // Revoke the whole family and all refresh tokens for this company
+        for (const rt of this.db.refreshTokens) {
+          if (rt.familyId === matched.familyId || rt.companyId === company.id) {
+            rt.isRevoked = true;
+            rt.updatedAt = new Date().toISOString();
+          }
+        }
+        try {
+          const pool = this.db.getMysqlPool();
+          if (pool && this.db.isConnectedToMysql) {
+            await pool.query('UPDATE refresh_tokens SET isRevoked = 1 WHERE familyId = ? OR companyId = ?', [
+              matched.familyId,
+              company.id,
+            ]);
+          }
+        } catch {}
+        this.db.persist();
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'COMPANY_ACCESS_REVOKED',
+          message: "Your company's access has been revoked. Please contact your administrator.",
+        });
+      }
+
+      if (compStatus === 'pending') {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'COMPANY_ACCESS_REVOKED',
+          message: 'Please wait untill Super-admin approve your company request',
+        });
+      }
+
+      if (compStatus === 'inactive') {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'COMPANY_ACCESS_REVOKED',
+          message: 'Your company account is inactive. Please contact Super Admin.',
+        });
+      }
     }
 
-    // Rotate: Revoke the current token
-    matched.isRevoked = true;
-    matched.updatedAt = new Date().toISOString();
-
-    // Issue a new refresh token within the same token family
+    // Issue a new refresh token within the same token family FIRST
     const { rawToken: newRefreshToken } = await this.createRefreshToken(user, matched.familyId);
     const newAccessToken = this.generateAccessToken(user);
+
+    // Rotate: Revoke the current token ONLY after successful creation of the new token
+    matched.isRevoked = true;
+    matched.updatedAt = new Date().toISOString();
+    await this.db.saveRefreshTokenToMysql(matched);
+    this.db.persist();
 
     return {
       accessToken: newAccessToken,
@@ -839,15 +1140,34 @@ export class AuthService {
             rt.updatedAt = new Date().toISOString();
           }
         }
+        try {
+          const pool = this.db.getMysqlPool();
+          if (pool && this.db.isConnectedToMysql) {
+            await pool.query('UPDATE refresh_tokens SET isRevoked = 1, updatedAt = ? WHERE familyId = ?', [
+              new Date().toISOString(),
+              matched.familyId,
+            ]);
+          }
+        } catch {}
       }
     }
     if (userId) {
       for (const rt of this.db.refreshTokens) {
         if (rt.userId === userId) {
+          
           rt.isRevoked = true;
           rt.updatedAt = new Date().toISOString();
         }
       }
+      try {
+        const pool = this.db.getMysqlPool();
+        if (pool && this.db.isConnectedToMysql) {
+          await pool.query('UPDATE refresh_tokens SET isRevoked = 1, updatedAt = ? WHERE userId = ?', [
+            new Date().toISOString(),
+            userId,
+          ]);
+        }
+      } catch {}
     }
     this.db.persist();
     return { message: 'Successfully logged out' };
