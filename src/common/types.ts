@@ -619,8 +619,9 @@ export interface NotificationItem {
   userId?: string;
   title: string;
   message: string;
-  type: 'leave' | 'attendance' | 'payroll' | 'performance' | 'system' | 'birthday';
+  type: 'leave' | 'attendance' | 'payroll' | 'performance' | 'system' | 'birthday' | 'announcement' | 'holiday' | 'recruitment' | string;
   isRead: boolean;
+  readBy?: string[];
   createdAt: string;
   link?: string;
 }

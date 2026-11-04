@@ -18,6 +18,7 @@ import {
   WorkSession,
   WorkSessionStatus,
   AttendanceBreak,
+  NotificationItem,
 } from '../../common/types.js';
 import { EventsGateway } from '../events/events.gateway.js';
 import { CheckInDto } from './dto/check-in.dto.js';
@@ -275,12 +276,28 @@ export class AttendanceService {
 
     this.db.persist();
 
+    const checkInNotif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      companyId: user.companyId || null,
+      companyCode: user.companyCode || null,
+      userId: user.id,
+      title: 'Attendance Check-in',
+      message: `${`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email} checked in at ${timeStr} (${record.status}).`,
+      type: 'attendance',
+      isRead: false,
+      createdAt: now.toISOString(),
+      link: '/attendance',
+    };
+    this.db.notifications.unshift(checkInNotif);
+    void this.db.saveNotificationToMysql(checkInNotif);
+
     if (this.eventsGateway) {
       this.eventsGateway.emitAttendancePunch({
         employeeId: user.id,
         employeeName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
         time: timeStr,
         status: record.status,
+        companyId: user.companyId,
       });
     }
 
@@ -372,12 +389,29 @@ export class AttendanceService {
 
     this.db.persist();
 
+    const checkOutNotif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      companyId: user.companyId || null,
+      companyCode: user.companyCode || null,
+      userId: user.id,
+      title: 'Attendance Punch Out',
+      message: `${record.employeeName || 'Employee'} completed work shift at ${timeStr}.`,
+      type: 'attendance',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      link: '/attendance',
+    };
+    this.db.notifications.unshift(checkOutNotif);
+    void this.db.saveNotificationToMysql(checkOutNotif);
+
     if (this.eventsGateway) {
       this.eventsGateway.emitNotification({
         title: 'Attendance Punch Out',
         message: `${record.employeeName} completed work shift at ${timeStr}.`,
         type: 'info',
         module: 'attendance',
+        companyId: user.companyId,
+        userId: user.id,
       });
     }
 

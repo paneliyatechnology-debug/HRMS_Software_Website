@@ -75,8 +75,6 @@ interface DatabaseSchema {
 @Injectable()
 export class DatabaseService implements OnModuleInit {
   private readonly logger = new Logger(DatabaseService.name);
-  private dataDir = path.resolve(process.cwd(), 'data');
-  private dbFilePath = path.join(this.dataDir, 'database.json');
   private mysqlPool: mysql.Pool | null = null;
   private isMysqlConnected = false;
 
@@ -112,20 +110,8 @@ export class DatabaseService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    this.initDatabase();
+    this.logger.log('Initializing DatabaseService: 100% pure live MySQL integration.');
     await this.initMysqlSync();
-  }
-
-  private initDatabase() {
-    try {
-      if (fs.existsSync(this.dbFilePath)) {
-        try { fs.unlinkSync(this.dbFilePath); } catch {}
-        this.logger.log('Permanently removed data/database.json. Operating 100% on live MySQL.');
-      }
-      this.logger.log('Ready for live XAMPP MySQL sync. Zero static mock data.');
-    } catch (err) {
-      this.logger.error('Failed to initialize database defaults', err);
-    }
   }
 
   private async initMysqlSync() {
@@ -318,8 +304,57 @@ export class DatabaseService implements OnModuleInit {
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM departments`); this.departments = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM designations`); this.designations = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM holidays`); this.holidays = rows || []; } catch {}
-      try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM leave_balances`); this.leaveBalances = rows || []; } catch {}
-      try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM leave_requests`); this.leaveRequests = rows || []; } catch {}
+      try {
+        const [rows]: any = await this.mysqlPool.query(`SELECT * FROM leave_balances`);
+        const parseQ = (val: any, defTotal: number) => {
+          let p = val;
+          while (typeof p === 'string') {
+            try { p = JSON.parse(p); } catch { break; }
+          }
+          if (!p || typeof p !== 'object' || Array.isArray(p)) {
+            return { total: defTotal, used: 0, remaining: defTotal };
+          }
+          const total = Number(p.total) || defTotal;
+          const used = Number(p.used) || 0;
+          const remaining = Number(p.remaining !== undefined ? p.remaining : total - used);
+          return { total, used, remaining };
+        };
+        this.leaveBalances = (rows || []).map((r: any) => ({
+          ...r,
+          casualLeave: parseQ(r.casualLeave, 12),
+          sickLeave: parseQ(r.sickLeave, 10),
+          paidLeave: parseQ(r.paidLeave, 15),
+        }));
+      } catch {}
+      try {
+        const [rows]: any = await this.mysqlPool.query(`SELECT * FROM leave_requests ORDER BY appliedDate DESC`);
+        const dbMap = new Map<string, LeaveRequest>();
+        for (const r of rows || []) {
+          dbMap.set(r.id, {
+            id: r.id,
+            companyId: r.companyId,
+            companyCode: r.companyCode,
+            employeeId: r.employeeId,
+            employeeName: r.employeeName,
+            employeeAvatar: r.employeeAvatar || '',
+            departmentName: r.departmentName || '',
+            leaveType: r.leaveType,
+            startDate: r.startDate,
+            endDate: r.endDate,
+            daysCount: Number(r.daysCount),
+            isHalfDay: r.isHalfDay === 1 || r.isHalfDay === true || r.isHalfDay === '1',
+            reason: r.reason,
+            status: r.status,
+            appliedDate: r.appliedDate,
+            managerApproverId: r.managerApproverId,
+            managerApproverName: r.managerApproverName,
+            hrApprovedAt: r.hrApprovedAt,
+            managerApprovedAt: r.managerApprovedAt,
+            comments: r.comments,
+          });
+        }
+        this.leaveRequests = Array.from(dbMap.values());
+      } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM attendance_records`); this.attendanceRecords = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM work_sessions`); this.workSessions = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM attendance_breaks`); this.attendanceBreaks = rows || []; } catch {}
@@ -333,7 +368,14 @@ export class DatabaseService implements OnModuleInit {
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM performance_reviews`); this.performanceReviews = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM resignations`); this.resignations = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM announcements`); this.announcements = rows || []; } catch {}
-      try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM notifications`); this.notifications = rows || []; } catch {}
+      try {
+        const [rows]: any = await this.mysqlPool.query(`SELECT * FROM notifications`);
+        this.notifications = (rows || []).map((r: any) => ({
+          ...r,
+          isRead: r.isRead === 1 || r.isRead === true || r.isRead === '1',
+          readBy: r.readBy ? (typeof r.readBy === 'string' ? r.readBy.split(',').filter(Boolean) : r.readBy) : [],
+        }));
+      } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM documents`); this.documents = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM audit_logs`); this.auditLogs = rows || []; } catch {}
       try {
@@ -352,12 +394,6 @@ export class DatabaseService implements OnModuleInit {
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
           });
-        }
-        // Preserve any newly created in-memory tokens that haven't synced yet
-        for (const localRt of this.refreshTokens) {
-          if (!dbMap.has(localRt.id) && !localRt.isRevoked) {
-            dbMap.set(localRt.id, localRt);
-          }
         }
         this.refreshTokens = Array.from(dbMap.values());
       } catch {}
@@ -388,11 +424,11 @@ export class DatabaseService implements OnModuleInit {
       this.departments = this.departments.filter(belongsToExistingCompany);
       this.designations = this.designations.filter(belongsToExistingCompany);
       this.locations = this.locations.filter(belongsToExistingCompany);
-      this.holidays = this.holidays.filter(belongsToExistingCompany);
+      this.holidays = this.holidays.filter((h) => h.type === 'Public' || belongsToExistingCompany(h));
       this.leaveBalances = this.leaveBalances.filter(
         (lb) => (lb.employeeId ? (validUserIds.has(lb.employeeId) || validEmployeeIds.has(lb.employeeId)) : false),
       );
-      this.leaveRequests = this.leaveRequests.filter(belongsToExistingCompany);
+      this.leaveRequests = this.leaveRequests.filter((lr) => !lr.companyId || belongsToExistingCompany(lr));
       this.attendanceRecords = this.attendanceRecords.filter(belongsToExistingCompany);
       this.workSessions = this.workSessions.filter(belongsToExistingCompany);
       this.attendanceBreaks = this.attendanceBreaks.filter(belongsToExistingCompany);
@@ -406,7 +442,9 @@ export class DatabaseService implements OnModuleInit {
       this.performanceReviews = this.performanceReviews.filter(belongsToExistingCompany);
       this.resignations = this.resignations.filter(belongsToExistingCompany);
       this.announcements = this.announcements.filter(belongsToExistingCompany);
-      this.notifications = this.notifications.filter((n) => n.userId ? validUserIds.has(n.userId) : false);
+      this.notifications = this.notifications.filter((n) =>
+        n.userId ? validUserIds.has(n.userId) : belongsToExistingCompany(n),
+      );
       this.documents = this.documents.filter(belongsToExistingCompany);
       this.refreshTokens = this.refreshTokens.filter((rt) => rt.userId ? validUserIds.has(rt.userId) : false);
       this.employeeInvitations = this.employeeInvitations.filter(belongsToExistingCompany);
@@ -720,6 +758,20 @@ export class DatabaseService implements OnModuleInit {
   public async saveLeaveBalanceToMysql(lb: LeaveBalance): Promise<void> {
     if (!this.mysqlPool || !this.isMysqlConnected) return;
     try {
+      const cleanQuota = (val: any, defTotal: number) => {
+        let p = val;
+        while (typeof p === 'string') {
+          try { p = JSON.parse(p); } catch { break; }
+        }
+        if (!p || typeof p !== 'object' || Array.isArray(p)) {
+          return { total: defTotal, used: 0, remaining: defTotal };
+        }
+        return {
+          total: Number(p.total) || defTotal,
+          used: Number(p.used) || 0,
+          remaining: Number(p.remaining !== undefined ? p.remaining : (Number(p.total) || defTotal) - (Number(p.used) || 0)),
+        };
+      };
       await this.mysqlPool.query(
         `INSERT INTO leave_balances (id, companyId, companyCode, employeeId, year, casualLeave, sickLeave, paidLeave)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -730,9 +782,9 @@ export class DatabaseService implements OnModuleInit {
           lb.companyCode || null,
           lb.employeeId,
           lb.year,
-          typeof lb.casualLeave === 'object' ? JSON.stringify(lb.casualLeave) : lb.casualLeave || null,
-          typeof lb.sickLeave === 'object' ? JSON.stringify(lb.sickLeave) : lb.sickLeave || null,
-          typeof lb.paidLeave === 'object' ? JSON.stringify(lb.paidLeave) : lb.paidLeave || null,
+          JSON.stringify(cleanQuota(lb.casualLeave, 12)),
+          JSON.stringify(cleanQuota(lb.sickLeave, 10)),
+          JSON.stringify(cleanQuota(lb.paidLeave, 15)),
         ],
       );
     } catch (err: any) {
@@ -859,6 +911,67 @@ export class DatabaseService implements OnModuleInit {
   }
 
   /**
+   * Persists leave request directly to live MySQL.
+   */
+  public async saveLeaveRequestToMysql(lr: LeaveRequest): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO leave_requests (
+          id, companyId, companyCode, employeeId, employeeName, employeeAvatar,
+          departmentName, leaveType, startDate, endDate, daysCount,
+          isHalfDay, reason, status, appliedDate,
+          managerApproverId, managerApproverName, hrApprovedAt, managerApprovedAt, comments
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          companyId=COALESCE(VALUES(companyId), leave_requests.companyId),
+          companyCode=COALESCE(VALUES(companyCode), leave_requests.companyCode),
+          employeeName=VALUES(employeeName),
+          employeeAvatar=VALUES(employeeAvatar),
+          departmentName=VALUES(departmentName),
+          leaveType=VALUES(leaveType),
+          startDate=VALUES(startDate),
+          endDate=VALUES(endDate),
+          daysCount=VALUES(daysCount),
+          isHalfDay=VALUES(isHalfDay),
+          reason=VALUES(reason),
+          status=VALUES(status),
+          appliedDate=VALUES(appliedDate),
+          managerApproverId=VALUES(managerApproverId),
+          managerApproverName=VALUES(managerApproverName),
+          hrApprovedAt=VALUES(hrApprovedAt),
+          managerApprovedAt=VALUES(managerApprovedAt),
+          comments=VALUES(comments)`,
+        [
+          lr.id,
+          lr.companyId || null,
+          lr.companyCode || null,
+          lr.employeeId,
+          lr.employeeName || 'Employee',
+          lr.employeeAvatar || '',
+          lr.departmentName || '',
+          lr.leaveType,
+          lr.startDate,
+          lr.endDate,
+          lr.daysCount || 1,
+          lr.isHalfDay ? 1 : 0,
+          lr.reason || '',
+          lr.status || 'Pending',
+          lr.appliedDate || new Date().toISOString().split('T')[0],
+          lr.managerApproverId || null,
+          lr.managerApproverName || null,
+          lr.hrApprovedAt || null,
+          lr.managerApprovedAt || null,
+          lr.comments || null,
+        ],
+      );
+      this.logger.log(`Persisted leave request ${lr.id} directly to live MySQL.`);
+    } catch (err: any) {
+      this.logger.error(`Error saving leave request ${lr.id} to MySQL:`, err);
+    }
+  }
+
+  /**
    * Persists attendance summary record directly to MySQL.
    */
   public async saveAttendanceRecordToMysql(att: AttendanceRecord): Promise<void> {
@@ -931,6 +1044,55 @@ export class DatabaseService implements OnModuleInit {
       this.logger.log(`Saved location "${loc.id}" (${loc.name}) directly to live MySQL.`);
     } catch (err: any) {
       this.logger.error(`Error saving location ${loc.id} to MySQL:`, err);
+    }
+  }
+
+  /**
+   * Persists a holiday record directly to live MySQL.
+   */
+  public async saveHolidayToMysql(h: Holiday): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO holidays (id, companyId, companyCode, name, date, dayOfWeek, type, description, locationId)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           companyId=COALESCE(VALUES(companyId), holidays.companyId),
+           companyCode=COALESCE(VALUES(companyCode), holidays.companyCode),
+           name=VALUES(name),
+           date=VALUES(date),
+           dayOfWeek=VALUES(dayOfWeek),
+           type=VALUES(type),
+           description=VALUES(description),
+           locationId=VALUES(locationId)`,
+        [
+          h.id,
+          h.companyId || null,
+          h.companyCode || null,
+          h.name,
+          h.date,
+          h.dayOfWeek || 'Monday',
+          h.type || 'Company',
+          h.description || '',
+          h.locationId || null,
+        ],
+      );
+      this.logger.log(`Persisted holiday ${h.id} (${h.name}) directly to live MySQL.`);
+    } catch (err: any) {
+      this.logger.error(`Error saving holiday ${h.id} to MySQL:`, err);
+    }
+  }
+
+  /**
+   * Deletes a holiday record directly from live MySQL.
+   */
+  public async deleteHolidayFromMysql(id: string): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(`DELETE FROM holidays WHERE id = ?`, [id]);
+      this.logger.log(`Deleted holiday ${id} directly from live MySQL.`);
+    } catch (err: any) {
+      this.logger.error(`Error deleting holiday ${id} from MySQL:`, err);
     }
   }
 
@@ -1024,11 +1186,6 @@ export class DatabaseService implements OnModuleInit {
         employeeInvitations: this.employeeInvitations,
       };
 
-      // NO database.json writing! 100% Pure MySQL!
-      if (fs.existsSync(this.dbFilePath)) {
-        try { fs.unlinkSync(this.dbFilePath); } catch {}
-      }
-
       // Persist directly and strictly to live MySQL
       void this.syncToMysql(data);
     } catch (err) {
@@ -1068,8 +1225,74 @@ export class DatabaseService implements OnModuleInit {
       createdAt: new Date().toISOString(),
     };
     this.auditLogs.unshift(log);
+    void this.saveAuditLogToMysql(log);
     this.persist();
     return log;
+  }
+
+  /**
+   * Persists an audit log record directly to MySQL.
+   */
+  public async saveAuditLogToMysql(log: AuditLog): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO audit_logs (id, companyId, companyCode, userId, userName, userRole, action, module, recordId, details, ipAddress, createdAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE action=VALUES(action)`,
+        [
+          log.id,
+          log.companyId || null,
+          log.companyCode || null,
+          log.userId || null,
+          log.userName || '',
+          log.userRole || '',
+          log.action || '',
+          log.module || '',
+          log.recordId || null,
+          log.details || '',
+          log.ipAddress || '127.0.0.1',
+          log.createdAt || new Date().toISOString(),
+        ],
+      );
+    } catch (err: any) {
+      this.logger.warn(`Could not save audit log to MySQL: ${err.message}`);
+    }
+  }
+
+  /**
+   * Persists a notification record directly to MySQL.
+   */
+  public async saveNotificationToMysql(n: NotificationItem): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      const readByStr = Array.isArray((n as any).readBy)
+        ? (n as any).readBy.join(',')
+        : (n as any).readBy || '';
+      await this.mysqlPool.query(
+        `INSERT INTO notifications (id, companyId, companyCode, title, message, type, isRead, createdAt, link, userId, readBy)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           isRead=VALUES(isRead),
+           readBy=VALUES(readBy),
+           userId=VALUES(userId)`,
+        [
+          n.id,
+          n.companyId || null,
+          n.companyCode || null,
+          n.title,
+          n.message || '',
+          n.type || 'info',
+          n.isRead ? 1 : 0,
+          n.createdAt || new Date().toISOString(),
+          n.link || '',
+          n.userId || null,
+          readByStr,
+        ],
+      );
+    } catch (err: any) {
+      this.logger.warn(`Could not save notification to MySQL: ${err.message}`);
+    }
   }
 
   /**

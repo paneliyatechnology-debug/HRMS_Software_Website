@@ -1,11 +1,29 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Optional } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { LeaveRequest, LeaveStatus, LeaveType, Role, User } from '../../common/types.js';
+import { LeaveRequest, LeaveStatus, LeaveType, Role, User, NotificationItem } from '../../common/types.js';
 import { EventsGateway } from '../events/events.gateway.js';
 import { ApplyLeaveDto } from './dto/apply-leave.dto.js';
 import { ApproveLeaveDto } from './dto/approve-leave.dto.js';
 import { RejectLeaveDto } from './dto/reject-leave.dto.js';
 import { QueryLeaveDto } from './dto/query-leave.dto.js';
+
+export function normalizeQuota(val: any, defTotal: number): { total: number; used: number; remaining: number } {
+  let p = val;
+  while (typeof p === 'string') {
+    try {
+      p = JSON.parse(p);
+    } catch {
+      break;
+    }
+  }
+  if (!p || typeof p !== 'object' || Array.isArray(p)) {
+    return { total: defTotal, used: 0, remaining: defTotal };
+  }
+  const total = Number(p.total) || defTotal;
+  const used = Number(p.used) || 0;
+  const remaining = Number(p.remaining !== undefined ? p.remaining : total - used);
+  return { total, used, remaining };
+}
 
 @Injectable()
 export class LeavesService {
@@ -81,7 +99,7 @@ export class LeavesService {
       .sort((a, b) => (b.appliedDate > a.appliedDate ? 1 : -1));
   }
 
-  getBalances(employeeId: string, actorUser?: User) {
+  async getBalances(employeeId: string, actorUser?: User) {
     const user = this.db.resolveUser
       ? this.db.resolveUser(employeeId)
       : this.db.users?.find(
@@ -117,7 +135,12 @@ export class LeavesService {
         paidLeave: { total: 15, used: 0, remaining: 15 },
       };
       this.db.leaveBalances.push(balance);
+      await this.db.saveLeaveBalanceToMysql(balance);
       this.db.persist();
+    } else {
+      balance.casualLeave = normalizeQuota(balance.casualLeave, 12);
+      balance.sickLeave = normalizeQuota(balance.sickLeave, 10);
+      balance.paidLeave = normalizeQuota(balance.paidLeave, 15);
     }
     const { employeeId: _, id, ...rest } = balance;
     const resObj: any = {
@@ -125,6 +148,9 @@ export class LeavesService {
       userId: targetUserId,
       role: user?.role || 'EMPLOYEE',
       ...rest,
+      casualLeave: balance.casualLeave,
+      sickLeave: balance.sickLeave,
+      paidLeave: balance.paidLeave,
     };
     Object.defineProperty(resObj, 'employeeId', {
       value: targetUserId,
@@ -135,7 +161,7 @@ export class LeavesService {
     return resObj;
   }
 
-  apply(data: ApplyLeaveDto, actorUser?: User) {
+  async apply(data: ApplyLeaveDto, actorUser?: User) {
     if (!data.startDate || !data.endDate) {
       throw new BadRequestException('Start date and end date are required');
     }
@@ -208,6 +234,8 @@ export class LeavesService {
     (newRequest as any).companyCode = companyCode;
 
     this.db.leaveRequests.unshift(newRequest);
+    await this.db.saveLeaveRequestToMysql(newRequest);
+    this.db.persist();
 
     this.db.logAudit(
       realUserId,
@@ -219,17 +247,20 @@ export class LeavesService {
       newRequest.id,
     );
 
-    this.db.notifications.unshift({
+    const notifObj: NotificationItem = {
       id: `notif-${Date.now()}`,
       companyId,
       companyCode,
+      userId: realUserId,
       title: 'New Leave Application',
       message: `${fullName || 'Employee'} applied for ${data.leaveType} (${diffDays} days).`,
       type: 'leave',
       isRead: false,
       createdAt: new Date().toISOString(),
       link: '/leaves',
-    });
+    };
+    this.db.notifications.unshift(notifObj);
+    void this.db.saveNotificationToMysql(notifObj);
 
     this.db.persist();
 
@@ -239,6 +270,9 @@ export class LeavesService {
         message: `${fullName || 'Employee'} requested ${diffDays} day(s) of ${data.leaveType}.`,
         type: 'warning',
         module: 'leave',
+        companyId,
+        companyCode,
+        userId: realUserId,
       });
     }
 
@@ -259,8 +293,17 @@ export class LeavesService {
     return responseObj;
   }
 
-  approve(id: string, dto: ApproveLeaveDto, actorUser?: User) {
-    const request = this.db.leaveRequests.find((l) => l.id === id);
+  async approve(id: string, dto: ApproveLeaveDto, actorUser?: User) {
+    let request = this.db.leaveRequests.find((l) => l.id === id);
+    if (!request && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+      try {
+        const [rows]: any = await this.db.getMysqlPool()!.query('SELECT * FROM leave_requests WHERE id = ? LIMIT 1', [id]);
+        if (rows && rows.length > 0) {
+          request = rows[0] as LeaveRequest;
+          this.db.leaveRequests.unshift(request);
+        }
+      } catch {}
+    }
     if (!request) throw new NotFoundException('Leave request not found');
 
     if (actorUser && actorUser.role === Role.ADMIN) {
@@ -292,15 +335,19 @@ export class LeavesService {
       request.hrApprovedAt = new Date().toISOString();
     }
 
-    const balance = this.getBalances(request.employeeId);
+    const balance = await this.getBalances(request.employeeId);
+    balance.casualLeave = normalizeQuota(balance.casualLeave, 12);
+    balance.sickLeave = normalizeQuota(balance.sickLeave, 10);
+    balance.paidLeave = normalizeQuota(balance.paidLeave, 15);
+
     if (request.leaveType === LeaveType.CASUAL) {
-      balance.casualLeave.used += request.daysCount;
+      balance.casualLeave.used = (balance.casualLeave.used || 0) + request.daysCount;
       balance.casualLeave.remaining = Math.max(0, balance.casualLeave.total - balance.casualLeave.used);
     } else if (request.leaveType === LeaveType.SICK) {
-      balance.sickLeave.used += request.daysCount;
+      balance.sickLeave.used = (balance.sickLeave.used || 0) + request.daysCount;
       balance.sickLeave.remaining = Math.max(0, balance.sickLeave.total - balance.sickLeave.used);
     } else {
-      balance.paidLeave.used += request.daysCount;
+      balance.paidLeave.used = (balance.paidLeave.used || 0) + request.daysCount;
       balance.paidLeave.remaining = Math.max(0, balance.paidLeave.total - balance.paidLeave.used);
     }
 
@@ -314,32 +361,50 @@ export class LeavesService {
       request.id,
     );
 
-    this.db.notifications.unshift({
+    const user = this.db.users.find(
+      (u) => u.id === request.employeeId || u.employeeId === request.employeeId,
+    );
+    const realUserId = user ? user.id : request.employeeId;
+    const companyId = (request as any).companyId || user?.companyId || null;
+    const companyCode = (request as any).companyCode || user?.companyCode || null;
+
+    const approvedNotif: NotificationItem = {
       id: `notif-${Date.now()}`,
-      companyId: (request as any).companyId || null,
-      companyCode: (request as any).companyCode || null,
+      companyId,
+      companyCode,
+      userId: realUserId,
       title: 'Leave Approved',
       message: `Your leave request for ${request.startDate} to ${request.endDate} has been approved.`,
       type: 'leave',
       isRead: false,
       createdAt: new Date().toISOString(),
       link: '/leaves',
-    });
+    };
+    this.db.notifications.unshift(approvedNotif);
+    void this.db.saveNotificationToMysql(approvedNotif);
 
     this.db.persist();
+    await this.db.saveLeaveRequestToMysql(request);
+    const rawBalance = this.db.leaveBalances.find(
+      (b) => b.employeeId === request.employeeId || (request as any).userId === b.employeeId,
+    );
+    if (rawBalance) {
+      rawBalance.casualLeave = balance.casualLeave;
+      rawBalance.sickLeave = balance.sickLeave;
+      rawBalance.paidLeave = balance.paidLeave;
+      await this.db.saveLeaveBalanceToMysql(rawBalance);
+    }
 
     if (this.eventsGateway) {
       this.eventsGateway.emitLeaveUpdate({
         id: request.id,
         employeeName: request.employeeName,
         status: 'Approved',
+        companyId,
+        companyCode,
+        userId: realUserId,
       });
     }
-
-    const user = this.db.users.find(
-      (u) => u.id === request.employeeId || u.employeeId === request.employeeId,
-    );
-    const realUserId = user ? user.id : request.employeeId;
     const { employeeId: _, id: reqId, ...rest } = request;
     const resObj: any = {
       id: reqId,
@@ -356,8 +421,17 @@ export class LeavesService {
     return resObj;
   }
 
-  reject(id: string, dto: RejectLeaveDto, actorUser?: User) {
-    const request = this.db.leaveRequests.find((l) => l.id === id);
+  async reject(id: string, dto: RejectLeaveDto, actorUser?: User) {
+    let request = this.db.leaveRequests.find((l) => l.id === id);
+    if (!request && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+      try {
+        const [rows]: any = await this.db.getMysqlPool()!.query('SELECT * FROM leave_requests WHERE id = ? LIMIT 1', [id]);
+        if (rows && rows.length > 0) {
+          request = rows[0] as LeaveRequest;
+          this.db.leaveRequests.unshift(request);
+        }
+      } catch {}
+    }
     if (!request) throw new NotFoundException('Leave request not found');
 
     if (actorUser && actorUser.role === Role.ADMIN) {
@@ -387,20 +461,42 @@ export class LeavesService {
       request.id,
     );
 
+    const user = this.db.users.find(
+      (u) => u.id === request.employeeId || u.employeeId === request.employeeId,
+    );
+    const realUserId = user ? user.id : request.employeeId;
+    const companyId = (request as any).companyId || user?.companyId || null;
+    const companyCode = (request as any).companyCode || user?.companyCode || null;
+
+    const rejectedNotif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      companyId,
+      companyCode,
+      userId: realUserId,
+      title: 'Leave Rejected',
+      message: `Your leave request for ${request.startDate} to ${request.endDate} was rejected. Reason: ${reason}`,
+      type: 'leave',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      link: '/leaves',
+    };
+    this.db.notifications.unshift(rejectedNotif);
+    void this.db.saveNotificationToMysql(rejectedNotif);
+
     this.db.persist();
+    await this.db.saveLeaveRequestToMysql(request);
 
     if (this.eventsGateway) {
       this.eventsGateway.emitLeaveUpdate({
         id: request.id,
         employeeName: request.employeeName,
         status: 'Rejected',
+        companyId,
+        companyCode,
+        userId: realUserId,
       });
     }
 
-    const user = this.db.users.find(
-      (u) => u.id === request.employeeId || u.employeeId === request.employeeId,
-    );
-    const realUserId = user ? user.id : request.employeeId;
     const { employeeId: _, id: reqId, ...rest } = request;
     const resObj: any = {
       id: reqId,

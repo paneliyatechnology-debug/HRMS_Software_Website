@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, Req, Query, UseGuards 
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { HolidaysService } from './holidays.service.js';
 import { CreateHolidayDto } from './dto/create-holiday.dto.js';
+import { UpdateHolidayDto } from './dto/update-holiday.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 
 @ApiTags('Holidays')
@@ -36,13 +37,16 @@ export class HolidaysController {
   @Put(':id')
   @ApiOperation({
     summary: 'Update company holiday',
-    description: 'Updates a holiday record on the corporate calendar.',
+    description: 'Updates a holiday record on the corporate calendar (e.g. name, date, description).',
   })
   @ApiParam({ name: 'id', description: 'Holiday ID' })
-  @ApiResponse({ status: 200, description: 'Holiday updated' })
+  @ApiBody({ type: UpdateHolidayDto })
+  @ApiResponse({ status: 200, description: 'Holiday updated successfully' })
+  @ApiResponse({ status: 400, description: 'Bad Request / Invalid Date' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Holiday not found' })
-  update(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+  @ApiResponse({ status: 409, description: 'Conflict: Holiday already exists on this date' })
+  update(@Param('id') id: string, @Body() body: UpdateHolidayDto, @Req() req: any) {
     return this.holidaysService.update(id, body, req.user);
   }
 

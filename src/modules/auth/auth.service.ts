@@ -34,7 +34,7 @@ export class AuthService {
       jti: crypto.randomUUID(),
     };
     const secret = process.env.JWT_SECRET || 'enterprise_hrms_jwt_secret_key_2026';
-    const expiresIn = (process.env.JWT_ACCESS_EXPIRES_IN || '30m') as any;
+    const expiresIn = (process.env.JWT_ACCESS_EXPIRES_IN || '1h') as any;
     return jwt.sign(payload, secret, { expiresIn });
   }
 
@@ -948,8 +948,84 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or unknown refresh token');
     }
 
-    // Reuse detection: If token was already revoked, revoke the ENTIRE family!
+    // Reuse detection: If token was already revoked, check grace period first!
     if (matched.isRevoked) {
+      const revokedAt = matched.updatedAt ? new Date(matched.updatedAt).getTime() : 0;
+      const isWithinGracePeriod = Date.now() - revokedAt <= 60_000;
+
+      if (isWithinGracePeriod) {
+        // Find the active (non-revoked) token in the same family to handle concurrent requests
+        let activeSibling = this.db.refreshTokens.find(
+          (rt) => rt.familyId === matched!.familyId && !rt.isRevoked,
+        );
+        if (!activeSibling && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+          try {
+            const [rows]: any = await this.db.getMysqlPool()!.query(
+              'SELECT * FROM refresh_tokens WHERE familyId = ? AND isRevoked = 0 ORDER BY createdAt DESC LIMIT 1',
+              [matched.familyId],
+            );
+            if (rows && rows.length > 0) {
+              const r = rows[0];
+              activeSibling = {
+                id: r.id,
+                userId: r.userId,
+                companyId: r.companyId,
+                companyCode: r.companyCode,
+                tokenHash: r.tokenHash,
+                familyId: r.familyId,
+                isRevoked: false,
+                expiresAt: r.expiresAt,
+                createdAt: r.createdAt,
+                updatedAt: r.updatedAt,
+              };
+              this.db.refreshTokens.push(activeSibling);
+            }
+          } catch {}
+        }
+
+        if (activeSibling) {
+          let user = this.db.users.find((u) => u.id === activeSibling!.userId);
+          if (!user && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+            try {
+              const [uRows]: any = await this.db.getMysqlPool()!.query(
+                'SELECT * FROM users WHERE id = ? LIMIT 1',
+                [activeSibling.userId],
+              );
+              if (uRows && uRows.length > 0) {
+                user = uRows[0] as User;
+                if (user) {
+                  this.db.users.push(user);
+                }
+              }
+            } catch {}
+          }
+          if (user) {
+            const newAccessToken = this.generateAccessToken(user);
+            return {
+              accessToken: newAccessToken,
+              refreshToken: cleanToken,
+              user: {
+                id: user.id,
+                userId: user.id,
+                email: user.email,
+                phone: user.phone || '',
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                isSuperAdmin: user.isSuperAdmin ?? (user.role === Role.SUPER_ADMIN),
+                status: user.status || 'Active',
+                companyId: user.companyId || null,
+                companyCode: user.companyCode || null,
+                employeeId: user.id,
+                employeeCode: user.employeeCode,
+                avatarUrl: user.avatarUrl,
+              },
+            };
+          }
+        }
+      }
+
+      // Outside grace period: Legitimate reuse detection! Revoke the entire family
       for (const rt of this.db.refreshTokens) {
         if (rt.familyId === matched.familyId) {
           rt.isRevoked = true;
@@ -979,7 +1055,21 @@ export class AuthService {
     }
 
     // Find associated user
-    const user = this.db.users.find((u) => u.id === matched.userId);
+    let user = this.db.users.find((u) => u.id === matched.userId);
+    if (!user && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+      try {
+        const [uRows]: any = await this.db.getMysqlPool()!.query(
+          'SELECT * FROM users WHERE id = ? LIMIT 1',
+          [matched.userId],
+        );
+        if (uRows && uRows.length > 0) {
+          user = uRows[0] as User;
+          if (user) {
+            this.db.users.push(user);
+          }
+        }
+      } catch {}
+    }
     if (!user) {
       matched.isRevoked = true;
       matched.updatedAt = new Date().toISOString();

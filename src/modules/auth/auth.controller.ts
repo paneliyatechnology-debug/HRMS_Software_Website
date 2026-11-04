@@ -98,7 +98,12 @@ export class AuthController {
       const allowedSet = new Set([...defaultAllowed, ...envAllowed]);
       try {
         const originUrl = requestOrigin.startsWith('http') ? new URL(requestOrigin).origin : requestOrigin;
-        if (!allowedSet.has(originUrl)) {
+        const isLocalNetwork =
+          originUrl.startsWith('http://localhost:') ||
+          originUrl.startsWith('http://127.0.0.1:') ||
+          originUrl.startsWith('http://192.168.') ||
+          originUrl.startsWith('http://10.');
+        if (!allowedSet.has(originUrl) && !isLocalNetwork) {
           throw new ForbiddenException('CSRF check failed: Request origin is not permitted');
         }
       } catch (err) {
@@ -112,15 +117,6 @@ export class AuthController {
     if (res && result.refreshToken) {
       this.authService.setRefreshCookie(res, result.refreshToken);
     }
-
-    // In production, when using HttpOnly cookie, omit refreshToken from response body to prevent browser JS exposure
-    const isProduction = process.env.NODE_ENV === 'production';
-    const isExplicitTesting = !!body?.refreshToken || process.env.EXPOSE_REFRESH_TOKEN_IN_BODY === 'true';
-    if (isProduction && !isExplicitTesting) {
-      const { refreshToken: _, ...sanitized } = result;
-      return sanitized;
-    }
-
     return result;
   }
 

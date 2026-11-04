@@ -1,6 +1,6 @@
 import { Injectable, Optional, ForbiddenException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { Announcement, Role, User } from '../../common/types.js';
+import { Announcement, Role, User, NotificationItem } from '../../common/types.js';
 import { EventsGateway } from '../events/events.gateway.js';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto.js';
 
@@ -71,12 +71,28 @@ export class AnnouncementsService {
     };
 
     this.db.announcements.unshift(newAnc);
+
+    const ancNotif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      companyId,
+      companyCode,
+      title: `Announcement: ${newAnc.title}`,
+      message: newAnc.content || 'A new company-wide announcement was published.',
+      type: 'announcement',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      link: '/announcements',
+    };
+    this.db.notifications.unshift(ancNotif);
+    void this.db.saveNotificationToMysql(ancNotif);
+
     this.db.persist();
 
     if (this.eventsGateway) {
       this.eventsGateway.emitAnnouncement({
         title: newAnc.title,
         content: newAnc.content,
+        companyId,
       });
     }
 

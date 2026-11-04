@@ -20,6 +20,15 @@ export class NotificationsController {
     return this.notifService.findAll(req.user);
   }
 
+  @Get('unread-count')
+  @ApiOperation({
+    summary: 'Get total unread notifications count for the active user',
+  })
+  @ApiResponse({ status: 200, description: 'Unread notification count' })
+  getUnreadCount(@Req() req: any) {
+    return this.notifService.getUnreadCount(req.user);
+  }
+
   @Put(':id/read')
   @ApiOperation({
     summary: 'Mark specific notification as read',

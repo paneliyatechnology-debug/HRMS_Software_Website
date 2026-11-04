@@ -385,435 +385,6 @@
       ]
     },
     {
-      "name": "☕ Attendance & Break Flow (Step-by-Step)",
-      "description": "Sequential workflow: Login -> Status -> Start Work -> Take Break -> Resume Work -> Stop Work -> History. Tokens and session IDs are auto-captured in tests.",
-      "item": [
-        {
-          "name": "Step 1: Login Employee (Auto-saves authToken)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"sk@gmail.com\",\n  \"password\": \"your_password_here\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "login"
-              ]
-            },
-            "description": "Logs in employee/admin and automatically sets pm.environment.set('authToken', res.accessToken)."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res && res.accessToken) {",
-                  "    pm.environment.set('authToken', res.accessToken);",
-                  "    pm.collectionVariables.set('authToken', res.accessToken);",
-                  "    console.log('authToken updated successfully');",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "response": []
-        },
-        {
-          "name": "Step 2: Check Initial Work Status",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/attendance/work/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "attendance",
-                "work",
-                "status"
-              ]
-            },
-            "description": "Returns current work status: hasActiveSession, isOnBreak, elapsedSeconds, assignedOffice."
-          },
-          "response": []
-        },
-        {
-          "name": "Step 3: Start Work / Clock-In",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"deviceInfo\": \"Web Browser\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/attendance/work/start",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "attendance",
-                "work",
-                "start"
-              ]
-            },
-            "description": "Starts a geo-fenced work session. Auto-saves sessionId."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res && res.sessionId) {",
-                  "    pm.environment.set('sessionId', res.sessionId);",
-                  "    pm.collectionVariables.set('sessionId', res.sessionId);",
-                  "    console.log('sessionId updated:', res.sessionId);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "response": []
-        },
-        {
-          "name": "Step 4: Check Status - Working",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/attendance/work/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "attendance",
-                "work",
-                "status"
-              ]
-            },
-            "description": "Returns hasActiveSession: true, isOnBreak: false, elapsed working seconds."
-          },
-          "response": []
-        },
-        {
-          "name": "Step 5: Take a Break (Start Break)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/attendance/work/break/start",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "attendance",
-                "work",
-                "break",
-                "start"
-              ]
-            },
-            "description": "Pauses active work timer and transitions work session status to ON_BREAK.",
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res && res.breakId) {",
-                  "    pm.environment.set('breakId', res.breakId);",
-                  "    pm.collectionVariables.set('breakId', res.breakId);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "response": []
-        },
-        {
-          "name": "Step 6: Check Status - On Break",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/attendance/work/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "attendance",
-                "work",
-                "status"
-              ]
-            },
-            "description": "Returns hasActiveSession: true, isOnBreak: true, currentBreak details and live ticking break elapsed seconds."
-          },
-          "response": []
-        },
-        {
-          "name": "Step 7: Resume Work from Break",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/attendance/work/break/resume",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "attendance",
-                "work",
-                "break",
-                "resume"
-              ]
-            },
-            "description": "Ends active break, calculates authoritative duration, and resumes active work session.",
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Step 8: Check Status - Work Resumed",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/attendance/work/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "attendance",
-                "work",
-                "status"
-              ]
-            },
-            "description": "Returns hasActiveSession: true, isOnBreak: false. Working timer resumes from accumulated value."
-          },
-          "response": []
-        },
-        {
-          "name": "Step 9: Stop Work / Clock-Out",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"remarks\": \"Shift completed\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/attendance/work/stop",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "attendance",
-                "work",
-                "stop"
-              ]
-            },
-            "description": "Calculates authoritative duration (Total Session - Total Breaks) and marks session COMPLETED. If on break, this call is blocked."
-          },
-          "response": []
-        },
-        {
-          "name": "Step 10: View Work & Break History",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/attendance/work/history?limit=10&page=1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "attendance",
-                "work",
-                "history"
-              ],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                }
-              ]
-            },
-            "description": "Lists past work sessions with start time, end time, accurate working duration, and geofence verification details."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
       "name": "System Health",
       "description": "API status and system vitality",
       "item": [
@@ -970,15 +541,18 @@
                   "if (token) {",
                   "    pm.collectionVariables.set(\"token\", token);",
                   "    pm.environment.set(\"token\", token);",
+                  "    pm.globals.set(\"token\", token);",
                   "    console.log(\"Auth token auto-saved:\", token);",
                   "}",
                   "if (jsonData.refreshToken) {",
                   "    pm.collectionVariables.set(\"refreshToken\", jsonData.refreshToken);",
                   "    pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
+                  "    pm.globals.set(\"refreshToken\", jsonData.refreshToken);",
                   "}",
                   "if (jsonData.user && jsonData.user.companyId) {",
                   "    pm.collectionVariables.set(\"companyId\", jsonData.user.companyId);",
                   "    pm.environment.set(\"companyId\", jsonData.user.companyId);",
+                  "    pm.globals.set(\"companyId\", jsonData.user.companyId);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -1039,15 +613,18 @@
                   "if (token) {",
                   "    pm.collectionVariables.set(\"token\", token);",
                   "    pm.environment.set(\"token\", token);",
+                  "    pm.globals.set(\"token\", token);",
                   "    console.log(\"Auth token auto-saved:\", token);",
                   "}",
                   "if (jsonData.refreshToken) {",
                   "    pm.collectionVariables.set(\"refreshToken\", jsonData.refreshToken);",
                   "    pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
+                  "    pm.globals.set(\"refreshToken\", jsonData.refreshToken);",
                   "}",
                   "if (jsonData.user && jsonData.user.companyId) {",
                   "    pm.collectionVariables.set(\"companyId\", jsonData.user.companyId);",
                   "    pm.environment.set(\"companyId\", jsonData.user.companyId);",
+                  "    pm.globals.set(\"companyId\", jsonData.user.companyId);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -1108,15 +685,18 @@
                   "if (token) {",
                   "    pm.collectionVariables.set(\"token\", token);",
                   "    pm.environment.set(\"token\", token);",
+                  "    pm.globals.set(\"token\", token);",
                   "    console.log(\"Auth token auto-saved:\", token);",
                   "}",
                   "if (jsonData.refreshToken) {",
                   "    pm.collectionVariables.set(\"refreshToken\", jsonData.refreshToken);",
                   "    pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
+                  "    pm.globals.set(\"refreshToken\", jsonData.refreshToken);",
                   "}",
                   "if (jsonData.user && jsonData.user.companyId) {",
                   "    pm.collectionVariables.set(\"companyId\", jsonData.user.companyId);",
                   "    pm.environment.set(\"companyId\", jsonData.user.companyId);",
+                  "    pm.globals.set(\"companyId\", jsonData.user.companyId);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -1238,6 +818,33 @@
               "variable": []
             },
             "description": "Retrieves current user profile. Pass token in Authorization header, or as query param ?token=..."
+          },
+          "response": []
+        },
+        {
+          "name": "Check session status and validate company access",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/session-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "session-status"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Lightweight heartbeat endpoint to detect company rejection or session invalidation in real time."
           },
           "response": []
         },
@@ -1521,6 +1128,55 @@
           "response": []
         },
         {
+          "name": "Approve company registration request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/company-requests/{id}/Approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "company-requests",
+                "{id}",
+                "Approve"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Registration Request ID"
+                }
+              ]
+            },
+            "description": "Approves request, officially creates company tenant with CMP code, and provisions Admin user account."
+          },
+          "response": []
+        },
+        {
           "name": "Reject company registration request",
           "request": {
             "method": "POST",
@@ -1566,6 +1222,103 @@
               ]
             },
             "description": "Rejects request with optional reason. Company is not created."
+          },
+          "response": []
+        },
+        {
+          "name": "Reject company registration request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/company-requests/{id}/Reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "company-requests",
+                "{id}",
+                "Reject"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Registration Request ID"
+                }
+              ]
+            },
+            "description": "Rejects request with optional reason. Company is not created."
+          },
+          "response": []
+        },
+        {
+          "name": "Update / Reject / Approve company registration request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/company-requests/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "company-requests",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Registration Request ID or Company ID"
+                }
+              ]
+            },
+            "description": "Handles registration request update. If body has reason or status=Rejected, rejects request. If status=Active/Approved, approves request."
           },
           "response": []
         },
@@ -1686,6 +1439,54 @@
           "response": []
         },
         {
+          "name": "Update / Reject / Approve company by ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/companies/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "companies",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Company ID or Company Code"
+                }
+              ]
+            },
+            "description": "Handles company update. If body has reason or status=Rejected, rejects company. If status=Active/Approved, approves company."
+          },
+          "response": []
+        },
+        {
           "name": "Delete company and cleanup associated data",
           "request": {
             "method": "DELETE",
@@ -1769,6 +1570,55 @@
           "response": []
         },
         {
+          "name": "Approve company registration request (changes status to Active)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/companies/{id}/Approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "companies",
+                "{id}",
+                "Approve"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Company ID or Company Code"
+                }
+              ]
+            },
+            "description": "Approves pending company directly in companies table, updating status to Active."
+          },
+          "response": []
+        },
+        {
           "name": "Reject company registration request",
           "request": {
             "method": "POST",
@@ -1803,6 +1653,55 @@
                 "companies",
                 "{id}",
                 "reject"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Company ID or Company Code"
+                }
+              ]
+            },
+            "description": "Rejects pending company directly in companies table, updating status to Rejected."
+          },
+          "response": []
+        },
+        {
+          "name": "Reject company registration request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/companies/{id}/Reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "companies",
+                "{id}",
+                "Reject"
               ],
               "query": [],
               "variable": [
@@ -3792,7 +3691,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"deviceInfo\": \"Web Browser\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3834,7 +3733,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"remarks\": \"Shift completed\"\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3859,7 +3758,7 @@
           "response": []
         },
         {
-          "name": "Take a Break (Start Break)",
+          "name": "Start employee work break",
           "request": {
             "method": "POST",
             "header": [
@@ -3869,11 +3768,20 @@
                 "type": "text"
               },
               {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
+                "key": "Content-Type",
+                "value": "application/json",
                 "type": "text"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
               "raw": "{{baseUrl}}/attendance/work/break/start",
               "host": [
@@ -3888,21 +3796,12 @@
               "query": [],
               "variable": []
             },
-            "description": "Pauses active work timer and starts break timer for the authenticated employee.",
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "Pauses active work timer and starts break timer for the authenticated employee."
           },
           "response": []
         },
         {
-          "name": "Resume Work from Break",
+          "name": "Resume employee work after break",
           "request": {
             "method": "POST",
             "header": [
@@ -3912,11 +3811,20 @@
                 "type": "text"
               },
               {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
+                "key": "Content-Type",
+                "value": "application/json",
                 "type": "text"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
               "raw": "{{baseUrl}}/attendance/work/break/resume",
               "host": [
@@ -3931,16 +3839,7 @@
               "query": [],
               "variable": []
             },
-            "description": "Concludes active break, records break duration, and resumes active work session.",
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "Concludes active break, records break duration, and resumes active work session."
           },
           "response": []
         },
@@ -5516,7 +5415,7 @@
                 }
               ]
             },
-            "description": "Updates a holiday record on the corporate calendar."
+            "description": "Updates a holiday record on the corporate calendar (e.g. name, date, description)."
           },
           "response": []
         },

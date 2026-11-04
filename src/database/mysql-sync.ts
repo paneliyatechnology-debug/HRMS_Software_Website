@@ -442,7 +442,9 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
       type VARCHAR(50),
       isRead BOOLEAN DEFAULT FALSE,
       createdAt VARCHAR(50),
-      link VARCHAR(255)
+      link VARCHAR(255),
+      userId VARCHAR(64),
+      readBy TEXT
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
     `CREATE TABLE IF NOT EXISTS documents (

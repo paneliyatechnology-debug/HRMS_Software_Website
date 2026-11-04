@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { Holiday, Role, User } from '../../common/types.js';
+import { Holiday, Role, User, NotificationItem } from '../../common/types.js';
 import { CreateHolidayDto } from './dto/create-holiday.dto.js';
+import { UpdateHolidayDto } from './dto/update-holiday.dto.js';
 
 @Injectable()
 export class HolidaysService {
@@ -30,10 +31,19 @@ export class HolidaysService {
     return list.sort((a, b) => (a.date > b.date ? 1 : -1));
   }
 
-  create(data: CreateHolidayDto, actorUser?: User) {
+  async create(data: CreateHolidayDto, actorUser?: User) {
     if (actorUser && actorUser.role === Role.EMPLOYEE) {
       throw new ForbiddenException('Employees are not authorized to create holidays.');
     }
+
+    if (!data.name || !data.name.trim()) {
+      throw new BadRequestException('Holiday name is required.');
+    }
+    if (!data.date || !data.date.trim()) {
+      throw new BadRequestException('Holiday date (YYYY-MM-DD) is required.');
+    }
+
+    const targetDate = data.date.trim();
 
     let companyId: string | null = null;
     let companyCode: string | null = null;
@@ -43,7 +53,6 @@ export class HolidaysService {
       if (!actorUser.companyId) {
         throw new ForbiddenException('Admin user is not associated with any company.');
       }
-      // Strict isolation: Admin can ONLY create holidays for their own company
       companyId = actorUser.companyId;
       companyCode = actorUser.companyCode || null;
       holidayType = 'Company';
@@ -60,24 +69,92 @@ export class HolidaysService {
       }
     }
 
+    // Duplicate Date Validation: Check if a holiday already exists on this date
+    let duplicate = this.db.holidays.find((h) => {
+      if (h.date !== targetDate) return false;
+      if (h.type === 'Public') return true;
+      if (holidayType === 'Public') return true;
+      if (companyId && h.companyId === companyId) return true;
+      return false;
+    });
+
+    if (!duplicate && (this.db as any).mysqlPool && (this.db as any).isMysqlConnected) {
+      try {
+        const pool = (this.db as any).mysqlPool;
+        const [rows]: any = await pool.query(
+          `SELECT * FROM holidays WHERE date = ? AND (type = 'Public' OR companyId = ? OR ? = 'Public') LIMIT 1`,
+          [targetDate, companyId || '___none___', holidayType],
+        );
+        if (rows && rows.length > 0) {
+          duplicate = rows[0];
+          if (!this.db.holidays.some((h) => h.id === rows[0].id)) {
+            this.db.holidays.push(rows[0]);
+          }
+        }
+      } catch {}
+    }
+
+    if (duplicate) {
+      throw new ConflictException(
+        `A holiday "${duplicate.name}" is already scheduled on this date (${targetDate}). Multiple holidays on the same date are not allowed.`,
+      );
+    }
+
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    let calculatedDay = data.dayOfWeek;
+    if (!calculatedDay) {
+      const d = new Date(targetDate + 'T00:00:00');
+      if (!isNaN(d.getTime())) {
+        calculatedDay = daysOfWeek[d.getDay()];
+      } else {
+        calculatedDay = 'Monday';
+      }
+    }
+
     const newHol: Holiday = {
       id: `hol-${Date.now()}`,
-      name: data.name || 'Holiday',
-      date: data.date || new Date().toISOString().split('T')[0],
-      dayOfWeek: data.dayOfWeek || 'Monday',
+      name: data.name.trim(),
+      date: targetDate,
+      dayOfWeek: calculatedDay,
       type: holidayType,
       description: data.description || 'Company holiday',
-      locationId: data.locationId,
+      locationId: data.locationId || undefined,
       companyId,
       companyCode,
     };
     this.db.holidays.push(newHol);
+    await this.db.saveHolidayToMysql(newHol);
+
+    const holNotif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      companyId: newHol.companyId || null,
+      companyCode: newHol.companyCode || null,
+      title: `Upcoming Holiday: ${newHol.name}`,
+      message: `Company holiday scheduled for ${newHol.date} (${newHol.dayOfWeek}).`,
+      type: 'holiday',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      link: '/holidays',
+    };
+    this.db.notifications.unshift(holNotif);
+    void this.db.saveNotificationToMysql(holNotif);
+
     this.db.persist();
     return newHol;
   }
 
-  update(id: string, data: Partial<CreateHolidayDto>, actorUser?: User) {
-    const idx = this.db.holidays.findIndex((h) => h.id === id);
+  async update(id: string, data: UpdateHolidayDto, actorUser?: User) {
+    let idx = this.db.holidays.findIndex((h) => h.id === id);
+    if (idx === -1 && (this.db as any).mysqlPool && (this.db as any).isMysqlConnected) {
+      try {
+        const pool = (this.db as any).mysqlPool;
+        const [rows]: any = await pool.query('SELECT * FROM holidays WHERE id = ? LIMIT 1', [id]);
+        if (rows && rows.length > 0) {
+          this.db.holidays.push(rows[0]);
+          idx = this.db.holidays.length - 1;
+        }
+      } catch {}
+    }
     if (idx === -1) throw new NotFoundException(`Holiday "${id}" not found`);
     const current = this.db.holidays[idx];
 
@@ -92,21 +169,68 @@ export class HolidaysService {
       throw new ForbiddenException('Employees are not authorized to update holidays.');
     }
 
+    const targetDate = data.date ? data.date.trim() : current.date;
+    const targetType = data.type || current.type;
+    const targetCompanyId = current.companyId;
+
+    // Duplicate Date Validation if date is being changed
+    if (data.date && data.date.trim() !== current.date) {
+      const duplicate = this.db.holidays.find((h) => {
+        if (h.id === current.id) return false;
+        if (h.date !== targetDate) return false;
+        if (h.type === 'Public') return true;
+        if (targetType === 'Public') return true;
+        if (targetCompanyId && h.companyId === targetCompanyId) return true;
+        return false;
+      });
+
+      if (duplicate) {
+        throw new ConflictException(
+          `A holiday "${duplicate.name}" is already scheduled on this date (${targetDate}). Multiple holidays on the same date are not allowed.`,
+        );
+      }
+    }
+
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    let calculatedDay = data.dayOfWeek || current.dayOfWeek;
+    if (data.date && !data.dayOfWeek) {
+      const d = new Date(targetDate + 'T00:00:00');
+      if (!isNaN(d.getTime())) {
+        calculatedDay = daysOfWeek[d.getDay()];
+      }
+    }
+
     const updated: Holiday = {
       ...current,
-      ...(data as any),
+      name: data.name !== undefined ? data.name.trim() : current.name,
+      date: targetDate,
+      dayOfWeek: calculatedDay,
+      type: targetType,
+      description: data.description !== undefined ? data.description : current.description,
+      locationId: data.locationId !== undefined ? data.locationId : current.locationId,
       id: current.id,
       companyId: current.companyId,
       companyCode: current.companyCode,
     };
 
     this.db.holidays[idx] = updated;
+    await this.db.saveHolidayToMysql(updated);
     this.db.persist();
     return updated;
   }
 
-  remove(id: string, actorUser?: User) {
-    const idx = this.db.holidays.findIndex((h) => h.id === id);
+  async remove(id: string, actorUser?: User) {
+    let idx = this.db.holidays.findIndex((h) => h.id === id);
+    if (idx === -1 && (this.db as any).mysqlPool && (this.db as any).isMysqlConnected) {
+      try {
+        const pool = (this.db as any).mysqlPool;
+        const [rows]: any = await pool.query('SELECT * FROM holidays WHERE id = ? LIMIT 1', [id]);
+        if (rows && rows.length > 0) {
+          this.db.holidays.push(rows[0]);
+          idx = this.db.holidays.length - 1;
+        }
+      } catch {}
+    }
     if (idx === -1) throw new NotFoundException(`Holiday "${id}" not found`);
     const current = this.db.holidays[idx];
 
@@ -122,6 +246,7 @@ export class HolidaysService {
     }
 
     const removed = this.db.holidays.splice(idx, 1);
+    await this.db.deleteHolidayFromMysql(id);
     this.db.persist();
     return removed[0];
   }

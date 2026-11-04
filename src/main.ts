@@ -23,6 +23,9 @@ async function bootstrap() {
     'http://127.0.0.1:4000',
     'http://192.168.1.109:3000',
     'http://192.168.1.104:3000',
+    'http://192.168.1.106:3000',
+    "*"
+
   ];
   const envOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)

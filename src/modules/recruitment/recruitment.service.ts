@@ -160,17 +160,28 @@ export class RecruitmentService {
     candidate.interviews.push(interview);
     candidate.status = CandidateStatus.INTERVIEW;
 
-    this.db.notifications.unshift({
+    const interviewer = this.db.users.find(
+      (u) =>
+        `${u.firstName || ''} ${u.lastName || ''}`.trim().toLowerCase() === (dto.interviewerName || '').trim().toLowerCase() ||
+        u.email.toLowerCase() === (dto.interviewerName || '').trim().toLowerCase(),
+    );
+    const targetUserId = interviewer ? interviewer.id : actorUser?.id;
+
+    const recNotif = {
       id: `notif-${Date.now()}`,
       companyId: candidate.companyId || actorUser?.companyId || '',
       companyCode: candidate.companyCode || actorUser?.companyCode || '',
+      userId: targetUserId,
       title: 'Interview Scheduled',
       message: `Interview for ${candidate.fullName} with ${dto.interviewerName} scheduled for ${dto.scheduledAt}`,
-      type: 'system',
+      type: 'recruitment',
       isRead: false,
       createdAt: new Date().toISOString(),
       link: '/recruitment',
-    });
+    };
+
+    this.db.notifications.unshift(recNotif);
+    void this.db.saveNotificationToMysql(recNotif);
 
     this.db.persist();
     return candidate;
