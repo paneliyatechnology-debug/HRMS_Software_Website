@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
 import { DatabaseService } from '../../database/database.service.js';
 import { EmployeeDocument, Role, User } from '../../common/types.js';
@@ -175,53 +175,80 @@ export class DocumentsService {
   }
 
   async create(data: Partial<CreateDocumentMetadataDto>, actorUser?: User): Promise<EmployeeDocument> {
-    let targetId = (data as any).userId || data.employeeId;
-
-    // Strict Role Permission Check: Employee can only upload for themselves
-    if (actorUser && actorUser.role === Role.EMPLOYEE) {
-      targetId = actorUser.id;
+    if (!actorUser) {
+      throw new UnauthorizedException('Authentication token required to upload documents.');
     }
 
-    let user = this.db.resolveUser
-      ? this.db.resolveUser(targetId)
-      : this.db.users?.find(
+    let targetEmployeeId: string;
+    let targetUser: User | undefined;
+
+    if (actorUser.role === Role.EMPLOYEE) {
+      // Strict Role Permission: EMPLOYEE can ONLY upload their own documents
+      // Never trust body.employeeId for an EMPLOYEE!
+      targetEmployeeId = actorUser.id;
+      targetUser = actorUser;
+    } else if (actorUser.role === Role.ADMIN) {
+      // ADMIN can upload for employees in their company or for themselves
+      const requestedId = (data as any).userId || data.employeeId;
+      if (requestedId && requestedId !== actorUser.id) {
+        targetUser = this.db.users.find(
           (u) =>
-            u.id === targetId ||
-            u.employeeId === targetId ||
-            (u.email && u.email.toLowerCase() === targetId?.toLowerCase()),
+            u.id === requestedId ||
+            u.employeeId === requestedId ||
+            (u.email && u.email.toLowerCase() === requestedId.toLowerCase()),
         );
 
-    // Look up in MySQL if not found in memory
-    if (!user && targetId && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
-      try {
-        const pool = this.db.getMysqlPool()!;
-        const [rows]: any = await pool.query(
-          'SELECT * FROM users WHERE id = ? OR employeeId = ? OR email = ? LIMIT 1',
-          [targetId, targetId, targetId],
-        );
-        if (rows && rows.length > 0) {
-          user = rows[0];
-          if (!this.db.users.some((u) => u.id === user!.id)) {
-            this.db.users.push(user!);
-          }
+        if (!targetUser && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+          try {
+            const pool = this.db.getMysqlPool()!;
+            const [rows]: any = await pool.query(
+              'SELECT * FROM users WHERE id = ? OR employeeId = ? OR email = ? LIMIT 1',
+              [requestedId, requestedId, requestedId],
+            );
+            if (rows && rows.length > 0) {
+              targetUser = rows[0];
+            }
+          } catch {}
         }
-      } catch {}
-    }
 
-    // Company isolation check for ADMIN
-    if (actorUser && actorUser.role === Role.ADMIN) {
-      if (user && actorUser.companyId && user.companyId && user.companyId !== actorUser.companyId) {
-        throw new ForbiddenException('Cannot upload documents for an employee belonging to another company.');
+        if (!targetUser) {
+          throw new NotFoundException(`Employee with ID "${requestedId}" not found.`);
+        }
+
+        // Verify company isolation for ADMIN
+        if (targetUser.companyId && actorUser.companyId && targetUser.companyId !== actorUser.companyId) {
+          throw new ForbiddenException('Cannot upload documents for an employee belonging to another company.');
+        }
+        targetEmployeeId = targetUser.id;
+      } else {
+        targetEmployeeId = actorUser.id;
+        targetUser = actorUser;
       }
+    } else if (actorUser.role === Role.SUPER_ADMIN) {
+      const requestedId = (data as any).userId || data.employeeId;
+      if (requestedId) {
+        targetUser = this.db.users.find(
+          (u) =>
+            u.id === requestedId ||
+            u.employeeId === requestedId ||
+            (u.email && u.email.toLowerCase() === requestedId.toLowerCase()),
+        );
+        targetEmployeeId = targetUser ? targetUser.id : requestedId;
+      } else {
+        targetEmployeeId = actorUser.id;
+        targetUser = actorUser;
+      }
+    } else {
+      throw new ForbiddenException('You do not have permission to upload documents.');
     }
 
-    const realUserId = user ? user.id : (actorUser?.id || this.db.users[0]?.id || 'user-default');
-    const empName = user
-      ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email
-      : (actorUser ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() : 'Employee');
+    const realUserId = targetEmployeeId;
+    const empName = targetUser
+      ? `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() || targetUser.email
+      : `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || 'Employee';
 
-    const companyId = user?.companyId || actorUser?.companyId || null;
-    const companyCode = user?.companyCode || actorUser?.companyCode || null;
+    const companyId = targetUser?.companyId || actorUser.companyId || null;
+    const companyCode = targetUser?.companyCode || actorUser.companyCode || null;
 
     const newDoc: EmployeeDocument = {
       id: `doc-${Date.now()}-${Math.floor(Math.random() * 1000)}`,

@@ -105,6 +105,21 @@ export class JwtAuthGuard implements CanActivate {
         u.email.toLowerCase() === identifier.toLowerCase(),
     );
 
+    if (!user && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+      try {
+        const [mysqlUsers]: any = await this.db.getMysqlPool()!.query(
+          'SELECT * FROM users WHERE id = ? OR employeeId = ? OR email = ? LIMIT 1',
+          [identifier, identifier, identifier],
+        );
+        if (mysqlUsers && mysqlUsers.length > 0) {
+          user = mysqlUsers[0];
+          if (!this.db.users.some((u) => u.id === user!.id)) {
+            this.db.users.push(user!);
+          }
+        }
+      } catch {}
+    }
+
     if (!user && (identifier === 'user-1' || identifier.toLowerCase() === 'admin')) {
       user = this.db.users.find((u) => u.id === 'user-admin-default' || u.role === Role.SUPER_ADMIN);
     }

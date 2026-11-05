@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  UnauthorizedException,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -23,7 +24,6 @@ import { CreateDocumentMetadataDto } from './dto/create-document.dto.js';
 import { UploadDocumentDto } from './dto/upload-document.dto.js';
 import { VerifyDocumentDto } from './dto/verify-document.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
-import { Public } from '../../common/guards/public.decorator.js';
 
 @ApiTags('Documents')
 @ApiBearerAuth()
@@ -32,7 +32,6 @@ import { Public } from '../../common/guards/public.decorator.js';
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
-  @Public()
   @Get()
   @ApiOperation({
     summary: 'List documents, optionally by userId',
@@ -42,24 +41,20 @@ export class DocumentsController {
   @ApiQuery({ name: 'employeeId', required: false, description: 'Filter by employee ID (legacy alias for userId)' })
   @ApiQuery({ name: 'companyId', required: false, description: 'Company filter for Super Admin' })
   @ApiResponse({ status: 200, description: 'List of documents' })
-  async findAll(
+  @ApiResponse({ status: 401, description: 'Unauthorized - Valid JWT Bearer token required' })
+  findAll(
     @Query('userId') userId?: string,
     @Query('employeeId') employeeId?: string,
     @Query('companyId') companyFilter?: string,
     @Req() req?: any,
   ) {
-    let actorUser = req?.user;
-    if (!actorUser && req) {
-      actorUser = this.documentsService.resolveUserFromRequest(req);
+    const actorUser = req?.user;
+    if (!actorUser) {
+      throw new UnauthorizedException('Authentication token is required.');
     }
-    const targetEmployeeId = userId || employeeId;
-    if (!actorUser && targetEmployeeId) {
-      actorUser = await this.documentsService.resolveUserByIdentifier(targetEmployeeId);
-    }
-    return this.documentsService.findAll(targetEmployeeId, actorUser, companyFilter);
+    return this.documentsService.findAll(userId || employeeId, actorUser, companyFilter);
   }
 
-  @Public()
   @Post()
   @ApiOperation({
     summary: 'Upload document metadata',
@@ -67,19 +62,15 @@ export class DocumentsController {
   })
   @ApiBody({ type: CreateDocumentMetadataDto })
   @ApiResponse({ status: 201, description: 'Document registered' })
-  async create(@Body() body: CreateDocumentMetadataDto, @Req() req: any) {
-    let actorUser = req?.user;
-    if (!actorUser && req) {
-      actorUser = this.documentsService.resolveUserFromRequest(req);
-    }
-    const targetId = (body as any)?.userId || body.employeeId;
-    if (!actorUser && targetId) {
-      actorUser = await this.documentsService.resolveUserByIdentifier(targetId);
+  @ApiResponse({ status: 401, description: 'Unauthorized - Valid JWT Bearer token required' })
+  create(@Body() body: CreateDocumentMetadataDto, @Req() req: any) {
+    const actorUser = req?.user;
+    if (!actorUser) {
+      throw new UnauthorizedException('Authentication token is required.');
     }
     return this.documentsService.create(body, actorUser);
   }
 
-  @Public()
   @Post('upload')
   @ApiOperation({
     summary: 'Upload actual physical document file',
@@ -87,6 +78,8 @@ export class DocumentsController {
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadDocumentDto })
+  @ApiResponse({ status: 201, description: 'Document file uploaded and registered' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Valid JWT Bearer token required' })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -118,7 +111,7 @@ export class DocumentsController {
       },
     }),
   )
-  async uploadFile(
+  uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Body()
     body: {
@@ -134,6 +127,11 @@ export class DocumentsController {
       throw new BadRequestException('No file provided');
     }
 
+    const actorUser = (req as any).user;
+    if (!actorUser) {
+      throw new UnauthorizedException('Authentication token is required.');
+    }
+
     const fileSizeFormatted =
       file.size > 1024 * 1024
         ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
@@ -141,19 +139,9 @@ export class DocumentsController {
 
     const dynamicBaseUrl = `${req.protocol}://${req.get('host')}`;
 
-    let actorUser = (req as any).user;
-    if (!actorUser) {
-      actorUser = this.documentsService.resolveUserFromRequest(req);
-    }
-    const targetEmployeeId = body.employeeId || body.userId;
-    if (!actorUser && targetEmployeeId) {
-      actorUser = await this.documentsService.resolveUserByIdentifier(targetEmployeeId);
-    }
-
     return this.documentsService.create(
       {
-        employeeId: targetEmployeeId || actorUser?.id,
-        userId: targetEmployeeId || actorUser?.id,
+        employeeId: body.employeeId || (body as any).userId,
         title: body.title || file.originalname,
         category: (body.category as any) || 'Other',
         fileUrl: `${dynamicBaseUrl}/uploads/documents/${file.filename}`,
@@ -172,9 +160,14 @@ export class DocumentsController {
   @ApiParam({ name: 'id', description: 'Document ID' })
   @ApiBody({ type: VerifyDocumentDto })
   @ApiResponse({ status: 200, description: 'Document verification updated' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Document not found' })
   verify(@Param('id') id: string, @Body() body: VerifyDocumentDto, @Req() req: any) {
-    return this.documentsService.verify(id, body, req?.user);
+    const actorUser = req?.user;
+    if (!actorUser) {
+      throw new UnauthorizedException('Authentication token is required.');
+    }
+    return this.documentsService.verify(id, body, actorUser);
   }
 }
