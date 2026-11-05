@@ -11,6 +11,10 @@ import {
   Req,
   ForbiddenException,
   UnauthorizedException,
+  BadRequestException,
+  UseInterceptors,
+  UploadedFile,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,7 +24,12 @@ import {
   ApiBody,
   ApiHeader,
   ApiBearerAuth,
+  ApiConsumes,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as path from 'path';
+import * as fs from 'fs';
 import { EmployeesService } from './employees.service.js';
 import { EmployeeInvitationService } from './employee-invitation.service.js';
 import { CreateEmployeeDto } from './dto/create-employee.dto.js';
@@ -29,6 +38,8 @@ import { QueryEmployeeDto } from './dto/query-employee.dto.js';
 import { AuthService } from '../auth/auth.service.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { Role } from '../../common/types.js';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
+import { DocumentsService } from '../documents/documents.service.js';
 
 @ApiTags('Employees')
 @ApiBearerAuth()
@@ -39,6 +50,7 @@ export class EmployeesController {
     private readonly invitationService: EmployeeInvitationService,
     private readonly authService: AuthService,
     private readonly db: DatabaseService,
+    private readonly documentsService: DocumentsService,
   ) {}
 
   /** Resolve logged-in user from request or Authorization header */
@@ -257,6 +269,122 @@ export class EmployeesController {
       id,
       `${actor.firstName} ${actor.lastName}`,
       actor,
+    );
+  }
+
+  @Post('documents/upload')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Dedicated Employee Document Upload',
+    description:
+      'Allows an authenticated employee to upload their personal document directly using JWT Bearer token.\n' +
+      'Requires EMPLOYEE role. Identity and company are extracted strictly from verified JWT.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file', 'title', 'category'],
+      properties: {
+        file: { type: 'string', format: 'binary', description: 'Document file (PDF, Word, or image)' },
+        title: { type: 'string', description: 'Document title' },
+        category: { type: 'string', description: 'Document category' },
+        expiryDate: { type: 'string', format: 'date', description: 'Optional expiry date (YYYY-MM-DD)' },
+      },
+    },
+  })
+  @ApiResponse({ status: 201, description: 'Document uploaded and registered successfully' })
+  @ApiResponse({ status: 400, description: 'Missing required fields or invalid file format' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Missing or invalid Bearer token' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Only EMPLOYEE role is permitted' })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadDir = path.join(process.cwd(), 'uploads', 'documents');
+          if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+          }
+          cb(null, uploadDir);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = path.extname(file.originalname);
+          const cleanBase = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
+          cb(null, `doc-${cleanBase}-${uniqueSuffix}${ext}`);
+        },
+      }),
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+      },
+      fileFilter: (req, file, cb) => {
+        if (!file.originalname.match(/\.(pdf|doc|docx|png|jpg|jpeg|txt)$/i)) {
+          return cb(
+            new BadRequestException('Only PDF, Word documents, and images are supported'),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async uploadEmployeeDocument(
+    @UploadedFile() file: Express.Multer.File,
+    @Body()
+    body: {
+      title?: string;
+      category?: string;
+      expiryDate?: string;
+    },
+    @Req() req: any,
+  ) {
+    // 1. Enforce Authorization: Bearer <accessToken>
+    const authHeader = req.headers?.authorization;
+    if (!authHeader || typeof authHeader !== 'string' || !authHeader.toLowerCase().startsWith('bearer ')) {
+      throw new UnauthorizedException('Authorization header with Bearer token is required.');
+    }
+
+    // 2. Resolve authenticated user from JwtAuthGuard
+    const actorUser = req.user;
+    if (!actorUser) {
+      throw new UnauthorizedException('Authentication token is required.');
+    }
+
+    // 3. Enforce EMPLOYEE role only (ADMIN or others receive 403 Forbidden)
+    if (actorUser.role !== Role.EMPLOYEE) {
+      throw new ForbiddenException('Only employees are allowed to use this employee document upload endpoint.');
+    }
+
+    // 4. Validate file
+    if (!file) {
+      throw new BadRequestException('Document file is required.');
+    }
+
+    // 5. Validate required fields
+    if (!body.title || !body.title.trim()) {
+      throw new BadRequestException('Document title is required.');
+    }
+    if (!body.category || !body.category.trim()) {
+      throw new BadRequestException('Document category is required.');
+    }
+
+    const fileSizeFormatted =
+      file.size > 1024 * 1024
+        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+        : `${Math.round(file.size / 1024)} KB`;
+
+    const dynamicBaseUrl = `${req.protocol}://${req.get('host')}`;
+
+    // 6. Save via documentsService.create (automatically bounds to actorUser)
+    return this.documentsService.create(
+      {
+        title: body.title.trim(),
+        category: body.category.trim() as any,
+        fileUrl: `${dynamicBaseUrl}/uploads/documents/${file.filename}`,
+        fileSize: fileSizeFormatted,
+        expiryDate: body.expiryDate,
+      },
+      actorUser,
     );
   }
 }
