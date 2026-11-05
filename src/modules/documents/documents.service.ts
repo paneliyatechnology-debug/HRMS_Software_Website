@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import jwt from 'jsonwebtoken';
 import { DatabaseService } from '../../database/database.service.js';
 import { EmployeeDocument, Role, User } from '../../common/types.js';
 import { CreateDocumentMetadataDto } from './dto/create-document.dto.js';
@@ -96,6 +97,83 @@ export class DocumentsService {
     }));
   }
 
+  resolveUserFromRequest(req: any): User | undefined {
+    try {
+      const rawToken =
+        req.headers?.authorization ||
+        req.headers?.token ||
+        req.headers?.['x-request-token'] ||
+        req.headers?.['request-token'] ||
+        req.cookies?.accessToken ||
+        req.cookies?.token ||
+        req.query?.token;
+
+      if (!rawToken || typeof rawToken !== 'string') return undefined;
+
+      let clean = rawToken.trim().replace(/^["']+|["']+$/g, '').trim();
+      if (clean.toLowerCase().startsWith('bearer ')) {
+        clean = clean.substring(7).trim().replace(/^["']+|["']+$/g, '').trim();
+      }
+      if (!clean) return undefined;
+
+      let identifier = clean;
+      try {
+        const secret = process.env.JWT_SECRET || 'enterprise_hrms_jwt_secret_key_2026';
+        const decoded = jwt.verify(clean, secret) as any;
+        if (decoded && (decoded.sub || decoded.userId || decoded.id || decoded.email)) {
+          identifier = decoded.sub || decoded.userId || decoded.id || decoded.email;
+        }
+      } catch {
+        const match = clean.match(/(?:jwt_)?token_([^_]+)/i);
+        if (match && match[1]) {
+          identifier = match[1];
+        } else if (clean.startsWith('token_user-')) {
+          identifier = clean.replace(/^token_/, '').split('_')[0];
+        } else if (clean.startsWith('user-')) {
+          identifier = clean.split('_')[0];
+        }
+      }
+
+      return this.db.users.find(
+        (u) =>
+          u.id.toLowerCase() === identifier.toLowerCase() ||
+          u.email.toLowerCase() === identifier.toLowerCase(),
+      );
+    } catch {
+      return undefined;
+    }
+  }
+
+  async resolveUserByIdentifier(identifier?: string): Promise<User | undefined> {
+    if (!identifier) return undefined;
+    const clean = identifier.trim();
+
+    let user = this.db.users.find(
+      (u) =>
+        u.id.toLowerCase() === clean.toLowerCase() ||
+        (u.employeeId && u.employeeId.toLowerCase() === clean.toLowerCase()) ||
+        (u.email && u.email.toLowerCase() === clean.toLowerCase()),
+    );
+
+    if (!user && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+      try {
+        const pool = this.db.getMysqlPool()!;
+        const [rows]: any = await pool.query(
+          'SELECT * FROM users WHERE id = ? OR employeeId = ? OR email = ? LIMIT 1',
+          [clean, clean, clean],
+        );
+        if (rows && rows.length > 0) {
+          user = rows[0];
+          if (!this.db.users.some((u) => u.id === user!.id)) {
+            this.db.users.push(user!);
+          }
+        }
+      } catch {}
+    }
+
+    return user;
+  }
+
   async create(data: Partial<CreateDocumentMetadataDto>, actorUser?: User): Promise<EmployeeDocument> {
     let targetId = (data as any).userId || data.employeeId;
 
@@ -104,7 +182,7 @@ export class DocumentsService {
       targetId = actorUser.id;
     }
 
-    const user = this.db.resolveUser
+    let user = this.db.resolveUser
       ? this.db.resolveUser(targetId)
       : this.db.users?.find(
           (u) =>
@@ -112,6 +190,23 @@ export class DocumentsService {
             u.employeeId === targetId ||
             (u.email && u.email.toLowerCase() === targetId?.toLowerCase()),
         );
+
+    // Look up in MySQL if not found in memory
+    if (!user && targetId && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+      try {
+        const pool = this.db.getMysqlPool()!;
+        const [rows]: any = await pool.query(
+          'SELECT * FROM users WHERE id = ? OR employeeId = ? OR email = ? LIMIT 1',
+          [targetId, targetId, targetId],
+        );
+        if (rows && rows.length > 0) {
+          user = rows[0];
+          if (!this.db.users.some((u) => u.id === user!.id)) {
+            this.db.users.push(user!);
+          }
+        }
+      } catch {}
+    }
 
     // Company isolation check for ADMIN
     if (actorUser && actorUser.role === Role.ADMIN) {

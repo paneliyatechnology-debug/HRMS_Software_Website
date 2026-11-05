@@ -70,6 +70,7 @@ async function bootstrap() {
   const uploadRoots = [
     path.resolve(process.cwd(), 'uploads'),
     path.resolve(process.cwd(), 'HRMS_Software_Website', 'uploads'),
+    path.resolve(process.cwd(), '..', 'uploads'),
   ];
   for (const root of uploadRoots) {
     const docsDir = path.join(root, 'documents');
