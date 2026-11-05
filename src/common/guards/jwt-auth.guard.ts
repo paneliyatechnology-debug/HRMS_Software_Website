@@ -49,6 +49,8 @@ export class JwtAuthGuard implements CanActivate {
       req.headers?.token ||
       req.headers?.['x-request-token'] ||
       req.headers?.['request-token'] ||
+      req.cookies?.accessToken ||
+      req.cookies?.token ||
       req.query?.token;
 
     if (!rawToken || typeof rawToken !== 'string') {
@@ -86,10 +88,12 @@ export class JwtAuthGuard implements CanActivate {
       if (jwtErr?.name === 'TokenExpiredError') {
         throw new UnauthorizedException('Authentication token has expired. Please login again.');
       }
-      // 2. Fallback for legacy token format: jwt_token_<userId>_<timestamp>
-      const match = clean.match(/jwt_token_([^_]+)/i);
+      // 2. Fallback for token format: jwt_token_<userId>_<timestamp> or token_<userId> or user-<id>
+      const match = clean.match(/(?:jwt_)?token_([^_]+)/i);
       if (match && match[1]) {
         identifier = match[1];
+      } else if (clean.startsWith('token_user-')) {
+        identifier = clean.replace(/^token_/, '').split('_')[0];
       } else if (clean.startsWith('user-')) {
         identifier = clean.split('_')[0];
       }

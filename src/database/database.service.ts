@@ -445,7 +445,9 @@ export class DatabaseService implements OnModuleInit {
       this.notifications = this.notifications.filter((n) =>
         n.userId ? validUserIds.has(n.userId) : belongsToExistingCompany(n),
       );
-      this.documents = this.documents.filter(belongsToExistingCompany);
+      this.documents = this.documents.filter(
+        (d) => belongsToExistingCompany(d) || (d.employeeId && (validUserIds.has(d.employeeId) || validEmployeeIds.has(d.employeeId))),
+      );
       this.refreshTokens = this.refreshTokens.filter((rt) => rt.userId ? validUserIds.has(rt.userId) : false);
       this.employeeInvitations = this.employeeInvitations.filter(belongsToExistingCompany);
     } catch (err) {
@@ -1093,6 +1095,62 @@ export class DatabaseService implements OnModuleInit {
       this.logger.log(`Deleted holiday ${id} directly from live MySQL.`);
     } catch (err: any) {
       this.logger.error(`Error deleting holiday ${id} from MySQL:`, err);
+    }
+  }
+
+  /**
+   * Persists an employee document record directly to live MySQL.
+   */
+  public async saveDocumentToMysql(doc: EmployeeDocument): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO documents (id, companyId, companyCode, employeeId, employeeName, title, category, fileUrl, fileSize, uploadDate, expiryDate, verificationStatus, verifiedBy)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           companyId=COALESCE(VALUES(companyId), documents.companyId),
+           companyCode=COALESCE(VALUES(companyCode), documents.companyCode),
+           employeeName=VALUES(employeeName),
+           title=VALUES(title),
+           category=VALUES(category),
+           fileUrl=VALUES(fileUrl),
+           fileSize=VALUES(fileSize),
+           uploadDate=VALUES(uploadDate),
+           expiryDate=VALUES(expiryDate),
+           verificationStatus=VALUES(verificationStatus),
+           verifiedBy=VALUES(verifiedBy)`,
+        [
+          doc.id,
+          doc.companyId || null,
+          doc.companyCode || null,
+          doc.employeeId,
+          doc.employeeName || 'Employee',
+          doc.title,
+          doc.category || 'Other',
+          doc.fileUrl || '',
+          doc.fileSize || '',
+          doc.uploadDate || new Date().toISOString().split('T')[0],
+          doc.expiryDate || null,
+          doc.verificationStatus || 'Pending',
+          doc.verifiedBy || null,
+        ],
+      );
+      this.logger.log(`Persisted document "${doc.id}" (${doc.title}) directly to live MySQL.`);
+    } catch (err: any) {
+      this.logger.error(`Error saving document ${doc.id} to MySQL:`, err);
+    }
+  }
+
+  /**
+   * Deletes a document record directly from live MySQL.
+   */
+  public async deleteDocumentFromMysql(id: string): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(`DELETE FROM documents WHERE id = ?`, [id]);
+      this.logger.log(`Deleted document ${id} directly from live MySQL.`);
+    } catch (err: any) {
+      this.logger.error(`Error deleting document ${id} from MySQL:`, err);
     }
   }
 

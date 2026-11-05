@@ -8,17 +8,43 @@ import { VerifyDocumentDto } from './dto/verify-document.dto.js';
 export class DocumentsService {
   constructor(private readonly db: DatabaseService) {}
 
-  findAll(employeeId?: string, actorUser?: User, companyFilter?: string) {
+  async findAll(employeeId?: string, actorUser?: User, companyFilter?: string) {
+    // If MySQL is connected, always refresh from live database
+    if (this.db.getMysqlPool() && this.db.isConnectedToMysql) {
+      try {
+        const pool = this.db.getMysqlPool()!;
+        const [rows]: any = await pool.query('SELECT * FROM documents ORDER BY uploadDate DESC');
+        this.db.documents = rows || [];
+      } catch {}
+    }
+
     let list = [...this.db.documents];
 
-    // Tenant isolation
+    // Company and User Isolation
     if (actorUser) {
       if (actorUser.role === Role.EMPLOYEE) {
-        list = list.filter((d) => d.employeeId === actorUser.id || (d as any).userId === actorUser.id);
+        list = list.filter(
+          (d) =>
+            d.employeeId === actorUser.id ||
+            (d as any).userId === actorUser.id ||
+            (actorUser.employeeId && d.employeeId === actorUser.employeeId),
+        );
       } else if (actorUser.role === Role.ADMIN) {
-        if (actorUser.companyId) {
-          list = list.filter((d) => !d.companyId || d.companyId === actorUser.companyId);
-        }
+        list = list.filter((d) => {
+          if (actorUser.companyId && d.companyId) {
+            return d.companyId === actorUser.companyId;
+          }
+          if (actorUser.companyCode && d.companyCode) {
+            return d.companyCode.toLowerCase() === actorUser.companyCode.toLowerCase();
+          }
+          const linkedUser = this.db.users.find(
+            (u) => u.id === d.employeeId || u.employeeId === d.employeeId,
+          );
+          if (linkedUser && actorUser.companyId) {
+            return linkedUser.companyId === actorUser.companyId;
+          }
+          return false;
+        });
       } else if (actorUser.role === Role.SUPER_ADMIN && companyFilter) {
         list = list.filter(
           (d) =>
@@ -30,6 +56,11 @@ export class DocumentsService {
     }
 
     if (employeeId) {
+      if (actorUser && actorUser.role === Role.EMPLOYEE) {
+        if (employeeId !== actorUser.id && employeeId !== actorUser.employeeId) {
+          throw new ForbiddenException('Employees can only view their own documents.');
+        }
+      }
       const user = this.db.resolveUser
         ? this.db.resolveUser(employeeId)
         : this.db.users?.find(
@@ -39,40 +70,69 @@ export class DocumentsService {
               (u.email && u.email.toLowerCase() === employeeId.toLowerCase()),
           );
       const targetId = user ? user.id : employeeId;
-      list = list.filter((d) => d.employeeId === targetId || (d as any).userId === targetId || d.employeeId === employeeId);
+      list = list.filter(
+        (d) =>
+          d.employeeId === targetId ||
+          (d as any).userId === targetId ||
+          d.employeeId === employeeId,
+      );
     }
 
-    return list.map((d) => {
-      const { employeeId: _, id: docId, ...rest } = d;
-      const resObj: any = { id: docId, userId: (d as any).userId || d.employeeId, ...rest };
-      Object.defineProperty(resObj, 'employeeId', { value: resObj.userId, enumerable: false, configurable: true, writable: true });
-      return resObj;
-    });
+    return list.map((d) => ({
+      id: d.id,
+      userId: (d as any).userId || d.employeeId,
+      employeeId: d.employeeId,
+      employeeName: d.employeeName,
+      title: d.title,
+      category: d.category,
+      fileUrl: d.fileUrl,
+      fileSize: d.fileSize,
+      uploadDate: d.uploadDate,
+      expiryDate: d.expiryDate,
+      verificationStatus: d.verificationStatus,
+      verifiedBy: d.verifiedBy,
+      companyId: d.companyId,
+      companyCode: d.companyCode,
+    }));
   }
 
-  create(data: Partial<CreateDocumentMetadataDto>, actorUser?: User): EmployeeDocument {
-    const targetId = (data as any).userId || data.employeeId;
+  async create(data: Partial<CreateDocumentMetadataDto>, actorUser?: User): Promise<EmployeeDocument> {
+    let targetId = (data as any).userId || data.employeeId;
+
+    // Strict Role Permission Check: Employee can only upload for themselves
+    if (actorUser && actorUser.role === Role.EMPLOYEE) {
+      targetId = actorUser.id;
+    }
+
     const user = this.db.resolveUser
       ? this.db.resolveUser(targetId)
       : this.db.users?.find(
           (u) =>
             u.id === targetId ||
             u.employeeId === targetId ||
-            (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
+            (u.email && u.email.toLowerCase() === targetId?.toLowerCase()),
         );
+
+    // Company isolation check for ADMIN
+    if (actorUser && actorUser.role === Role.ADMIN) {
+      if (user && actorUser.companyId && user.companyId && user.companyId !== actorUser.companyId) {
+        throw new ForbiddenException('Cannot upload documents for an employee belonging to another company.');
+      }
+    }
+
     const realUserId = user ? user.id : (actorUser?.id || this.db.users[0]?.id || 'user-default');
     const empName = user
-      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+      ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email
       : (actorUser ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() : 'Employee');
 
     const companyId = user?.companyId || actorUser?.companyId || null;
     const companyCode = user?.companyCode || actorUser?.companyCode || null;
 
     const newDoc: EmployeeDocument = {
-      id: `doc-${Date.now()}`,
+      id: `doc-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       employeeId: realUserId,
       employeeName: empName || 'Employee',
-      title: data.title || 'Document',
+      title: data.title?.trim() || 'Document',
       category: (data.category as any) || 'Other',
       fileUrl: data.fileUrl || '/docs/sample.pdf',
       fileSize: data.fileSize || '1.2 MB',
@@ -84,17 +144,57 @@ export class DocumentsService {
     };
     (newDoc as any).userId = realUserId;
 
+    // In-memory update
     this.db.documents.unshift(newDoc);
+
+    // Live MySQL persistence
+    await this.db.saveDocumentToMysql(newDoc);
     this.db.persist();
 
-    const { employeeId: _, id: docId, ...rest } = newDoc;
-    const resObj: any = { id: docId, userId: realUserId, ...rest };
-    Object.defineProperty(resObj, 'employeeId', { value: realUserId, enumerable: false, configurable: true, writable: true });
-    return resObj;
+    this.db.logAudit(
+      actorUser?.id || realUserId,
+      empName,
+      actorUser?.role || 'EMPLOYEE',
+      'DOCUMENT_UPLOADED',
+      'Document Management',
+      `Uploaded document "${newDoc.title}" for ${newDoc.employeeName}`,
+      newDoc.id,
+      undefined,
+      companyId || undefined,
+      companyCode || undefined,
+    );
+
+    return {
+      id: newDoc.id,
+      userId: realUserId,
+      employeeId: realUserId,
+      employeeName: newDoc.employeeName,
+      title: newDoc.title,
+      category: newDoc.category,
+      fileUrl: newDoc.fileUrl,
+      fileSize: newDoc.fileSize,
+      uploadDate: newDoc.uploadDate,
+      expiryDate: newDoc.expiryDate,
+      verificationStatus: newDoc.verificationStatus,
+      verifiedBy: newDoc.verifiedBy,
+      companyId: newDoc.companyId,
+      companyCode: newDoc.companyCode,
+    } as any;
   }
 
-  verify(id: string, dto: VerifyDocumentDto, actorUser?: User) {
-    const doc = this.db.documents.find((d) => d.id === id);
+  async verify(id: string, dto: VerifyDocumentDto, actorUser?: User) {
+    let doc = this.db.documents.find((d) => d.id === id);
+    if (!doc && (this.db as any).mysqlPool && (this.db as any).isMysqlConnected) {
+      try {
+        const pool = (this.db as any).mysqlPool;
+        const [rows]: any = await pool.query('SELECT * FROM documents WHERE id = ? LIMIT 1', [id]);
+        if (rows && rows.length > 0) {
+          doc = rows[0];
+          this.db.documents.push(doc!);
+        }
+      } catch {}
+    }
+
     if (!doc) throw new NotFoundException('Document not found');
 
     if (actorUser && actorUser.role === Role.ADMIN) {
@@ -109,6 +209,9 @@ export class DocumentsService {
     doc.verificationStatus = dto.status;
     doc.verifiedBy = verifiedBy;
 
+    await this.db.saveDocumentToMysql(doc);
+    this.db.persist();
+
     this.db.logAudit(
       actorUser?.id || 'sys',
       verifiedBy,
@@ -117,9 +220,11 @@ export class DocumentsService {
       'Document Management',
       `Document "${doc.title}" for ${doc.employeeName} marked as ${dto.status}`,
       doc.id,
+      undefined,
+      doc.companyId || undefined,
+      doc.companyCode || undefined,
     );
 
-    this.db.persist();
     return doc;
   }
 }

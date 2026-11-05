@@ -24,6 +24,7 @@ async function bootstrap() {
     'http://192.168.1.109:3000',
     'http://192.168.1.104:3000',
     'http://192.168.1.106:3000',
+    'http://192.168.1.108:3000',
     "*"
 
   ];
@@ -35,7 +36,12 @@ async function bootstrap() {
   app.enableCors({
     origin: (origin: any, callback: any) => {
       // Allow non-browser tools, same-origin, or CLI requests (where origin is undefined)
-      if (!origin || allowedOrigins.has(origin)) {
+      if (
+        !origin ||
+        allowedOrigins.has(origin) ||
+        allowedOrigins.has('*') ||
+        /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin)
+      ) {
         callback(null, true);
       } else {
         callback(null, false);
@@ -60,19 +66,25 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new LoggingInterceptor());
 
-  // Ensure uploads directories exist
-  const uploadsDir = path.join(process.cwd(), 'uploads', 'documents');
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+  // Ensure uploads directories exist in active project paths
+  const uploadRoots = [
+    path.resolve(process.cwd(), 'uploads'),
+    path.resolve(process.cwd(), 'HRMS_Software_Website', 'uploads'),
+  ];
+  for (const root of uploadRoots) {
+    const docsDir = path.join(root, 'documents');
+    if (!fs.existsSync(docsDir)) {
+      try { fs.mkdirSync(docsDir, { recursive: true }); } catch {}
+    }
+    const profDir = path.join(root, 'profiles');
+    if (!fs.existsSync(profDir)) {
+      try { fs.mkdirSync(profDir, { recursive: true }); } catch {}
+    }
+    if (fs.existsSync(root)) {
+      app.use('/uploads', express.static(root));
+      app.use('/api/uploads', express.static(root));
+    }
   }
-  const profilesDir = path.join(process.cwd(), 'uploads', 'profiles');
-  if (!fs.existsSync(profilesDir)) {
-    fs.mkdirSync(profilesDir, { recursive: true });
-  }
-
-  // Serve static files from /uploads and /api/uploads
-  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-  app.use('/api/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   // Redirect root '/' to Swagger Documentation
   app.getHttpAdapter().get('/', (_req: any, res: any) => {
