@@ -15,3 +15,4 @@
 6. **Preserve Backend Stability**: Preserve existing backend functionality, database schemas, and dependencies unless a task specifically requires modification.
 7. **Path Verification**: Verify every target file path before making changes to ensure it is strictly within the backend repository.
 8. **No Destructive Git Operations**: Do not perform git reset, git clean, stash clearing, or mass deletions.
+
