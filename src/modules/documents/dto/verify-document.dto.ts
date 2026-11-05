@@ -1,14 +1,29 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString } from 'class-validator';
 
 export class VerifyDocumentDto {
-  @ApiProperty({ enum: ['Verified', 'Rejected'], example: 'Verified' })
-  @IsIn(['Verified', 'Rejected'])
-  @IsNotEmpty()
-  status: 'Verified' | 'Rejected';
+  @ApiPropertyOptional({
+    enum: ['Verified', 'Rejected'],
+    example: 'Verified',
+    description: 'Verification status. Defaults to "Verified" if omitted.',
+    default: 'Verified',
+  })
+  @IsOptional()
+  @IsString()
+  status?: string;
 
-  @ApiPropertyOptional({ example: 'HR Admin' })
+  @ApiPropertyOptional({ example: 'HR Admin', description: 'Name of the verifying admin' })
   @IsString()
   @IsOptional()
   verifiedBy?: string;
+
+  @ApiPropertyOptional({ example: 'Document illegible or expired', description: 'Optional rejection reason' })
+  @IsString()
+  @IsOptional()
+  reason?: string;
+
+  @ApiPropertyOptional({ example: 'Document illegible or expired', description: 'Optional rejection reason' })
+  @IsString()
+  @IsOptional()
+  rejectionReason?: string;
 }

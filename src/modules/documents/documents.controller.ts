@@ -154,20 +154,53 @@ export class DocumentsController {
 
   @Put(':id/verify')
   @ApiOperation({
-    summary: 'Verify or reject uploaded document',
-    description: 'Marks document as Verified or Rejected with audit signature.',
+    summary: 'Verify uploaded document',
+    description: 'Marks document as Verified (defaults to Verified if body is omitted or empty).',
   })
   @ApiParam({ name: 'id', description: 'Document ID' })
-  @ApiBody({ type: VerifyDocumentDto })
-  @ApiResponse({ status: 200, description: 'Document verification updated' })
+  @ApiBody({ type: VerifyDocumentDto, required: false })
+  @ApiResponse({ status: 200, description: 'Document marked as Verified successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 403, description: 'Forbidden — ADMIN or SUPER_ADMIN role required' })
   @ApiResponse({ status: 404, description: 'Document not found' })
   verify(@Param('id') id: string, @Body() body: VerifyDocumentDto, @Req() req: any) {
     const actorUser = req?.user;
     if (!actorUser) {
       throw new UnauthorizedException('Authentication token is required.');
     }
-    return this.documentsService.verify(id, body, actorUser);
+    return this.documentsService.verify(id, body || {}, actorUser);
+  }
+
+  @Post(':id/verify')
+  @ApiOperation({ summary: 'Verify uploaded document (POST alias)' })
+  @ApiParam({ name: 'id', description: 'Document ID' })
+  verifyPost(@Param('id') id: string, @Body() body: VerifyDocumentDto, @Req() req: any) {
+    return this.verify(id, body, req);
+  }
+
+  @Put(':id/reject')
+  @ApiOperation({
+    summary: 'Reject uploaded document',
+    description: 'Marks document as Rejected with audit record.',
+  })
+  @ApiParam({ name: 'id', description: 'Document ID' })
+  @ApiBody({ type: VerifyDocumentDto, required: false })
+  @ApiResponse({ status: 200, description: 'Document marked as Rejected successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden — ADMIN or SUPER_ADMIN role required' })
+  @ApiResponse({ status: 404, description: 'Document not found' })
+  reject(@Param('id') id: string, @Body() body: VerifyDocumentDto, @Req() req: any) {
+    const actorUser = req?.user;
+    if (!actorUser) {
+      throw new UnauthorizedException('Authentication token is required.');
+    }
+    return this.documentsService.reject(id, body || {}, actorUser);
+  }
+
+  @Post(':id/reject')
+  @ApiOperation({ summary: 'Reject uploaded document (POST alias)' })
+  @ApiParam({ name: 'id', description: 'Document ID' })
+  rejectPost(@Param('id') id: string, @Body() body: VerifyDocumentDto, @Req() req: any) {
+    return this.reject(id, body, req);
   }
 }

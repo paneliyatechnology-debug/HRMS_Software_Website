@@ -304,11 +304,15 @@ export class DocumentsService {
     } as any;
   }
 
-  async verify(id: string, dto: VerifyDocumentDto, actorUser?: User) {
+  async verify(
+    id: string,
+    dto?: { status?: string; verifiedBy?: string; reason?: string; rejectionReason?: string },
+    actorUser?: User,
+  ) {
     let doc = this.db.documents.find((d) => d.id === id);
-    if (!doc && (this.db as any).mysqlPool && (this.db as any).isMysqlConnected) {
+    if (!doc && this.db.getMysqlPool() && this.db.isConnectedToMysql) {
       try {
-        const pool = (this.db as any).mysqlPool;
+        const pool = this.db.getMysqlPool()!;
         const [rows]: any = await pool.query('SELECT * FROM documents WHERE id = ? LIMIT 1', [id]);
         if (rows && rows.length > 0) {
           doc = rows[0];
@@ -317,30 +321,48 @@ export class DocumentsService {
       } catch {}
     }
 
-    if (!doc) throw new NotFoundException('Document not found');
+    if (!doc) throw new NotFoundException(`Document with ID "${id}" not found.`);
 
     if (actorUser && actorUser.role === Role.ADMIN) {
-      if (doc.companyId && doc.companyId !== actorUser.companyId) {
+      if (doc.companyId && actorUser.companyId && doc.companyId !== actorUser.companyId) {
         throw new ForbiddenException('Cannot verify document belonging to another company.');
       }
     } else if (actorUser && actorUser.role === Role.EMPLOYEE) {
-      throw new ForbiddenException('Employees cannot verify documents.');
+      throw new ForbiddenException('Employees cannot verify or reject documents.');
     }
 
-    const verifiedBy = dto.verifiedBy || (actorUser ? `${actorUser.firstName} ${actorUser.lastName}` : 'HR Admin');
-    doc.verificationStatus = dto.status;
+    // Default to 'Verified' if status is omitted or empty
+    let newStatus: 'Verified' | 'Rejected' = 'Verified';
+    if (dto?.status) {
+      const s = String(dto.status).trim().toLowerCase();
+      if (s === 'rejected' || s === 'reject') {
+        newStatus = 'Rejected';
+      } else {
+        newStatus = 'Verified';
+      }
+    }
+
+    const verifiedBy =
+      dto?.verifiedBy?.trim() ||
+      (actorUser ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() : '') ||
+      actorUser?.email ||
+      'HR Admin';
+
+    doc.verificationStatus = newStatus;
     doc.verifiedBy = verifiedBy;
 
+    // Live MySQL persistence
     await this.db.saveDocumentToMysql(doc);
     this.db.persist();
 
+    const action = newStatus === 'Verified' ? 'DOCUMENT_VERIFIED' : 'DOCUMENT_REJECTED';
     this.db.logAudit(
       actorUser?.id || 'sys',
       verifiedBy,
       actorUser?.role || 'ADMIN',
-      'DOCUMENT_VERIFIED',
+      action,
       'Document Management',
-      `Document "${doc.title}" for ${doc.employeeName} marked as ${dto.status}`,
+      `Document "${doc.title}" for ${doc.employeeName} marked as ${newStatus}`,
       doc.id,
       undefined,
       doc.companyId || undefined,
@@ -348,5 +370,13 @@ export class DocumentsService {
     );
 
     return doc;
+  }
+
+  async reject(
+    id: string,
+    dto?: { reason?: string; rejectionReason?: string; verifiedBy?: string },
+    actorUser?: User,
+  ) {
+    return this.verify(id, { ...dto, status: 'Rejected' }, actorUser);
   }
 }
