@@ -8,13 +8,14 @@ import {
   Query,
   UseInterceptors,
   UploadedFile,
+  UploadedFiles,
   BadRequestException,
   UnauthorizedException,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { diskStorage } from 'multer';
 import * as path from 'path';
@@ -81,38 +82,52 @@ export class DocumentsController {
   @ApiResponse({ status: 201, description: 'Document file uploaded and registered' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Valid JWT Bearer token required' })
   @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          const uploadDir = path.join(process.cwd(), 'uploads', 'documents');
-          if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
+    FileFieldsInterceptor(
+      [
+        { name: 'file', maxCount: 1 },
+        { name: 'document', maxCount: 1 },
+        { name: 'doc', maxCount: 1 },
+        { name: 'attachment', maxCount: 1 },
+      ],
+      {
+        storage: diskStorage({
+          destination: (req, file, cb) => {
+            const uploadDir = path.join(process.cwd(), 'uploads', 'documents');
+            if (!fs.existsSync(uploadDir)) {
+              fs.mkdirSync(uploadDir, { recursive: true });
+            }
+            cb(null, uploadDir);
+          },
+          filename: (req, file, cb) => {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+            const ext = path.extname(file.originalname);
+            const cleanBase = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
+            cb(null, `doc-${cleanBase}-${uniqueSuffix}${ext}`);
+          },
+        }),
+        limits: {
+          fileSize: 10 * 1024 * 1024, // 10MB limit
+        },
+        fileFilter: (req, file, cb) => {
+          if (!file.originalname.match(/\.(pdf|doc|docx|png|jpg|jpeg|txt)$/i)) {
+            return cb(
+              new BadRequestException('Only PDF, Word documents, and images are supported'),
+              false,
+            );
           }
-          cb(null, uploadDir);
+          cb(null, true);
         },
-        filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = path.extname(file.originalname);
-          const cleanBase = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
-          cb(null, `doc-${cleanBase}-${uniqueSuffix}${ext}`);
-        },
-      }),
-      limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB limit
       },
-      fileFilter: (req, file, cb) => {
-        if (!file.originalname.match(/\.(pdf|doc|docx|png|jpg|jpeg|txt)$/i)) {
-          return cb(
-            new BadRequestException('Only PDF, Word documents, and images are supported'),
-            false,
-          );
-        }
-        cb(null, true);
-      },
-    }),
+    ),
   )
   uploadFile(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles()
+    files: {
+      file?: Express.Multer.File[];
+      document?: Express.Multer.File[];
+      doc?: Express.Multer.File[];
+      attachment?: Express.Multer.File[];
+    },
     @Body()
     body: {
       employeeId?: string;
@@ -123,11 +138,17 @@ export class DocumentsController {
     },
     @Req() req: Request,
   ) {
+    const file =
+      files?.file?.[0] ||
+      files?.document?.[0] ||
+      files?.doc?.[0] ||
+      files?.attachment?.[0];
+
     if (!file) {
-      throw new BadRequestException('No file provided');
+      throw new BadRequestException('No document file provided. Please attach a file (supported field names: "file", "document").');
     }
 
-    const actorUser = (req as any).user;
+    const actorUser = (req as any).user || this.documentsService.resolveUserFromRequest(req);
     if (!actorUser) {
       throw new UnauthorizedException('Authentication token is required.');
     }

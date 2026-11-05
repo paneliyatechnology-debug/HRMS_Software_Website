@@ -384,6 +384,25 @@ export interface LeaveBalance {
   maternityLeave?: { total: number; used: number; remaining: number };
 }
 
+export interface LeaveTypeItem {
+  id: string;
+  name: string;
+  code?: string;
+  description?: string;
+  daysAllowed: number;
+  isPaid: boolean;
+  requiresApproval: boolean;
+  carryForward: boolean;
+  maxCarryForwardDays?: number;
+  status: 'Active' | 'Inactive';
+  color?: string;
+  companyId?: string | null;
+  companyCode?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+
 export interface Holiday {
   id: string;
   name: string;

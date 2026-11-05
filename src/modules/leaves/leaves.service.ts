@@ -1,11 +1,13 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Optional } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, ConflictException, Optional } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { LeaveRequest, LeaveStatus, LeaveType, Role, User, NotificationItem } from '../../common/types.js';
+import { LeaveRequest, LeaveStatus, LeaveType, Role, User, NotificationItem, LeaveTypeItem } from '../../common/types.js';
 import { EventsGateway } from '../events/events.gateway.js';
 import { ApplyLeaveDto } from './dto/apply-leave.dto.js';
 import { ApproveLeaveDto } from './dto/approve-leave.dto.js';
 import { RejectLeaveDto } from './dto/reject-leave.dto.js';
 import { QueryLeaveDto } from './dto/query-leave.dto.js';
+import { CreateLeaveTypeDto } from './dto/create-leave-type.dto.js';
+import { UpdateLeaveTypeDto } from './dto/update-leave-type.dto.js';
 
 export function normalizeQuota(val: any, defTotal: number): { total: number; used: number; remaining: number } {
   let p = val;
@@ -511,5 +513,308 @@ export class LeavesService {
       writable: true,
     });
     return resObj;
+  }
+
+  // ===================== LEAVE TYPES CRUD =====================
+
+  /**
+   * Helper to ensure default leave types exist for a company so list is never empty.
+   */
+  private async ensureDefaultLeaveTypes(companyId?: string | null, companyCode?: string | null): Promise<void> {
+    const existing = this.db.leaveTypes.filter(
+      (lt) => (companyId && lt.companyId === companyId) || (!companyId && !lt.companyId),
+    );
+    if (existing.length > 0) return;
+
+    const defaults = [
+      { name: 'Casual Leave', code: 'CL', daysAllowed: 12, isPaid: true, color: '#3b82f6', description: 'Annual casual leave allowance' },
+      { name: 'Sick Leave', code: 'SL', daysAllowed: 10, isPaid: true, color: '#ef4444', description: 'Medical and sick leave' },
+      { name: 'Paid Leave', code: 'PL', daysAllowed: 15, isPaid: true, color: '#10b981', description: 'Annual earned paid leave' },
+      { name: 'Maternity Leave', code: 'ML', daysAllowed: 90, isPaid: true, color: '#ec4899', description: 'Maternity leave benefit' },
+      { name: 'Unpaid Leave', code: 'UL', daysAllowed: 0, isPaid: false, color: '#6b7280', description: 'Leave without pay' },
+    ];
+
+    const now = new Date().toISOString();
+    for (let i = 0; i < defaults.length; i++) {
+      const def = defaults[i];
+      const lt: LeaveTypeItem = {
+        id: `lt-${Date.now()}-${i}`,
+        companyId: companyId || null,
+        companyCode: companyCode || null,
+        name: def.name,
+        code: def.code,
+        description: def.description,
+        daysAllowed: def.daysAllowed,
+        isPaid: def.isPaid,
+        requiresApproval: true,
+        carryForward: def.code === 'PL',
+        maxCarryForwardDays: def.code === 'PL' ? 5 : 0,
+        status: 'Active',
+        color: def.color,
+        createdAt: now,
+        updatedAt: now,
+      };
+      this.db.leaveTypes.push(lt);
+      await this.db.saveLeaveTypeToMysql(lt);
+    }
+    this.db.persist();
+  }
+
+  async getLeaveTypes(actorUser?: User, companyFilter?: string): Promise<LeaveTypeItem[]> {
+    let targetCompanyId: string | null = null;
+    let targetCompanyCode: string | null = null;
+
+    if (actorUser) {
+      if (actorUser.role === Role.ADMIN || actorUser.role === Role.EMPLOYEE) {
+        targetCompanyId = actorUser.companyId || null;
+        targetCompanyCode = actorUser.companyCode || null;
+      } else if (actorUser.role === Role.SUPER_ADMIN && companyFilter) {
+        targetCompanyId = companyFilter;
+      }
+    }
+
+    if (targetCompanyId) {
+      await this.ensureDefaultLeaveTypes(targetCompanyId, targetCompanyCode);
+    }
+
+    let list = [...this.db.leaveTypes];
+
+    if (actorUser) {
+      if (actorUser.role === Role.ADMIN || actorUser.role === Role.EMPLOYEE) {
+        list = list.filter((lt) => !lt.companyId || lt.companyId === actorUser.companyId);
+      } else if (actorUser.role === Role.SUPER_ADMIN && companyFilter) {
+        list = list.filter(
+          (lt) =>
+            !lt.companyId ||
+            lt.companyId === companyFilter ||
+            (lt.companyCode && lt.companyCode.toLowerCase() === companyFilter.toLowerCase()),
+        );
+      }
+    }
+
+    return list.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getLeaveTypeById(id: string, actorUser?: User): Promise<LeaveTypeItem> {
+    let lt = this.db.leaveTypes.find((item) => item.id === id);
+
+    if (!lt && (this.db as any).mysqlPool && (this.db as any).isMysqlConnected) {
+      try {
+        const pool = (this.db as any).mysqlPool;
+        const [rows]: any = await pool.query('SELECT * FROM leave_types WHERE id = ? LIMIT 1', [id]);
+        if (rows && rows.length > 0) {
+          const loaded: LeaveTypeItem = {
+            ...rows[0],
+            daysAllowed: Number(rows[0].daysAllowed) || 0,
+            isPaid: Boolean(rows[0].isPaid),
+            requiresApproval: Boolean(rows[0].requiresApproval),
+            carryForward: Boolean(rows[0].carryForward),
+            maxCarryForwardDays: Number(rows[0].maxCarryForwardDays) || 0,
+          };
+          this.db.leaveTypes.push(loaded);
+          lt = loaded;
+        }
+      } catch {}
+    }
+
+    if (!lt) {
+      throw new NotFoundException(`Leave type with ID "${id}" not found.`);
+    }
+
+    if (actorUser && (actorUser.role === Role.ADMIN || actorUser.role === Role.EMPLOYEE)) {
+      if (lt.companyId && actorUser.companyId && lt.companyId !== actorUser.companyId) {
+        throw new ForbiddenException('Cannot access leave type belonging to another company.');
+      }
+    }
+
+    return lt;
+  }
+
+  async createLeaveType(dto: CreateLeaveTypeDto, actorUser?: User): Promise<LeaveTypeItem> {
+    if (actorUser && actorUser.role === Role.EMPLOYEE) {
+      throw new ForbiddenException('Employees are not authorized to create leave types.');
+    }
+
+    if (!dto.name || !dto.name.trim()) {
+      throw new BadRequestException('Leave type name is required.');
+    }
+
+    let companyId: string | null = null;
+    let companyCode: string | null = null;
+
+    if (actorUser && actorUser.role === Role.ADMIN) {
+      if (!actorUser.companyId) {
+        throw new ForbiddenException('Admin user is not associated with any company.');
+      }
+      companyId = actorUser.companyId;
+      companyCode = actorUser.companyCode || null;
+    } else if (actorUser && actorUser.role === Role.SUPER_ADMIN) {
+      if (dto.companyId) {
+        const comp = this.db.companies.find((c) => c.id === dto.companyId || c.companyCode === dto.companyId);
+        companyId = comp?.id || dto.companyId;
+        companyCode = comp?.companyCode || null;
+      }
+    }
+
+    const trimmedName = dto.name.trim();
+
+    // Check for duplicate name in the company
+    const duplicate = this.db.leaveTypes.find(
+      (lt) =>
+        lt.name.trim().toLowerCase() === trimmedName.toLowerCase() &&
+        ((!companyId && !lt.companyId) || (companyId && lt.companyId === companyId)),
+    );
+
+    if (duplicate) {
+      throw new ConflictException(`Leave type with name "${trimmedName}" already exists for this company.`);
+    }
+
+    const now = new Date().toISOString();
+    const newLt: LeaveTypeItem = {
+      id: `lt-${Date.now()}`,
+      companyId,
+      companyCode,
+      name: trimmedName,
+      code: dto.code ? dto.code.trim().toUpperCase() : trimmedName.substring(0, 3).toUpperCase(),
+      description: dto.description || '',
+      daysAllowed: dto.daysAllowed !== undefined ? Number(dto.daysAllowed) : 12,
+      isPaid: dto.isPaid !== undefined ? Boolean(dto.isPaid) : true,
+      requiresApproval: dto.requiresApproval !== undefined ? Boolean(dto.requiresApproval) : true,
+      carryForward: dto.carryForward !== undefined ? Boolean(dto.carryForward) : false,
+      maxCarryForwardDays: dto.maxCarryForwardDays !== undefined ? Number(dto.maxCarryForwardDays) : 0,
+      status: dto.status || 'Active',
+      color: dto.color || '#3b82f6',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.db.leaveTypes.push(newLt);
+    await this.db.saveLeaveTypeToMysql(newLt);
+    this.db.persist();
+
+    const actorName = actorUser ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || actorUser.email : 'Admin';
+    this.db.logAudit(
+      actorUser?.id || 'sys',
+      actorName,
+      actorUser?.role || 'ADMIN',
+      'CREATE_LEAVE_TYPE',
+      'Leave Management',
+      `Created new leave type "${newLt.name}" (${newLt.code}) with quota ${newLt.daysAllowed} days`,
+      newLt.id,
+      undefined,
+      companyId || undefined,
+      companyCode || undefined,
+    );
+
+    return newLt;
+  }
+
+  async updateLeaveType(id: string, dto: UpdateLeaveTypeDto, actorUser?: User): Promise<LeaveTypeItem> {
+    if (actorUser && actorUser.role === Role.EMPLOYEE) {
+      throw new ForbiddenException('Employees are not authorized to update leave types.');
+    }
+
+    const lt = await this.getLeaveTypeById(id, actorUser);
+
+    if (actorUser && actorUser.role === Role.ADMIN) {
+      if (lt.companyId && actorUser.companyId && lt.companyId !== actorUser.companyId) {
+        throw new ForbiddenException('Cannot modify leave type belonging to another company.');
+      }
+    }
+
+    if (dto.name && dto.name.trim().toLowerCase() !== lt.name.toLowerCase()) {
+      const duplicate = this.db.leaveTypes.find(
+        (other) =>
+          other.id !== lt.id &&
+          other.name.trim().toLowerCase() === dto.name!.trim().toLowerCase() &&
+          ((!lt.companyId && !other.companyId) || (lt.companyId && other.companyId === lt.companyId)),
+      );
+      if (duplicate) {
+        throw new ConflictException(`Leave type "${dto.name}" already exists for this company.`);
+      }
+    }
+
+    const updated: LeaveTypeItem = {
+      ...lt,
+      name: dto.name !== undefined ? dto.name.trim() : lt.name,
+      code: dto.code !== undefined ? dto.code.trim().toUpperCase() : lt.code,
+      description: dto.description !== undefined ? dto.description : lt.description,
+      daysAllowed: dto.daysAllowed !== undefined ? Number(dto.daysAllowed) : lt.daysAllowed,
+      isPaid: dto.isPaid !== undefined ? Boolean(dto.isPaid) : lt.isPaid,
+      requiresApproval: dto.requiresApproval !== undefined ? Boolean(dto.requiresApproval) : lt.requiresApproval,
+      carryForward: dto.carryForward !== undefined ? Boolean(dto.carryForward) : lt.carryForward,
+      maxCarryForwardDays: dto.maxCarryForwardDays !== undefined ? Number(dto.maxCarryForwardDays) : lt.maxCarryForwardDays,
+      status: dto.status !== undefined ? dto.status : lt.status,
+      color: dto.color !== undefined ? dto.color : lt.color,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const idx = this.db.leaveTypes.findIndex((item) => item.id === id);
+    if (idx !== -1) {
+      this.db.leaveTypes[idx] = updated;
+    } else {
+      this.db.leaveTypes.push(updated);
+    }
+
+    await this.db.saveLeaveTypeToMysql(updated);
+    this.db.persist();
+
+    const actorName = actorUser ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || actorUser.email : 'Admin';
+    this.db.logAudit(
+      actorUser?.id || 'sys',
+      actorName,
+      actorUser?.role || 'ADMIN',
+      'UPDATE_LEAVE_TYPE',
+      'Leave Management',
+      `Updated leave type "${updated.name}" (${updated.id})`,
+      updated.id,
+      undefined,
+      updated.companyId || undefined,
+      updated.companyCode || undefined,
+    );
+
+    return updated;
+  }
+
+  async deleteLeaveType(id: string, actorUser?: User): Promise<{ success: boolean; message: string; deleted: LeaveTypeItem }> {
+    if (actorUser && actorUser.role === Role.EMPLOYEE) {
+      throw new ForbiddenException('Employees are not authorized to delete leave types.');
+    }
+
+    const lt = await this.getLeaveTypeById(id, actorUser);
+
+    if (actorUser && actorUser.role === Role.ADMIN) {
+      if (lt.companyId && actorUser.companyId && lt.companyId !== actorUser.companyId) {
+        throw new ForbiddenException('Cannot delete leave type belonging to another company.');
+      }
+    }
+
+    const idx = this.db.leaveTypes.findIndex((item) => item.id === id);
+    if (idx !== -1) {
+      this.db.leaveTypes.splice(idx, 1);
+    }
+
+    await this.db.deleteLeaveTypeFromMysql(id);
+    this.db.persist();
+
+    const actorName = actorUser ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || actorUser.email : 'Admin';
+    this.db.logAudit(
+      actorUser?.id || 'sys',
+      actorName,
+      actorUser?.role || 'ADMIN',
+      'DELETE_LEAVE_TYPE',
+      'Leave Management',
+      `Deleted leave type "${lt.name}" (${lt.id})`,
+      lt.id,
+      undefined,
+      lt.companyId || undefined,
+      lt.companyCode || undefined,
+    );
+
+    return {
+      success: true,
+      message: `Leave type "${lt.name}" deleted successfully.`,
+      deleted: lt,
+    };
   }
 }

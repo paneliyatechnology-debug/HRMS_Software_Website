@@ -46,98 +46,288 @@ export class AttendanceService {
   constructor(
     private readonly db: DatabaseService,
     @Optional() private readonly eventsGateway?: EventsGateway,
-  ) {}
+  ) { }
 
   findAll(params?: QueryAttendanceDto, actorUser?: User) {
-    let list = [...this.db.attendanceRecords];
+    const targetDate = params?.date ? params.date.trim() : new Date().toISOString().split('T')[0];
 
-    // Company isolation for ADMIN or EMPLOYEE
-    if (actorUser) {
-      if (actorUser.role === Role.EMPLOYEE) {
-        list = list.filter(
-          (a) =>
-            a.employeeId === actorUser.id ||
-            (a as any).userId === actorUser.id ||
-            (actorUser.employeeId && a.employeeId === actorUser.employeeId),
-        );
-      } else if (actorUser.role === Role.ADMIN) {
-        if (actorUser.companyId) {
-          const companyUserIds = new Set(
-            this.db.users.filter((u) => u.companyId === actorUser.companyId).map((u) => u.id),
-          );
-          list = list.filter((a) => {
-            if (a.companyId) return a.companyId === actorUser.companyId;
-            const user = this.db.users.find(
-              (u) => u.id === a.employeeId || u.employeeId === a.employeeId || (a as any).userId === u.id,
-            );
-            return user ? companyUserIds.has(user.id) : companyUserIds.has(a.employeeId);
-          });
-        }
+    // 1. Resolve company roster of employees
+    let employees = [...this.db.employees].filter((emp) => {
+      const linkedUser = this.db.users.find(
+        (u) =>
+          u.id === emp.userId ||
+          u.employeeId === emp.id ||
+          (u.email && emp.email && u.email.toLowerCase() === emp.email.toLowerCase()),
+      );
+      if (linkedUser && (linkedUser.role === Role.SUPER_ADMIN || linkedUser.role === Role.ADMIN || linkedUser.isSuperAdmin)) {
+        return false;
+      }
+      if (emp.isSuperAdmin) return false;
+      const adminUsers = this.db.users.filter((u) => u.role === Role.ADMIN || u.role === Role.SUPER_ADMIN);
+      if (adminUsers.some((u) => u.id === emp.id || u.id === emp.userId)) return false;
+      return true;
+    });
+
+    // Ensure all company users with role EMPLOYEE are represented in employees roster
+    const companyUsers = this.db.users.filter((u) => {
+      if (u.role === Role.SUPER_ADMIN || u.isSuperAdmin) return false;
+      if (actorUser && (actorUser.role === Role.ADMIN || actorUser.role === Role.EMPLOYEE)) {
+        return u.companyId === actorUser.companyId;
+      }
+      return true;
+    });
+
+    for (const u of companyUsers) {
+      if (u.role === Role.ADMIN) continue;
+      const exists = employees.some(
+        (e) =>
+          e.userId === u.id ||
+          e.id === u.id ||
+          (e.email && u.email && e.email.toLowerCase() === u.email.toLowerCase()),
+      );
+      if (!exists) {
+        employees.push({
+          id: u.id,
+          userId: u.id,
+          employeeCode: u.employeeId || `EMP-${u.id.slice(-4)}`,
+          companyId: u.companyId,
+          companyCode: u.companyCode,
+          firstName: u.firstName || 'Employee',
+          lastName: u.lastName || '',
+          email: u.email,
+          phone: u.phone || '',
+          avatarUrl: (u as any).avatarUrl || (u as any).avatar || '',
+          departmentName: u.departmentName || '',
+          designationTitle: u.designationTitle || '',
+          shift: 'General Shift (9 AM - 6 PM)',
+        } as any);
       }
     }
 
+    // Role & Company Isolation
+    if (actorUser) {
+      if (actorUser.role === Role.EMPLOYEE) {
+        employees = employees.filter((e) => e.userId === actorUser.id || e.id === actorUser.id);
+      } else if (actorUser.role === Role.ADMIN) {
+        if (actorUser.companyId) {
+          employees = employees.filter((e) => e.companyId === actorUser.companyId);
+        }
+      } else if (actorUser.role === Role.SUPER_ADMIN && (params as any)?.companyId) {
+        employees = employees.filter((e) => e.companyId === (params as any).companyId);
+      }
+    }
+
+    // Query Filters (userId, employeeId, departmentId)
     const filterId = (params as any)?.userId || params?.employeeId;
     if (filterId) {
-      list = list.filter((a) => {
-        if (a.employeeId === filterId || (a as any).userId === filterId) return true;
-        const user = this.db.users.find((u) => u.id === a.employeeId || u.employeeId === a.employeeId);
-        return user?.id === filterId || user?.employeeId === filterId;
-      });
-    }
-    if (params?.date) {
-      list = list.filter((a) => a.date === params.date);
-    }
-    if (params?.departmentId) {
-      const userIdsInDept = this.db.users
-        .filter((u) => u.departmentId === params.departmentId)
-        .map((u) => u.id);
-      list = list.filter((a) => {
-        const user = this.db.users.find((u) => u.id === a.employeeId || u.employeeId === a.employeeId);
-        return user ? userIdsInDept.includes(user.id) : false;
+      employees = employees.filter((e) => {
+        return e.userId === filterId || e.id === filterId || (e as any).employeeCode === filterId;
       });
     }
 
-    return list
-      .map((a) => {
-        const user = this.db.users.find(
-          (u) =>
-            u.id === a.employeeId ||
-            u.employeeId === a.employeeId ||
-            (a as any).userId === u.id ||
-            ((u.firstName || '') + ' ' + (u.lastName || '')).trim().toLowerCase() ===
-              (a.employeeName || '').trim().toLowerCase(),
-        );
-        const realUserId = user ? user.id : a.employeeId;
-        const { employeeId: _, id: attId, ...rest } = a;
-        const resObj: any = {
-          id: attId,
-          userId: realUserId,
-          role: user?.role || 'EMPLOYEE',
-          userName: user
-            ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || a.employeeName
-            : a.employeeName,
-          ...rest,
-        };
-        Object.defineProperty(resObj, 'employeeId', {
-          value: realUserId,
-          enumerable: false,
-          configurable: true,
-          writable: true,
+    if (params?.departmentId) {
+      employees = employees.filter((e) => e.departmentId === params.departmentId);
+    }
+
+    // 2. Build attendance record for each employee for the targetDate
+    const resultList = employees.map((emp) => {
+      const empUserId = emp.userId || emp.id;
+      const empCode = (emp as any).employeeCode || (emp as any).employeeId || empUserId;
+      const empName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.email;
+      const shift = emp.shift || 'General Shift (9 AM - 6 PM)';
+
+      // Check existing manual attendance record in this.db.attendanceRecords
+      const existingRecord = this.db.attendanceRecords.find(
+        (a) =>
+          (a.employeeId === empUserId || a.employeeId === emp.id || (a as any).userId === empUserId) &&
+          a.date === targetDate,
+      );
+
+      // Check work sessions for targetDate
+      const sessions = this.db.workSessions.filter(
+        (ws) =>
+          (ws.employeeId === empUserId || ws.employeeId === emp.id || ws.employeeId === empCode) &&
+          ws.startTime.startsWith(targetDate),
+      );
+
+      // Check approved leave for targetDate
+      const approvedLeave = this.db.leaveRequests.find(
+        (lr) =>
+          (lr.employeeId === empUserId || lr.employeeId === emp.id) &&
+          lr.status === 'Approved' &&
+          lr.startDate <= targetDate &&
+          lr.endDate >= targetDate,
+      );
+
+      // Check holiday for targetDate
+      const isHoliday = this.db.holidays.some(
+        (h) => h.date === targetDate && (h.type === 'Public' || h.companyId === emp.companyId),
+      );
+
+      // Calculate work duration from work sessions
+      let totalSeconds = 0;
+      let earliestCheckIn: Date | null = null;
+      let latestCheckOut: Date | null = null;
+      let hasActiveSession = false;
+
+      for (const s of sessions) {
+        const start = new Date(s.startTime);
+        if (!earliestCheckIn || start < earliestCheckIn) {
+          earliestCheckIn = start;
+        }
+
+        if (s.status === WorkSessionStatus.ACTIVE || s.status === WorkSessionStatus.ON_BREAK || !s.endTime) {
+          hasActiveSession = true;
+          const elapsed = Math.max(0, Math.floor((Date.now() - start.getTime()) / 1000));
+          totalSeconds += elapsed;
+        } else {
+          const end = new Date(s.endTime);
+          if (!latestCheckOut || end > latestCheckOut) {
+            latestCheckOut = end;
+          }
+          totalSeconds +=
+            Number(s.durationSeconds) || Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000));
+        }
+      }
+
+      // If existing manual attendance record has workingHours, respect it if no sessions
+      let workingHours = parseFloat((totalSeconds / 3600).toFixed(2));
+      if (workingHours === 0 && existingRecord && existingRecord.workingHours > 0) {
+        workingHours = Number(existingRecord.workingHours);
+        totalSeconds = Math.round(workingHours * 3600);
+      }
+
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = totalSeconds % 60;
+      const workTime = `${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+
+      // Check-in formatting
+      let checkInStr = '';
+      if (earliestCheckIn) {
+        checkInStr = earliestCheckIn.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
         });
-        return resObj;
-      })
-      .sort((a, b) => (b.date > a.date ? 1 : -1));
+      } else if (existingRecord && existingRecord.checkIn) {
+        checkInStr = existingRecord.checkIn;
+      }
+
+      // Check-out formatting
+      let checkOutStr = '';
+      if (hasActiveSession) {
+        checkOutStr = '';
+      } else if (latestCheckOut) {
+        checkOutStr = latestCheckOut.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        });
+      } else if (existingRecord && existingRecord.checkOut) {
+        checkOutStr = existingRecord.checkOut;
+      }
+
+      // Status determination
+      let status: string = 'Absent';
+      if (hasActiveSession) {
+        status = 'Present';
+      } else if (sessions.length > 0 || workingHours > 0) {
+        status = workingHours >= 4 ? 'Present' : 'Half Day';
+      } else if (existingRecord && existingRecord.status) {
+        status = existingRecord.status;
+      } else if (approvedLeave) {
+        status = 'On Leave';
+      } else if (isHoliday) {
+        status = 'Holiday';
+      } else {
+        const dayOfWeek = new Date(targetDate + 'T00:00:00').getDay();
+        if (dayOfWeek === 0) {
+          status = 'Week Off';
+        } else {
+          status = 'Absent';
+        }
+      }
+
+      const recordId = existingRecord?.id || `att-${empUserId}-${targetDate}`;
+      const overtimeHours =
+        workingHours > 8 ? parseFloat((workingHours - 8).toFixed(2)) : existingRecord?.overtimeHours || 0;
+
+      const attItem = {
+        id: recordId,
+        userId: empUserId,
+        employeeId: empUserId,
+        employeeCode: empCode,
+        userName: empName,
+        employeeName: empName,
+        date: targetDate,
+        shift: shift,
+        status: status,
+        workTime: workTime,
+        workingHours: workingHours,
+        durationFormatted: workTime,
+        totalDurationSeconds: totalSeconds,
+        checkIn: checkInStr,
+        checkInTime: checkInStr || null,
+        checkOut: checkOutStr,
+        checkOutTime: checkOutStr || null,
+        breakDurationMinutes: existingRecord?.breakDurationMinutes || 0,
+        overtimeHours: overtimeHours,
+        departmentName: emp.departmentName || '',
+        designationTitle: emp.designationTitle || '',
+        avatar: emp.avatarUrl || (emp as any).avatar || '',
+        avatarUrl: emp.avatarUrl || (emp as any).avatar || '',
+        companyId: emp.companyId || actorUser?.companyId || null,
+        companyCode: emp.companyCode || actorUser?.companyCode || null,
+        remarks: existingRecord?.remarks || (hasActiveSession ? 'Active session in progress' : ''),
+        role: 'EMPLOYEE',
+        createdAt: existingRecord?.createdAt || new Date().toISOString(),
+      };
+
+      // Keep this.db.attendanceRecords updated for reports and sync to MySQL
+      if (!existingRecord && (sessions.length > 0 || status === 'Present' || status === 'On Leave')) {
+        const newRecord: AttendanceRecord = {
+          id: recordId,
+          employeeId: empUserId,
+          employeeName: empName,
+          date: targetDate,
+          checkIn: checkInStr,
+          checkOut: checkOutStr,
+          breakDurationMinutes: attItem.breakDurationMinutes,
+          workingHours: workingHours,
+          overtimeHours: overtimeHours,
+          status: status as any,
+          remarks: attItem.remarks,
+          companyId: attItem.companyId || undefined,
+          companyCode: attItem.companyCode || undefined,
+          createdAt: attItem.createdAt,
+        };
+        this.db.attendanceRecords.unshift(newRecord);
+        void this.db.saveAttendanceRecordToMysql(newRecord);
+      } else if (existingRecord && (hasActiveSession || sessions.length > 0)) {
+        existingRecord.checkIn = checkInStr || existingRecord.checkIn;
+        existingRecord.checkOut = checkOutStr;
+        existingRecord.workingHours = workingHours;
+        existingRecord.status = status as any;
+        existingRecord.remarks = attItem.remarks;
+        void this.db.saveAttendanceRecordToMysql(existingRecord);
+      }
+
+      return attItem;
+    });
+
+    return resultList.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
   }
 
   getTodayStatus(employeeId: string, actorUser?: User) {
     const user = this.db.resolveUser
       ? this.db.resolveUser(employeeId)
       : this.db.users?.find(
-          (u) =>
-            u.id === employeeId ||
-            u.employeeId === employeeId ||
-            (u.email && u.email.toLowerCase() === employeeId.toLowerCase()),
-        );
+        (u) =>
+          u.id === employeeId ||
+          u.employeeId === employeeId ||
+          (u.email && u.email.toLowerCase() === employeeId.toLowerCase()),
+      );
     const targetUserId = user ? user.id : employeeId;
 
     if (actorUser) {
@@ -158,40 +348,54 @@ export class AttendanceService {
       }
     }
     const today = new Date().toISOString().split('T')[0];
-    const record = this.db.attendanceRecords.find(
+    let record = this.db.attendanceRecords.find(
       (a) => (a.employeeId === targetUserId || a.employeeId === employeeId) && a.date === today,
     );
 
-    if (!record) {
-      const resObj: any = {
-        userId: targetUserId,
-        role: user?.role || 'EMPLOYEE',
-        isCheckedIn: false,
-        isCheckedOut: false,
-        checkInTime: null,
-        checkOutTime: null,
-        workingHours: 0,
-        status: 'Not Checked In',
-      };
-      Object.defineProperty(resObj, 'employeeId', {
-        value: targetUserId,
-        enumerable: false,
-        configurable: true,
-        writable: true,
-      });
-      return resObj;
+    // If no explicit record, compute from today's work sessions
+    const sessions = this.db.workSessions.filter(
+      (ws) => (ws.employeeId === targetUserId || ws.employeeId === employeeId) && ws.startTime.startsWith(today),
+    );
+
+    let totalSeconds = 0;
+    let earliestCheckIn: Date | null = null;
+    let latestCheckOut: Date | null = null;
+    let hasActiveSession = false;
+
+    for (const s of sessions) {
+      const start = new Date(s.startTime);
+      if (!earliestCheckIn || start < earliestCheckIn) earliestCheckIn = start;
+      if (s.status === WorkSessionStatus.ACTIVE || s.status === WorkSessionStatus.ON_BREAK || !s.endTime) {
+        hasActiveSession = true;
+        totalSeconds += Math.max(0, Math.floor((Date.now() - start.getTime()) / 1000));
+      } else {
+        const end = new Date(s.endTime);
+        if (!latestCheckOut || end > latestCheckOut) latestCheckOut = end;
+        totalSeconds += Number(s.durationSeconds) || Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000));
+      }
     }
+
+    let workingHours = record ? record.workingHours : parseFloat((totalSeconds / 3600).toFixed(2));
+    let checkInTime = record?.checkIn || (earliestCheckIn ? earliestCheckIn.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : null);
+    let checkOutTime = hasActiveSession ? null : (record?.checkOut || (latestCheckOut ? latestCheckOut.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : null));
+    let status = record?.status || (hasActiveSession ? 'Present' : sessions.length > 0 ? (workingHours >= 4 ? 'Present' : 'Half Day') : 'Not Checked In');
+
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    const workTime = `${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
 
     const resObj: any = {
       userId: targetUserId,
       role: user?.role || 'EMPLOYEE',
-      isCheckedIn: Boolean(record.checkIn),
-      isCheckedOut: Boolean(record.checkOut),
-      checkInTime: record.checkIn,
-      checkOutTime: record.checkOut,
-      workingHours: record.workingHours,
-      status: record.status,
-      recordId: record.id,
+      isCheckedIn: Boolean(checkInTime),
+      isCheckedOut: Boolean(checkOutTime && !hasActiveSession),
+      checkInTime,
+      checkOutTime,
+      workingHours,
+      workTime,
+      status,
+      recordId: record?.id || (sessions.length > 0 ? `att-${targetUserId}-${today}` : null),
     };
     Object.defineProperty(resObj, 'employeeId', {
       value: targetUserId,
@@ -212,11 +416,11 @@ export class AttendanceService {
     const user = this.db.resolveUser
       ? this.db.resolveUser(targetId)
       : this.db.users?.find(
-          (u) =>
-            u.id === targetId ||
-            u.employeeId === targetId ||
-            (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
-        );
+        (u) =>
+          u.id === targetId ||
+          u.employeeId === targetId ||
+          (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
+      );
     if (!user) throw new NotFoundException('User record not found');
 
     if (actorUser && actorUser.role === Role.ADMIN && actorUser.companyId) {
@@ -327,11 +531,11 @@ export class AttendanceService {
     const user = this.db.resolveUser
       ? this.db.resolveUser(targetId)
       : this.db.users?.find(
-          (u) =>
-            u.id === targetId ||
-            u.employeeId === targetId ||
-            (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
-        );
+        (u) =>
+          u.id === targetId ||
+          u.employeeId === targetId ||
+          (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
+      );
     if (!user) throw new NotFoundException('User record not found');
 
     if (actorUser && actorUser.role === Role.ADMIN && actorUser.companyId) {
@@ -439,11 +643,11 @@ export class AttendanceService {
     const user = this.db.resolveUser
       ? this.db.resolveUser(targetId)
       : this.db.users?.find(
-          (u) =>
-            u.id === targetId ||
-            u.employeeId === targetId ||
-            (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
-        );
+        (u) =>
+          u.id === targetId ||
+          u.employeeId === targetId ||
+          (u.email && u.email.toLowerCase() === targetId.toLowerCase()),
+      );
     if (!user) throw new NotFoundException('User record not found');
 
     if (actorUser && actorUser.role === Role.ADMIN && actorUser.companyId) {
@@ -774,42 +978,42 @@ export class AttendanceService {
       isOnBreak,
       currentBreak: currentOpenBreak
         ? {
-            id: currentOpenBreak.id,
-            breakStartTime: currentOpenBreak.breakStartTime,
-            elapsedSeconds: ongoingBreakSeconds,
-            formattedElapsed: formatDurationSeconds(ongoingBreakSeconds),
-          }
+          id: currentOpenBreak.id,
+          breakStartTime: currentOpenBreak.breakStartTime,
+          elapsedSeconds: ongoingBreakSeconds,
+          formattedElapsed: formatDurationSeconds(ongoingBreakSeconds),
+        }
         : null,
       totalBreakSeconds: sessionTotalBreakSeconds,
       formattedTotalBreak: formatDurationSeconds(sessionTotalBreakSeconds),
       activeSession: activeSession
         ? {
-            id: activeSession.id,
-            status: activeSession.status,
-            startTime: activeSession.startTime,
-            officeLocationId: activeSession.officeLocationId,
-            officeLocationName: activeSession.officeLocationName,
-            startDistanceMeters: activeSession.startDistanceMeters,
-            startAccuracy: activeSession.startAccuracy,
-            elapsedSeconds: actualElapsedWorkingSeconds,
-            formattedElapsed: formatDurationSeconds(actualElapsedWorkingSeconds),
-            totalAttendanceSeconds,
-            formattedTotalAttendance: formatDurationSeconds(totalAttendanceSeconds),
-            totalBreakSeconds: sessionTotalBreakSeconds,
-            formattedTotalBreak: formatDurationSeconds(sessionTotalBreakSeconds),
-            isOnBreak,
-          }
+          id: activeSession.id,
+          status: activeSession.status,
+          startTime: activeSession.startTime,
+          officeLocationId: activeSession.officeLocationId,
+          officeLocationName: activeSession.officeLocationName,
+          startDistanceMeters: activeSession.startDistanceMeters,
+          startAccuracy: activeSession.startAccuracy,
+          elapsedSeconds: actualElapsedWorkingSeconds,
+          formattedElapsed: formatDurationSeconds(actualElapsedWorkingSeconds),
+          totalAttendanceSeconds,
+          formattedTotalAttendance: formatDurationSeconds(totalAttendanceSeconds),
+          totalBreakSeconds: sessionTotalBreakSeconds,
+          formattedTotalBreak: formatDurationSeconds(sessionTotalBreakSeconds),
+          isOnBreak,
+        }
         : null,
       serverTime,
       assignedOffice: assignedOffice
         ? {
-            id: assignedOffice.id,
-            name: assignedOffice.name,
-            address: assignedOffice.address,
-            latitude: assignedOffice.latitude,
-            longitude: assignedOffice.longitude,
-            radiusMeters: assignedOffice.radiusMeters,
-          }
+          id: assignedOffice.id,
+          name: assignedOffice.name,
+          address: assignedOffice.address,
+          latitude: assignedOffice.latitude,
+          longitude: assignedOffice.longitude,
+          radiusMeters: assignedOffice.radiusMeters,
+        }
         : null,
       lastCompletedSession,
       todaySummary: {
@@ -880,7 +1084,7 @@ export class AttendanceService {
       if (file) {
         try {
           startSelfieUrl = saveMulterSelfie(file, employee.id, 'start');
-        } catch {}
+        } catch { }
       } else if (dto?.selfie && typeof dto.selfie === 'string' && dto.selfie.trim() !== '') {
         try {
           startSelfieUrl = saveBase64Selfie(dto.selfie, employee.id, 'start');
@@ -1033,7 +1237,7 @@ export class AttendanceService {
       if (file) {
         try {
           stopSelfieUrl = saveMulterSelfie(file, employee.id, 'stop');
-        } catch {}
+        } catch { }
       } else if (dto?.selfie && typeof dto.selfie === 'string' && dto.selfie.trim() !== '') {
         try {
           stopSelfieUrl = saveBase64Selfie(dto.selfie, employee.id, 'stop');

@@ -101,20 +101,46 @@ export class DocumentsService {
     try {
       const rawToken =
         req.headers?.authorization ||
+        req.headers?.['x-access-token'] ||
+        req.headers?.['x-auth-token'] ||
+        req.headers?.['auth-token'] ||
         req.headers?.token ||
         req.headers?.['x-request-token'] ||
         req.headers?.['request-token'] ||
+        req.headers?.bearer ||
+        req.headers?.authtoken ||
+        req.headers?.accesstoken ||
         req.cookies?.accessToken ||
         req.cookies?.token ||
-        req.query?.token;
+        req.cookies?.jwt ||
+        req.cookies?.jwtToken ||
+        req.cookies?.auth_token ||
+        req.cookies?.authToken ||
+        req.query?.token ||
+        req.query?.accessToken ||
+        req.query?.access_token ||
+        req.query?.bearer ||
+        req.query?.jwt;
 
-      if (!rawToken || typeof rawToken !== 'string') return undefined;
+      if (!rawToken || typeof rawToken !== 'string') {
+        const rawRt = req.cookies?.refreshToken || req.headers?.['x-refresh-token'];
+        if (rawRt && typeof rawRt === 'string') {
+          const cleanRt = rawRt.trim();
+          const rt = this.db.refreshTokens?.find((t) => !t.isRevoked && new Date(t.expiresAt) > new Date());
+          if (rt && rt.userId) {
+            return this.db.users.find((u) => u.id === rt.userId);
+          }
+        }
+        return undefined;
+      }
 
       let clean = rawToken.trim().replace(/^["']+|["']+$/g, '').trim();
       if (clean.toLowerCase().startsWith('bearer ')) {
         clean = clean.substring(7).trim().replace(/^["']+|["']+$/g, '').trim();
       }
-      if (!clean) return undefined;
+      if (!clean || clean.toLowerCase() === 'undefined' || clean.toLowerCase() === 'null') {
+        return undefined;
+      }
 
       let identifier = clean;
       try {
@@ -124,13 +150,18 @@ export class DocumentsService {
           identifier = decoded.sub || decoded.userId || decoded.id || decoded.email;
         }
       } catch {
-        const match = clean.match(/(?:jwt_)?token_([^_]+)/i);
-        if (match && match[1]) {
-          identifier = match[1];
-        } else if (clean.startsWith('token_user-')) {
-          identifier = clean.replace(/^token_/, '').split('_')[0];
-        } else if (clean.startsWith('user-')) {
-          identifier = clean.split('_')[0];
+        const decoded = jwt.decode(clean) as any;
+        if (decoded && (decoded.sub || decoded.userId || decoded.id || decoded.email)) {
+          identifier = decoded.sub || decoded.userId || decoded.id || decoded.email;
+        } else {
+          const match = clean.match(/(?:jwt_)?token_([^_]+)/i);
+          if (match && match[1]) {
+            identifier = match[1];
+          } else if (clean.startsWith('token_user-')) {
+            identifier = clean.replace(/^token_/, '').split('_')[0];
+          } else if (clean.startsWith('user-')) {
+            identifier = clean.split('_')[0];
+          }
         }
       }
 

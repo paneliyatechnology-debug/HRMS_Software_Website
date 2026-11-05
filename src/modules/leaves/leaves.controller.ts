@@ -1,10 +1,12 @@
-import { Controller, Get, Post, Put, Body, Param, Query, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { LeavesService } from './leaves.service.js';
 import { ApplyLeaveDto } from './dto/apply-leave.dto.js';
 import { ApproveLeaveDto } from './dto/approve-leave.dto.js';
 import { RejectLeaveDto } from './dto/reject-leave.dto.js';
 import { QueryLeaveDto } from './dto/query-leave.dto.js';
+import { CreateLeaveTypeDto } from './dto/create-leave-type.dto.js';
+import { UpdateLeaveTypeDto } from './dto/update-leave-type.dto.js';
 
 @ApiTags('Leaves')
 @ApiBearerAuth()
@@ -70,5 +72,43 @@ export class LeavesController {
   @ApiResponse({ status: 404, description: 'Leave request not found' })
   reject(@Param('id') id: string, @Body() body: RejectLeaveDto, @Req() req: any) {
     return this.leavesService.reject(id, body, req?.user);
+  }
+
+  // ===================== LEAVE TYPES ENDPOINTS (ALIAS) =====================
+
+  @Get('types')
+  @ApiOperation({ summary: 'List all leave types' })
+  @ApiQuery({ name: 'companyId', required: false })
+  getLeaveTypes(@Req() req: any, @Query('companyId') companyFilter?: string) {
+    return this.leavesService.getLeaveTypes(req.user, companyFilter);
+  }
+
+  @Get('types/:id')
+  @ApiOperation({ summary: 'Get leave type by ID' })
+  @ApiParam({ name: 'id', description: 'Leave Type ID' })
+  getLeaveTypeById(@Param('id') id: string, @Req() req: any) {
+    return this.leavesService.getLeaveTypeById(id, req.user);
+  }
+
+  @Post('types')
+  @ApiOperation({ summary: 'Create new leave type' })
+  @ApiBody({ type: CreateLeaveTypeDto })
+  createLeaveType(@Body() body: CreateLeaveTypeDto, @Req() req: any) {
+    return this.leavesService.createLeaveType(body, req.user);
+  }
+
+  @Put('types/:id')
+  @ApiOperation({ summary: 'Update leave type' })
+  @ApiParam({ name: 'id', description: 'Leave Type ID' })
+  @ApiBody({ type: UpdateLeaveTypeDto })
+  updateLeaveType(@Param('id') id: string, @Body() body: UpdateLeaveTypeDto, @Req() req: any) {
+    return this.leavesService.updateLeaveType(id, body, req.user);
+  }
+
+  @Delete('types/:id')
+  @ApiOperation({ summary: 'Delete leave type' })
+  @ApiParam({ name: 'id', description: 'Leave Type ID' })
+  deleteLeaveType(@Param('id') id: string, @Req() req: any) {
+    return this.leavesService.deleteLeaveType(id, req.user);
   }
 }

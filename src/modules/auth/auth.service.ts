@@ -34,7 +34,7 @@ export class AuthService {
       jti: crypto.randomUUID(),
     };
     const secret = process.env.JWT_SECRET || 'enterprise_hrms_jwt_secret_key_2026';
-    const expiresIn = (process.env.JWT_ACCESS_EXPIRES_IN || '1h') as any;
+    const expiresIn = (process.env.JWT_ACCESS_EXPIRES_IN || '30d') as any;
     return jwt.sign(payload, secret, { expiresIn });
   }
 
@@ -72,6 +72,20 @@ export class AuthService {
     return { rawToken, record };
   }
 
+  public setAccessCookie(res: any, accessToken: string) {
+    if (!res || typeof res.cookie !== 'function') return;
+    const expiresDays = Number(process.env.REFRESH_TOKEN_EXPIRES_DAYS) || 30;
+    const cookieOptions = {
+      httpOnly: false,
+      secure: false,
+      sameSite: 'lax' as const,
+      path: '/',
+      maxAge: expiresDays * 24 * 60 * 60 * 1000,
+    };
+    res.cookie('accessToken', accessToken, cookieOptions);
+    res.cookie('token', accessToken, cookieOptions);
+  }
+
   public setRefreshCookie(res: any, refreshToken: string) {
     if (!res || typeof res.cookie !== 'function') return;
     const expiresDays = Number(process.env.REFRESH_TOKEN_EXPIRES_DAYS) || 7;
@@ -92,6 +106,8 @@ export class AuthService {
       sameSite: 'lax',
       path: '/',
     });
+    res.clearCookie('accessToken', { path: '/' });
+    res.clearCookie('token', { path: '/' });
   }
 
   async register(data: RegisterDto) {

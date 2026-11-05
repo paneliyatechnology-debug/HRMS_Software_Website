@@ -338,13 +338,7 @@ export class EmployeesController {
     },
     @Req() req: any,
   ) {
-    // 1. Enforce Authorization: Bearer <accessToken>
-    const authHeader = req.headers?.authorization;
-    if (!authHeader || typeof authHeader !== 'string' || !authHeader.toLowerCase().startsWith('bearer ')) {
-      throw new UnauthorizedException('Authorization header with Bearer token is required.');
-    }
-
-    // 2. Resolve authenticated user from JwtAuthGuard
+    // 1. Resolve authenticated user from JwtAuthGuard
     const actorUser = req.user;
     if (!actorUser) {
       throw new UnauthorizedException('Authentication token is required.');

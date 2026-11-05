@@ -1,9 +1,12 @@
-import { Controller, Get, Post, Put, Body, Param, Req, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Req, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { OrganizationService } from './organization.service.js';
 import { CreateDepartmentDto } from './dto/create-department.dto.js';
 import { UpdateDepartmentDto } from './dto/update-department.dto.js';
 import { CreateDesignationDto } from './dto/create-designation.dto.js';
+import { UpdateDesignationDto } from './dto/update-designation.dto.js';
+import { AddDesignationMemberDto } from './dto/add-designation-member.dto.js';
+import { UpdateDesignationMemberDto } from './dto/update-designation-member.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 
 @ApiTags('Organization')
@@ -49,6 +52,19 @@ export class OrganizationController {
     return this.orgService.updateDepartment(id, body, req.user);
   }
 
+  @Delete('departments/:id')
+  @ApiOperation({
+    summary: 'Delete department',
+    description: 'Removes department from authenticated company and live MySQL.',
+  })
+  @ApiParam({ name: 'id', description: 'Department ID' })
+  @ApiResponse({ status: 200, description: 'Department deleted successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Department not found' })
+  deleteDepartment(@Param('id') id: string, @Req() req: any) {
+    return this.orgService.deleteDepartment(id, req.user);
+  }
+
   @Get('designations')
   @ApiOperation({
     summary: 'List all designations',
@@ -69,6 +85,99 @@ export class OrganizationController {
   @ApiResponse({ status: 201, description: 'Designation created successfully' })
   createDesignation(@Body() body: CreateDesignationDto, @Req() req: any) {
     return this.orgService.createDesignation(body, req.user);
+  }
+
+  @Put('designations/:id')
+  @ApiOperation({
+    summary: 'Update designation',
+    description: 'Updates job title, department association, or salary bounds in MySQL.',
+  })
+  @ApiParam({ name: 'id', description: 'Designation ID' })
+  @ApiBody({ type: UpdateDesignationDto })
+  @ApiResponse({ status: 200, description: 'Designation updated successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Designation not found' })
+  updateDesignation(@Param('id') id: string, @Body() body: UpdateDesignationDto, @Req() req: any) {
+    return this.orgService.updateDesignation(id, body, req.user);
+  }
+
+  @Delete('designations/:id')
+  @ApiOperation({
+    summary: 'Delete designation',
+    description: 'Removes designation from authenticated company and live MySQL.',
+  })
+  @ApiParam({ name: 'id', description: 'Designation ID' })
+  @ApiResponse({ status: 200, description: 'Designation deleted successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Designation not found' })
+  deleteDesignation(@Param('id') id: string, @Req() req: any) {
+    return this.orgService.deleteDesignation(id, req.user);
+  }
+
+  // -------------------------------------------------------------
+  // DESIGNATION MEMBERSHIP ENDPOINTS (List, Add, Edit, Delete)
+  // -------------------------------------------------------------
+
+  @Get('designations/:id/members')
+  @ApiOperation({
+    summary: 'List members under designation',
+    description: 'Retrieves all employees assigned to this designation in authenticated company.',
+  })
+  @ApiParam({ name: 'id', description: 'Designation ID' })
+  @ApiResponse({ status: 200, description: 'List of assigned members' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Designation not found' })
+  getDesignationMembers(@Param('id') id: string, @Req() req: any) {
+    return this.orgService.getDesignationMembers(id, req.user);
+  }
+
+  @Post('designations/:id/members')
+  @ApiOperation({
+    summary: 'Add / Assign member(s) to designation',
+    description: 'Assigns employee (single userId or bulk userIds array) to this designation in live MySQL.',
+  })
+  @ApiParam({ name: 'id', description: 'Designation ID' })
+  @ApiBody({ type: AddDesignationMemberDto })
+  @ApiResponse({ status: 201, description: 'Members assigned successfully' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Designation or Employee not found' })
+  addDesignationMember(@Param('id') id: string, @Body() body: AddDesignationMemberDto, @Req() req: any) {
+    return this.orgService.addDesignationMember(id, body, req.user);
+  }
+
+  @Put('designations/:id/members/:userId')
+  @ApiOperation({
+    summary: 'Edit / Reassign member designation details',
+    description: 'Updates employee designation assignment, department, or employment status.',
+  })
+  @ApiParam({ name: 'id', description: 'Current Designation ID' })
+  @ApiParam({ name: 'userId', description: 'Employee User ID' })
+  @ApiBody({ type: UpdateDesignationMemberDto })
+  @ApiResponse({ status: 200, description: 'Member details updated successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Designation or Employee not found' })
+  updateDesignationMember(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Body() body: UpdateDesignationMemberDto,
+    @Req() req: any,
+  ) {
+    return this.orgService.updateDesignationMember(id, userId, body, req.user);
+  }
+
+  @Delete('designations/:id/members/:userId')
+  @ApiOperation({
+    summary: 'Remove member from designation',
+    description: 'Unassigns employee from this designation and saves changes immediately to live MySQL.',
+  })
+  @ApiParam({ name: 'id', description: 'Designation ID' })
+  @ApiParam({ name: 'userId', description: 'Employee User ID to remove' })
+  @ApiResponse({ status: 200, description: 'Member removed from designation successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Designation or Employee not found' })
+  removeDesignationMember(@Param('id') id: string, @Param('userId') userId: string, @Req() req: any) {
+    return this.orgService.removeDesignationMember(id, userId, req.user);
   }
 
   @Get('locations')

@@ -42,6 +42,9 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'User with this email already exists' })
   async register(@Body() body: RegisterDto, @Res({ passthrough: true }) res?: any) {
     const result = await this.authService.register(body);
+    if (res && result.accessToken) {
+      this.authService.setAccessCookie(res, result.accessToken);
+    }
     if (res && result.refreshToken) {
       this.authService.setRefreshCookie(res, result.refreshToken);
     }
@@ -61,6 +64,9 @@ export class AuthController {
   async login(@Body() body: LoginDto, @Res({ passthrough: true }) res?: any) {
     const identifier = body.identifier || body.email || body.phone || '';
     const result = await this.authService.login(identifier, body.password, body.companyCode || body.companyId);
+    if (res && result.accessToken) {
+      this.authService.setAccessCookie(res, result.accessToken);
+    }
     if (res && result.refreshToken) {
       this.authService.setRefreshCookie(res, result.refreshToken);
     }
@@ -114,6 +120,9 @@ export class AuthController {
 
     const rawRefreshToken = req?.cookies?.refreshToken || body?.refreshToken;
     const result = await this.authService.refresh(rawRefreshToken);
+    if (res && result.accessToken) {
+      this.authService.setAccessCookie(res, result.accessToken);
+    }
     if (res && result.refreshToken) {
       this.authService.setRefreshCookie(res, result.refreshToken);
     }

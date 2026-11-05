@@ -814,7 +814,7 @@ export class AdminService {
   }
 
   createDepartment(actor: User, dto: CreateAdminDepartmentDto) {
-    this.resolveTargetCompany(actor);
+    const company = this.resolveTargetCompany(actor);
     const existing = this.db.departments.find((d) => d.name.toLowerCase() === dto.name.trim().toLowerCase());
     if (existing) {
       throw new ConflictException(`Department "${dto.name}" already exists.`);
@@ -827,9 +827,12 @@ export class AdminService {
       code: deptCode,
       description: dto.description?.trim() || '',
       employeeCount: 0,
+      companyId: company?.id || actor.companyId || null,
+      companyCode: company?.companyCode || actor.companyCode || null,
       createdAt: new Date().toISOString(),
     };
-    this.db.departments.push(dept);
+    this.db.departments.unshift(dept);
+    void this.db.saveDepartmentToMysql(dept);
     this.db.persist();
 
     return {
@@ -844,7 +847,7 @@ export class AdminService {
   }
 
   createDesignation(actor: User, dto: CreateAdminDesignationDto) {
-    this.resolveTargetCompany(actor);
+    const company = this.resolveTargetCompany(actor);
     const existing = this.db.designations.find((d) => d.title.toLowerCase() === dto.title.trim().toLowerCase());
     if (existing) {
       throw new ConflictException(`Designation "${dto.title}" already exists.`);
@@ -854,12 +857,15 @@ export class AdminService {
       id: `desig-${Date.now()}`,
       title: dto.title.trim(),
       departmentId: dto.departmentId || '',
-      departmentName: this.db.departments.find((d) => d.id === dto.departmentId)?.name || '',
+      departmentName: this.db.departments.find((d) => d.id === dto.departmentId)?.name || 'General',
       minSalary: 25000,
       maxSalary: 150000,
+      companyId: company?.id || actor.companyId || null,
+      companyCode: company?.companyCode || actor.companyCode || null,
       createdAt: new Date().toISOString(),
     };
-    this.db.designations.push(desig);
+    this.db.designations.unshift(desig);
+    void this.db.saveDesignationToMysql(desig);
     this.db.persist();
 
     return {

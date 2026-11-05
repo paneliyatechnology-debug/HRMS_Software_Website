@@ -45,6 +45,16 @@
       "key": "employeeToken",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "designationId",
+      "value": "des-1793877127945",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "user-1793766966909",
+      "type": "string"
     }
   ],
   "item": [
@@ -541,18 +551,15 @@
                   "if (token) {",
                   "    pm.collectionVariables.set(\"token\", token);",
                   "    pm.environment.set(\"token\", token);",
-                  "    pm.globals.set(\"token\", token);",
                   "    console.log(\"Auth token auto-saved:\", token);",
                   "}",
                   "if (jsonData.refreshToken) {",
                   "    pm.collectionVariables.set(\"refreshToken\", jsonData.refreshToken);",
                   "    pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
-                  "    pm.globals.set(\"refreshToken\", jsonData.refreshToken);",
                   "}",
                   "if (jsonData.user && jsonData.user.companyId) {",
                   "    pm.collectionVariables.set(\"companyId\", jsonData.user.companyId);",
                   "    pm.environment.set(\"companyId\", jsonData.user.companyId);",
-                  "    pm.globals.set(\"companyId\", jsonData.user.companyId);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -613,18 +620,15 @@
                   "if (token) {",
                   "    pm.collectionVariables.set(\"token\", token);",
                   "    pm.environment.set(\"token\", token);",
-                  "    pm.globals.set(\"token\", token);",
                   "    console.log(\"Auth token auto-saved:\", token);",
                   "}",
                   "if (jsonData.refreshToken) {",
                   "    pm.collectionVariables.set(\"refreshToken\", jsonData.refreshToken);",
                   "    pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
-                  "    pm.globals.set(\"refreshToken\", jsonData.refreshToken);",
                   "}",
                   "if (jsonData.user && jsonData.user.companyId) {",
                   "    pm.collectionVariables.set(\"companyId\", jsonData.user.companyId);",
                   "    pm.environment.set(\"companyId\", jsonData.user.companyId);",
-                  "    pm.globals.set(\"companyId\", jsonData.user.companyId);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -685,18 +689,15 @@
                   "if (token) {",
                   "    pm.collectionVariables.set(\"token\", token);",
                   "    pm.environment.set(\"token\", token);",
-                  "    pm.globals.set(\"token\", token);",
                   "    console.log(\"Auth token auto-saved:\", token);",
                   "}",
                   "if (jsonData.refreshToken) {",
                   "    pm.collectionVariables.set(\"refreshToken\", jsonData.refreshToken);",
                   "    pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
-                  "    pm.globals.set(\"refreshToken\", jsonData.refreshToken);",
                   "}",
                   "if (jsonData.user && jsonData.user.companyId) {",
                   "    pm.collectionVariables.set(\"companyId\", jsonData.user.companyId);",
                   "    pm.environment.set(\"companyId\", jsonData.user.companyId);",
-                  "    pm.globals.set(\"companyId\", jsonData.user.companyId);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -3124,6 +3125,48 @@
             "description": "**Role Required: ADMIN or SUPER_ADMIN**\n\nAdmin resends password setup invitation email to an employee in their company. Revokes previous unused tokens."
           },
           "response": []
+        },
+        {
+          "name": "Dedicated Employee Document Upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees/documents/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "documents",
+                "upload"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Allows an authenticated employee to upload their personal document directly using JWT Bearer token.\nRequires EMPLOYEE role. Identity and company are extracted strictly from verified JWT."
+          },
+          "response": []
         }
       ]
     },
@@ -3255,6 +3298,40 @@
           "response": []
         },
         {
+          "name": "Delete department",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/departments/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organization",
+                "departments",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Department ID"
+                }
+              ]
+            },
+            "description": "Removes department from authenticated company and live MySQL."
+          },
+          "response": []
+        },
+        {
           "name": "List all designations",
           "request": {
             "method": "GET",
@@ -3306,7 +3383,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Senior Staff Engineer\",\n  \"departmentId\": \"dept-1\",\n  \"minSalary\": 85000,\n  \"maxSalary\": 140000\n}",
+              "raw": "{\n  \"title\": \"Senior Software Engineer\",\n  \"departmentName\": \"Engineering\",\n  \"minSalary\": 60000,\n  \"maxSalary\": 120000\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3325,7 +3402,269 @@
               "query": [],
               "variable": []
             },
-            "description": "Adds a new job designation with salary pay-bands."
+            "description": "Adds a new job designation with salary pay-bands directly into live MySQL."
+          },
+          "response": []
+        },
+        {
+          "name": "Update designation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Lead Software Engineer\",\n  \"departmentName\": \"Engineering\",\n  \"minSalary\": 80000,\n  \"maxSalary\": 150000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organization/designations/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organization",
+                "designations",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Designation ID"
+                }
+              ]
+            },
+            "description": "Updates job title, department association, or salary bounds in live MySQL."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete designation",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/designations/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organization",
+                "designations",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Designation ID"
+                }
+              ]
+            },
+            "description": "Removes designation from authenticated company and live MySQL."
+          },
+          "response": []
+        },
+        {
+          "name": "List members under designation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/designations/{id}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organization",
+                "designations",
+                "{id}",
+                "members"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Designation ID"
+                }
+              ]
+            },
+            "description": "Retrieves all employees assigned to this designation in authenticated company."
+          },
+          "response": []
+        },
+        {
+          "name": "Add member to designation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user-1793766966909\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organization/designations/{id}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organization",
+                "designations",
+                "{id}",
+                "members"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Designation ID"
+                }
+              ]
+            },
+            "description": "Assigns employee (single userId or bulk userIds array) to this designation in live MySQL."
+          },
+          "response": []
+        },
+        {
+          "name": "Update member designation details",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"designationId\": \"\",\n  \"departmentId\": \"\",\n  \"status\": \"Active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organization/designations/{id}/members/{userId}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organization",
+                "designations",
+                "{id}",
+                "members",
+                "{userId}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Current Designation ID"
+                },
+                {
+                  "key": "userId",
+                  "value": "",
+                  "description": "Employee User ID"
+                }
+              ]
+            },
+            "description": "Updates employee designation assignment, department, or employment status."
+          },
+          "response": []
+        },
+        {
+          "name": "Remove member from designation",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/designations/{id}/members/{userId}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organization",
+                "designations",
+                "{id}",
+                "members",
+                "{userId}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Designation ID"
+                },
+                {
+                  "key": "userId",
+                  "value": "",
+                  "description": "Employee User ID to remove"
+                }
+              ]
+            },
+            "description": "Unassigns employee from this designation and saves changes immediately to live MySQL."
           },
           "response": []
         },
@@ -3393,6 +3732,191 @@
       ]
     },
     {
+      "name": "Designation Members",
+      "description": "APIs for managing employee membership in Designations / Roles: List members, Add / Assign members (single or bulk), Edit / Reassign member designation, and Remove members.",
+      "item": [
+        {
+          "name": "List members under designation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/designations/{{designationId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organization",
+                "designations",
+                "{{designationId}}",
+                "members"
+              ]
+            },
+            "description": "Retrieves all employees assigned to this designation in authenticated company."
+          },
+          "response": []
+        },
+        {
+          "name": "Add member to designation (Single User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organization/designations/{{designationId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organization",
+                "designations",
+                "{{designationId}}",
+                "members"
+              ]
+            },
+            "description": "Assigns a single employee by userId or employeeId to this designation in live MySQL."
+          },
+          "response": []
+        },
+        {
+          "name": "Add members to designation (Bulk Users)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userIds\": [\n    \"user-1793766966909\",\n    \"user-1793792747562\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organization/designations/{{designationId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organization",
+                "designations",
+                "{{designationId}}",
+                "members"
+              ]
+            },
+            "description": "Bulk assigns multiple employees to this designation in live MySQL."
+          },
+          "response": []
+        },
+        {
+          "name": "Edit member designation & status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"designationId\": \"{{targetDesignationId}}\",\n  \"departmentId\": \"{{departmentId}}\",\n  \"status\": \"Active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organization/designations/{{designationId}}/members/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organization",
+                "designations",
+                "{{designationId}}",
+                "members",
+                "{{userId}}"
+              ]
+            },
+            "description": "Updates employee designation assignment, department, or employment status."
+          },
+          "response": []
+        },
+        {
+          "name": "Remove member from designation",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/designations/{{designationId}}/members/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organization",
+                "designations",
+                "{{designationId}}",
+                "members",
+                "{{userId}}"
+              ]
+            },
+            "description": "Unassigns employee from this designation and saves changes immediately to live MySQL."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Attendance",
       "description": "Punch clock, biometric reader sync, manual regularizations",
       "item": [
@@ -3443,7 +3967,7 @@
               ],
               "variable": []
             },
-            "description": "Retrieves attendance logs filtered by employee, date, or department."
+            "description": "Retrieves attendance records for all employees in the admin company. Each record includes shift, status (Present, Half Day, Absent, On Leave, Holiday, Week Off), workTime (HHh MMm SSs), workingHours, checkInTime, checkOutTime, and employee metadata."
           },
           "response": []
         },
@@ -4186,6 +4710,197 @@
               ]
             },
             "description": "Marks leave request as Rejected with recorded reason."
+          },
+          "response": []
+        },
+        {
+          "name": "List all leave types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leaves/types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leaves",
+                "types"
+              ],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "",
+                  "disabled": true,
+                  "description": ""
+                }
+              ],
+              "variable": []
+            },
+            "description": "List all leave types"
+          },
+          "response": []
+        },
+        {
+          "name": "Create new leave type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Work From Home\",\n  \"code\": \"WFH\",\n  \"description\": \"Remote work allowance per year\",\n  \"daysAllowed\": 24,\n  \"isPaid\": true,\n  \"requiresApproval\": true,\n  \"carryForward\": false,\n  \"maxCarryForwardDays\": 0,\n  \"status\": \"Active\",\n  \"color\": \"#06b6d4\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/leaves/types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leaves",
+                "types"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Create new leave type"
+          },
+          "response": []
+        },
+        {
+          "name": "Get leave type by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leaves/types/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leaves",
+                "types",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Leave Type ID"
+                }
+              ]
+            },
+            "description": "Get leave type by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Update leave type",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"daysAllowed\": 30,\n  \"description\": \"Updated remote work policy allowance to 30 days\",\n  \"color\": \"#0891b2\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/leaves/types/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leaves",
+                "types",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Leave Type ID"
+                }
+              ]
+            },
+            "description": "Update leave type"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete leave type",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leaves/types/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leaves",
+                "types",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Leave Type ID"
+                }
+              ]
+            },
+            "description": "Delete leave type"
           },
           "response": []
         }
@@ -5552,21 +6267,37 @@
                 "key": "Accept",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
               }
             ],
             "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "description": "Upload document file (PDF, Word, or image)"
+                },
+                {
+                  "key": "title",
+                  "value": "Identity Proof",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "ID Proof",
+                  "type": "text"
+                },
+                {
+                  "key": "expiryDate",
+                  "value": "2030-12-31",
+                  "type": "text"
+                },
+                {
+                  "key": "userId",
+                  "value": "{{userId}}",
+                  "type": "text"
                 }
-              }
+              ]
             },
             "url": {
               "raw": "{{baseUrl}}/documents/upload",
@@ -5585,7 +6316,7 @@
           "response": []
         },
         {
-          "name": "Verify or reject uploaded document",
+          "name": "Verify uploaded document",
           "request": {
             "method": "PUT",
             "header": [
@@ -5602,7 +6333,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"status\": \"Verified\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5628,7 +6359,151 @@
                 }
               ]
             },
-            "description": "Marks document as Verified or Rejected with audit signature."
+            "description": "Marks document as Verified (defaults to Verified if body is omitted or empty)."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify uploaded document (POST alias)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Verified\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/documents/{id}/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "documents",
+                "{id}",
+                "verify"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Document ID"
+                }
+              ]
+            },
+            "description": "Verify uploaded document (POST alias)"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject uploaded document",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Document illegible or expired\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/documents/{id}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "documents",
+                "{id}",
+                "reject"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Document ID"
+                }
+              ]
+            },
+            "description": "Marks document as Rejected with audit record."
+          },
+          "response": []
+        },
+        {
+          "name": "Reject uploaded document (POST alias)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Document illegible or expired\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/documents/{id}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "documents",
+                "{id}",
+                "reject"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Document ID"
+                }
+              ]
+            },
+            "description": "Reject uploaded document (POST alias)"
           },
           "response": []
         }
@@ -5740,6 +6615,33 @@
               "variable": []
             },
             "description": "Retrieves notification center messages for attendance, leaves, announcements, and payroll."
+          },
+          "response": []
+        },
+        {
+          "name": "Get total unread notifications count for the active user",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "unread-count"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Get total unread notifications count for the active user"
           },
           "response": []
         },
@@ -6944,6 +7846,198 @@
               ]
             },
             "description": "Permanently deletes company and cascades deletion across all tables in MySQL and runtime memory."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Leave Types",
+      "description": "",
+      "item": [
+        {
+          "name": "List all leave types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leave-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leave-types"
+              ],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Optional company filter for Super Admin"
+                }
+              ],
+              "variable": []
+            },
+            "description": "Retrieves all active leave categories/types for the authenticated company."
+          },
+          "response": []
+        },
+        {
+          "name": "Create new leave type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Work From Home\",\n  \"code\": \"WFH\",\n  \"description\": \"Remote work allowance per year\",\n  \"daysAllowed\": 24,\n  \"isPaid\": true,\n  \"requiresApproval\": true,\n  \"carryForward\": false,\n  \"maxCarryForwardDays\": 0,\n  \"status\": \"Active\",\n  \"color\": \"#06b6d4\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/leave-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leave-types"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Creates a custom leave type (e.g. Paid Leave, Bereavement Leave) isolated to the company."
+          },
+          "response": []
+        },
+        {
+          "name": "Get leave type by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leave-types/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leave-types",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Leave Type ID"
+                }
+              ]
+            },
+            "description": "Retrieves single leave type configuration."
+          },
+          "response": []
+        },
+        {
+          "name": "Update leave type",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"daysAllowed\": 30,\n  \"description\": \"Updated remote work policy allowance to 30 days\",\n  \"color\": \"#0891b2\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/leave-types/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leave-types",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Leave Type ID"
+                }
+              ]
+            },
+            "description": "Updates leave type quota, policy, name, or status."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete leave type",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leave-types/{id}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leave-types",
+                "{id}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "cmp-1",
+                  "description": "Leave Type ID"
+                }
+              ]
+            },
+            "description": "Removes a leave type from the company."
           },
           "response": []
         }

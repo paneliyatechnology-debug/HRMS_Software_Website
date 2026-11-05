@@ -18,6 +18,7 @@ import {
   AttendanceRecord,
   LeaveRequest,
   LeaveBalance,
+  LeaveTypeItem,
   Holiday,
   PayrollRecord,
   EmployeeDocument,
@@ -50,6 +51,7 @@ interface DatabaseSchema {
   users: User[];
   employees: Employee[];
   holidays: Holiday[];
+  leaveTypes?: LeaveTypeItem[];
   leaveBalances: LeaveBalance[];
   leaveRequests: LeaveRequest[];
   attendanceRecords: AttendanceRecord[];
@@ -85,6 +87,7 @@ export class DatabaseService implements OnModuleInit {
   public users: User[] = [];
   public employees: Employee[] = [];
   public holidays: Holiday[] = [];
+  public leaveTypes: LeaveTypeItem[] = [];
   public leaveBalances: LeaveBalance[] = [];
   public leaveRequests: LeaveRequest[] = [];
   public attendanceRecords: AttendanceRecord[] = [];
@@ -305,6 +308,17 @@ export class DatabaseService implements OnModuleInit {
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM designations`); this.designations = rows || []; } catch {}
       try { const [rows]: any = await this.mysqlPool.query(`SELECT * FROM holidays`); this.holidays = rows || []; } catch {}
       try {
+        const [rows]: any = await this.mysqlPool.query(`SELECT * FROM leave_types`);
+        this.leaveTypes = (rows || []).map((r: any) => ({
+          ...r,
+          daysAllowed: Number(r.daysAllowed) || 0,
+          isPaid: Boolean(r.isPaid),
+          requiresApproval: Boolean(r.requiresApproval),
+          carryForward: Boolean(r.carryForward),
+          maxCarryForwardDays: Number(r.maxCarryForwardDays) || 0,
+        }));
+      } catch {}
+      try {
         const [rows]: any = await this.mysqlPool.query(`SELECT * FROM leave_balances`);
         const parseQ = (val: any, defTotal: number) => {
           let p = val;
@@ -425,6 +439,7 @@ export class DatabaseService implements OnModuleInit {
       this.designations = this.designations.filter(belongsToExistingCompany);
       this.locations = this.locations.filter(belongsToExistingCompany);
       this.holidays = this.holidays.filter((h) => h.type === 'Public' || belongsToExistingCompany(h));
+      this.leaveTypes = this.leaveTypes.filter((lt) => !lt.companyId || belongsToExistingCompany(lt));
       this.leaveBalances = this.leaveBalances.filter(
         (lb) => (lb.employeeId ? (validUserIds.has(lb.employeeId) || validEmployeeIds.has(lb.employeeId)) : false),
       );
@@ -518,6 +533,7 @@ export class DatabaseService implements OnModuleInit {
     this.departments = this.departments.filter((d) => !matchesTargetCompany(d));
     this.designations = this.designations.filter((d) => !matchesTargetCompany(d));
     this.holidays = this.holidays.filter((h) => !matchesTargetCompany(h));
+    this.leaveTypes = this.leaveTypes.filter((lt) => !matchesTargetCompany(lt));
     this.leaveBalances = this.leaveBalances.filter(
       (lb) => !matchesTargetCompany(lb) && (!lb.employeeId || !purgedUserIds.has(lb.employeeId)),
     );
@@ -598,7 +614,7 @@ export class DatabaseService implements OnModuleInit {
         );
 
         const companyTables = [
-          'departments', 'designations', 'locations', 'holidays', 'leave_balances',
+          'departments', 'designations', 'locations', 'holidays', 'leave_types', 'leave_balances',
           'leave_requests', 'attendance_records', 'work_sessions', 'payroll_records',
           'job_openings', 'candidates', 'company_assets', 'training_programs',
           'employee_trainings', 'performance_cycles', 'performance_reviews',
@@ -1050,6 +1066,101 @@ export class DatabaseService implements OnModuleInit {
   }
 
   /**
+   * Persists a department record directly to live MySQL.
+   */
+  public async saveDepartmentToMysql(dept: Department): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO departments (
+          id, companyId, companyCode, name, code, headEmployeeId, headName, employeeCount, description, createdAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          companyId=COALESCE(VALUES(companyId), departments.companyId),
+          companyCode=COALESCE(VALUES(companyCode), departments.companyCode),
+          name=VALUES(name), code=VALUES(code),
+          headEmployeeId=VALUES(headEmployeeId), headName=VALUES(headName),
+          employeeCount=VALUES(employeeCount), description=VALUES(description)`,
+        [
+          dept.id,
+          dept.companyId || null,
+          dept.companyCode || null,
+          dept.name,
+          dept.code || 'DEPT',
+          dept.headEmployeeId || null,
+          dept.headName || null,
+          Number(dept.employeeCount) || 0,
+          dept.description || '',
+          dept.createdAt || new Date().toISOString(),
+        ],
+      );
+      this.logger.log(`Saved department "${dept.id}" (${dept.name}) directly to live MySQL.`);
+    } catch (err: any) {
+      this.logger.error(`Error saving department ${dept.id} to MySQL:`, err);
+    }
+  }
+
+  /**
+   * Deletes a department record directly from live MySQL.
+   */
+  public async deleteDepartmentFromMysql(id: string): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(`DELETE FROM departments WHERE id = ?`, [id]);
+      this.logger.log(`Deleted department "${id}" directly from live MySQL.`);
+    } catch (err: any) {
+      this.logger.error(`Error deleting department ${id} from MySQL:`, err);
+    }
+  }
+
+  /**
+   * Persists a designation record directly to live MySQL.
+   */
+  public async saveDesignationToMysql(des: Designation): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO designations (
+          id, companyId, companyCode, title, departmentId, departmentName, minSalary, maxSalary, createdAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          companyId=COALESCE(VALUES(companyId), designations.companyId),
+          companyCode=COALESCE(VALUES(companyCode), designations.companyCode),
+          title=VALUES(title), departmentId=VALUES(departmentId),
+          departmentName=VALUES(departmentName), minSalary=VALUES(minSalary),
+          maxSalary=VALUES(maxSalary)`,
+        [
+          des.id,
+          des.companyId || null,
+          des.companyCode || null,
+          des.title,
+          des.departmentId || '',
+          des.departmentName || '',
+          Number(des.minSalary) || 0,
+          Number(des.maxSalary) || 0,
+          des.createdAt || new Date().toISOString(),
+        ],
+      );
+      this.logger.log(`Saved designation "${des.id}" (${des.title}) directly to live MySQL.`);
+    } catch (err: any) {
+      this.logger.error(`Error saving designation ${des.id} to MySQL:`, err);
+    }
+  }
+
+  /**
+   * Deletes a designation record directly from live MySQL.
+   */
+  public async deleteDesignationFromMysql(id: string): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(`DELETE FROM designations WHERE id = ?`, [id]);
+      this.logger.log(`Deleted designation "${id}" directly from live MySQL.`);
+    } catch (err: any) {
+      this.logger.error(`Error deleting designation ${id} from MySQL:`, err);
+    }
+  }
+
+  /**
    * Persists a holiday record directly to live MySQL.
    */
   public async saveHolidayToMysql(h: Holiday): Promise<void> {
@@ -1095,6 +1206,66 @@ export class DatabaseService implements OnModuleInit {
       this.logger.log(`Deleted holiday ${id} directly from live MySQL.`);
     } catch (err: any) {
       this.logger.error(`Error deleting holiday ${id} from MySQL:`, err);
+    }
+  }
+
+  /**
+   * Persists a leave type record directly to live MySQL.
+   */
+  public async saveLeaveTypeToMysql(lt: LeaveTypeItem): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(
+        `INSERT INTO leave_types (id, companyId, companyCode, name, code, description, daysAllowed, isPaid, requiresApproval, carryForward, maxCarryForwardDays, status, color, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           companyId=COALESCE(VALUES(companyId), leave_types.companyId),
+           companyCode=COALESCE(VALUES(companyCode), leave_types.companyCode),
+           name=VALUES(name),
+           code=VALUES(code),
+           description=VALUES(description),
+           daysAllowed=VALUES(daysAllowed),
+           isPaid=VALUES(isPaid),
+           requiresApproval=VALUES(requiresApproval),
+           carryForward=VALUES(carryForward),
+           maxCarryForwardDays=VALUES(maxCarryForwardDays),
+           status=VALUES(status),
+           color=VALUES(color),
+           updatedAt=VALUES(updatedAt)`,
+        [
+          lt.id,
+          lt.companyId || null,
+          lt.companyCode || null,
+          lt.name,
+          lt.code || '',
+          lt.description || '',
+          Number(lt.daysAllowed) || 0,
+          Boolean(lt.isPaid),
+          Boolean(lt.requiresApproval),
+          Boolean(lt.carryForward),
+          Number(lt.maxCarryForwardDays) || 0,
+          lt.status || 'Active',
+          lt.color || '#3b82f6',
+          lt.createdAt || new Date().toISOString(),
+          lt.updatedAt || new Date().toISOString(),
+        ],
+      );
+      this.logger.log(`Persisted leave_type ${lt.id} (${lt.name}) directly to live MySQL.`);
+    } catch (err: any) {
+      this.logger.error(`Error saving leave_type ${lt.id} to MySQL:`, err);
+    }
+  }
+
+  /**
+   * Deletes a leave type record directly from live MySQL.
+   */
+  public async deleteLeaveTypeFromMysql(id: string): Promise<void> {
+    if (!this.mysqlPool || !this.isMysqlConnected) return;
+    try {
+      await this.mysqlPool.query(`DELETE FROM leave_types WHERE id = ?`, [id]);
+      this.logger.log(`Deleted leave_type ${id} directly from live MySQL.`);
+    } catch (err: any) {
+      this.logger.error(`Error deleting leave_type ${id} from MySQL:`, err);
     }
   }
 
@@ -1174,6 +1345,7 @@ export class DatabaseService implements OnModuleInit {
       users: this.users,
       employees: this.employees,
       holidays: this.holidays,
+      leaveTypes: this.leaveTypes,
       leaveBalances: this.leaveBalances,
       leaveRequests: this.leaveRequests,
       attendanceRecords: this.attendanceRecords,
@@ -1223,6 +1395,7 @@ export class DatabaseService implements OnModuleInit {
         users: this.users,
         employees: this.employees,
         holidays: this.holidays,
+        leaveTypes: this.leaveTypes,
         leaveBalances: this.leaveBalances,
         leaveRequests: this.leaveRequests,
         attendanceRecords: this.attendanceRecords,

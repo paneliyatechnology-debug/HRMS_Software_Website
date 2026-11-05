@@ -521,6 +521,52 @@ async function generate() {
       approverName: 'Admin',
       reason: 'Milestone delivery scheduled during requested dates',
     },
+    'post_/api/leave-types': {
+      name: 'Work From Home',
+      code: 'WFH',
+      description: 'Remote work allowance per year',
+      daysAllowed: 24,
+      isPaid: true,
+      requiresApproval: true,
+      carryForward: false,
+      maxCarryForwardDays: 0,
+      status: 'Active',
+      color: '#06b6d4',
+    },
+    'put_/api/leave-types/{id}': {
+      daysAllowed: 30,
+      description: 'Updated remote work policy allowance to 30 days',
+      color: '#0891b2',
+    },
+    'post_/api/leaves/types': {
+      name: 'Work From Home',
+      code: 'WFH',
+      description: 'Remote work allowance per year',
+      daysAllowed: 24,
+      isPaid: true,
+      requiresApproval: true,
+      carryForward: false,
+      maxCarryForwardDays: 0,
+      status: 'Active',
+      color: '#06b6d4',
+    },
+    'put_/api/leaves/types/{id}': {
+      daysAllowed: 30,
+      description: 'Updated remote work policy allowance to 30 days',
+      color: '#0891b2',
+    },
+    'put_/api/documents/{id}/verify': {
+      status: 'Verified',
+    },
+    'post_/api/documents/{id}/verify': {
+      status: 'Verified',
+    },
+    'put_/api/documents/{id}/reject': {
+      reason: 'Document illegible or expired',
+    },
+    'post_/api/documents/{id}/reject': {
+      reason: 'Document illegible or expired',
+    },
     'post_/api/payroll/generate': {
       month: '2026-10',
     },

@@ -170,6 +170,24 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
       paidLeave JSON
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
+    `CREATE TABLE IF NOT EXISTS leave_types (
+      id VARCHAR(64) PRIMARY KEY,
+      companyId VARCHAR(64),
+      companyCode VARCHAR(50),
+      name VARCHAR(255) NOT NULL,
+      code VARCHAR(50),
+      description TEXT,
+      daysAllowed INT DEFAULT 12,
+      isPaid BOOLEAN DEFAULT TRUE,
+      requiresApproval BOOLEAN DEFAULT TRUE,
+      carryForward BOOLEAN DEFAULT FALSE,
+      maxCarryForwardDays INT DEFAULT 0,
+      status VARCHAR(50) DEFAULT 'Active',
+      color VARCHAR(50),
+      createdAt VARCHAR(50),
+      updatedAt VARCHAR(50)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
     `CREATE TABLE IF NOT EXISTS leave_requests (
       id VARCHAR(64) PRIMARY KEY,
       companyId VARCHAR(64),
@@ -557,6 +575,7 @@ export async function initializeMysqlTables(pool: mysql.Pool) {
         DELETE FROM designations WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
         DELETE FROM locations WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
         DELETE FROM holidays WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
+        DELETE FROM leave_types WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
         DELETE FROM leave_balances WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
         DELETE FROM leave_requests WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
         DELETE FROM attendance_records WHERE companyId = OLD.id OR companyCode = OLD.companyCode;
@@ -628,7 +647,7 @@ export async function purgeOrphanedData(pool: mysql.Pool) {
 
     // 2. Cascade delete from all child tables
     const tablesWithCompanyCols = [
-      'departments', 'designations', 'locations', 'holidays', 'leave_balances',
+      'departments', 'designations', 'locations', 'holidays', 'leave_types', 'leave_balances',
       'leave_requests', 'attendance_records', 'work_sessions', 'attendance_breaks', 'payroll_records',
       'job_openings', 'candidates', 'company_assets', 'training_programs',
       'employee_trainings', 'performance_cycles', 'performance_reviews',
